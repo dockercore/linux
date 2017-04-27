@@ -1,0 +1,298 @@
+                                                附录1-配置TFTP服务器
+
+
+
+1.1 TFTP简介
+
+1.1.1 什么是TFTP
+
+    TFTP(Trivial File Transfer Protocol,简单文件传输协议)是TCP/IP协议族中的一个用来在客户端
+
+与服务器之间进行简单文件传输的协议，提供不复杂，开销不大的文件传输服务，默认使用端口号为69.
+
+    TFTP是一个传输文件的简单协议，它基于UDP协议而实现。此协议涉及的时候是进行小文件传输的，
+
+因此它不具备通常的FTP的许多工嗯呢该，它只能从文件服务器上获得或写入文件，不能列出目录，不进行
+
+认证，它传输八位数据。
+
+    TFTP传输有以下3种模式：
+
+    。netascii:八位ASCII码形式。
+
+    。octer:八位源数据类型。
+
+    。mail:已经不再支持，它将返回的数据直接返回给用户而不是保存为文件。
+
+    优点：
+
+    。TFTP能够用于那些有UDP协议而无TCP协议的环境。
+
+    。TFTP代码锁站点内存要比FTP小。
+
+    可应用于Cisco路由器的IOS备份等。
+
+1.1.2 TFTP和FTP协议比较
+
+    1.相同点
+
+    。都是用于文件传输，可以实现网络中两台主机之间的文件上传于下载。可以将TFTP协议看做是FTP
+
+协议的简化版本。
+
+    2.不同点
+
+    。TFTP协议不需要验证客户端的权限，FTP需要进行客户端验证。
+
+    ，TFTP协议一般多用于局域网以及远程UNIX计算机中，而常见的FTP协议则多用于互联网中。
+
+    。FTP客户端与服务器之间的通信使用TCP协议，而TFTP客户端与服务器之间的通信使用的是UDP协议。
+
+    。TFTP只支持文件传输。TFTP不支持交互，没有一个庞大的命令集，TFTP不允许用户列出目录内容或者
+
+与服务器协商来决定哪些是可得到的文件。
+    
+
+1.2 TFTP服务器安装和配置
+
+1.2.1 安装TFTP服务器软件包
+
+    -->rpm -q xinetd
+
+       xinetd-2.3.14-39.el6_4.x86_64
+
+
+    -->rpm -q tftp-server 
+
+    -->yum install xinetd tftp-server  -y
+
+
+1.2.2 /etc/xinetd.d/tftp文件详解
+
+    配置文件为：
+
+    --> more /etc/xinetd.d/tftp 
+
+# default: off
+# description: The tftp server serves files using the trivial file transfer \
+#	protocol.  The tftp protocol is often used to boot diskless \
+#	workstations, download configuration files to network-aware printers, \
+#	and to start the installation process for some operating systems.
+service tftp
+{
+	socket_type		= dgram
+	protocol		= udp
+	wait			= yes
+	user			= root
+	server			= /usr/sbin/in.tftpd
+	server_args		= -s /var/lib/tftpboot
+	disable			= yes
+	per_source		= 11
+	cps			= 100 2
+	flags			= IPv4
+}
+
+    参数说明：
+
+    。protocol = udp #设置TFTP使用的协议
+
+    。user = root #设置启动tftp的用户
+
+    。disable = yes #设置是否启用tftp、yes表示禁用，no表示启用
+
+    。socket_type = dgram:设置socket类型。
+
+    。server_args：配置服务器的文件存放的位置，就是进行tftp传输的时候，都是从该文件夹中搜索文件的
+
+
+1.2.3 TFTP服务器配置实例
+
+    配置TFTP服务器有两种方法：编辑/etc/xinetd.d/tftp文件，或使用ntsysv命令启用TFTP
+
+    1.编辑/etc/xinetd.d/tftp文件
+
+    -->vim /etc/xinetd.d/tftp中修改：
+
+        disable                 = no  #修改为no
+
+    2.使用ntsysv命令
+
+    -->yum install ntsysv -y
+
+    -->ntsysv  #打开服务
+
+    -->选择:tftp，按空格选中-->确定
+
+1.2.4 控制xinetd服务
+
+    tftp是由xinetd进程启动的，所以只要重新激活xinetd，就能够将xinetd里面的设定重新读进来，
+
+刚刚设定的tftp自然也就可以被激活。
+
+    1.启动xinetd服务
+
+    -->service xinetd start
+
+      Starting xinetd: 
+
+
+
+    2.查看xinetd服务运行状态
+
+    -->service xinetd status
+
+    xinetd (pid  2184) is running...
+
+
+
+    3.停止xinetd服务
+
+    -->service xinetd stop
+
+    Stopping xinetd:                                           [  OK  ]
+
+
+
+    4.重新启动xinetd服务
+
+    -->service xinetd restart
+
+       Stopping xinetd:                                           [FAILED]
+       Starting xinetd:                                           [  OK  ]
+
+    5.重新加载xinetd服务配置
+
+    -->service xinetd reload
+
+      Reloading configuration:                                   [  OK  ]
+
+
+    6.开机自动启动xinetd服务
+
+    -->chkconfig xinetd on
+
+    -->chkconfig --list xinetd
+
+      xinetd         	0:off	1:off	2:on	3:on	4:on	5:on	6:off
+
+1.3 配置TFTP客户端
+
+    IP:192.168.0.204
+
+    1.安装tftp软件包
+
+    -->rpm -q tftp
+
+    package tftp is not installed
+
+    -->yum install tftp -y
+
+    2.连接Tftp服务器
+
+    使用tftp命令可以使用TFTP协议在远程主机之间传输文件
+
+    命令语法：
+
+    tftp[选项][主机[端口]][-c <命令>]
+
+                                            tftp命令选项含义
+    ----------------------------------------------------------------------------------
+       选项                                     选项含义
+    ----------------------------------------------------------------------------------
+       -4                              只使用IPv4连接
+    -----------------------------------------------------------------------------------
+       -6                              只使用IPv6连接
+    -----------------------------------------------------------------------------------
+       -c <命令>                       执行命令
+    -----------------------------------------------------------------------------------
+       -m <模式>                       设置默认传输模式
+    -----------------------------------------------------------------------------------
+       -R <端口：端口>                 强制源端口号是在端口号的指定范围
+    -----------------------------------------------------------------------------------
+       -v                              显示详细信息
+    -----------------------------------------------------------------------------------
+
+                                        
+					tftp子命令
+    -----------------------------------------------------------------------------------
+          子命令                        功能
+    -----------------------------------------------------------------------------------
+        connect           连接到远程TFTP服务器
+    -----------------------------------------------------------------------------------
+        mode              指定传输模式,可以是ascii、netascii或binary，默认为ascii
+    -----------------------------------------------------------------------------------
+        put               发送文件
+    -----------------------------------------------------------------------------------
+        get               从指定的来源获取文件或文件设置
+    -----------------------------------------------------------------------------------
+        quit              退出TFTP
+    -----------------------------------------------------------------------------------
+        verbose           切换详细模式
+    -----------------------------------------------------------------------------------
+        trace             切换数据包跟踪(调试功能)
+    -----------------------------------------------------------------------------------
+        literal           切换文本模式
+    -----------------------------------------------------------------------------------
+        status            显示当前状态
+    ------------------------------------------------------------------------------------
+        binary            二进制文件模式
+    -----------------------------------------------------------------------------------
+        ascii             ASCII模式
+   ------------------------------------------------------------------------------------  
+        rexmt             设置每个数据包的重播超时时间，单位为秒 
+   ------------------------------------------------------------------------------------
+        timeout           设置总传输超时时间，单位为秒
+   -----------------------------------------------------------------------------------
+        ?                 显示帮助信息
+   -----------------------------------------------------------------------------------
+        help              显示帮助信息
+   ----------------------------------------------------------------------------------
+     
+    
+    在Linux客户端使用fttp命令连接到TFTP服务器
+
+    -->tftp 192.168.0.203  
+
+    -->tftp> help
+
+tftp-hpa 0.49
+Commands may be abbreviated.  Commands are:
+
+connect 	connect to remote tftp
+mode    	set file transfer mode
+put     	send file
+get     	receive file
+quit    	exit tftp
+verbose 	toggle verbose mode
+trace   	toggle packet tracing
+literal 	toggle literal mode, ignore ':' in file name
+status  	show current status
+binary  	set mode to octet
+ascii   	set mode to netascii
+rexmt   	set per-packet transmission timeout
+timeout 	set total retransmission timeout
+?       	print help information
+help    	print help information
+
+
+    -->tftp> status
+Connected to 192.168.0.203.
+Mode: netascii Verbose: off Tracing: off Literal: off
+Rexmt-interval: 5 seconds, Max-timeout: 25 seconds
+
+
+
+
+    默认服务器端上传文件的目录：/var/lib/tftpboot
+
+    3.查看进程
+
+    在客户端连接并登录到tftp服务器之后，在tftp服务器上使用以下命令查看tftp进程
+
+    -->ps -ef|grep tftp
+
+       root      7425  3285  0 16:36 pts/1    00:00:00 grep tftp
+
+    -->tftp> put a.txt b.txt 
+
+    

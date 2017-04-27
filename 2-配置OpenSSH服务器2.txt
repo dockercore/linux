@@ -1,0 +1,336 @@
+                                                         第2章  配置OpenSSH服务器
+
+
+
+2.1 SSH简介
+
+    使用SSH可以在本机主机和远程服务器之间进行加密第传输数据，实现数据的安全。而OpenSSH是SSH协议的免费开源实现，
+
+它采用安全、加密的网络连接工具代替了telnet、ftp、rlogin、rsh和rcp工具。
+
+
+2.1.1什么是SSH
+
+    SSH(Secure Shell,安全Shell)是由IETF的网络工作小组所制定，建立在引用层和传输层基础上的安全协议。SSH是目前较
+
+可靠，专为远程登录会话和其它网络服务提供安全性的协议。利用SSH协议可以有效防止远程管理过程中的信息泄露问题。
+
+
+2.1.2 SSH工作原理
+
+    SSH是由服务器端和客户端的软件组成。服务器端是一个守护进程，它在后台运行并响应来自客户端的连接请求。服务端一般是
+
+ssh进程，它提供了对远程连接的处理，一般包括公共密钥认证、秘钥交换、对称秘钥加密和非安全连接。客户端包括ssh、scp、slogin
+
+和sftp等应用程序。
+
+    SSH工作介质大致是本地的客户端发送一个连接请求到远程的服务端，服务端检查申请的包和IP地址再发送密钥给SSH客户端，本地再
+
+将密钥发回给服务端，到此为止连接建立。
+
+    启动SSH服务后，sshd进程运行并在默认的22端口进行监听。当请求到来的时候，sshd守护进程会产生一个子进程，该子进程进行本次
+
+的连接处理。
+
+
+2.1.3 SSH安全验证方式
+
+    SSH客户端角度看，SSH提供了基于口令和基于密钥的安全验证方式。
+
+    1.基于口令的安全验证
+
+      只要知道账号和口令，就可以登录到远程主机。所有传输的数据都会被加密，但是不能保证正在连接的服务器就是想连接的服务器，
+
+    可能会有别的服务器在冒充真正的服务器，也就是会受到“中间人”这正方式的攻击。
+
+    2.基于密钥的安全验证
+
+      必须创建一对密钥（公钥和私钥），并把公钥放在需要访问的服务器上，如果连接到SSH服务器上，客户端就会向服务器发出请求，
+
+    请求用密钥进行安全验证。这种验证方式，不仅加密所有传送的数据，而且可以防止"中间人"攻击。
+
+2.1.4 OpenSSH简介
+
+    OpenSSH(Open Secure Shell,开放安全Shell)是SSH的替代软件，而且是免费的。默认使用RSA密钥，它采用安全、加密的网络连接工具
+
+代替telnet、ftp、rlogin、rsh和rcp工具。
+
+    使用OpenSSH工具将增强系统安全性，在使用OpenSSH软件进行通信时，登录验证口令将会被加密。OpenSSH提供了服务器端后台程序和客户
+
+端工具，用来加密远程控件和文件传输过程中的数据，并由此来代替原来类似的服务。
+
+    另一个使用OpenSSH的原因是，它自动把DISPLAY变量转发给客户主机。如果在本地主机上运行X窗口系统，并且使用ssh命令登录到远程主机
+
+上，当在远程主机上执行一个需要X的程序时，该程序会在本地主机上执行。
+
+
+2.2 OpenSSH服务器安装和配置
+
+2.2.1 安装OpenSSH服务器软件包
+
+    。查看软件包是否安装：
+
+    -->rpm -qa|grep openssh
+
+    要确保：openssh-server、openssh、openssh-clients和openssh-askpass软件包已经安装
+
+    如果没有安装，执行如下命令安装：
+
+    -->yum install openssh-server openssh  openssh-clients openssh-askpass -y
+
+    。查看OpenSSH的版本号
+
+    -->ssh -v 
+    
+    OpenSSH_4.3p2, OpenSSL 0.9.8e-fips-rhel5 01 Jul 2008
+    usage: ssh [-1246AaCfgkMNnqsTtVvXxY] [-b bind_address] [-c cipher_spec]
+           [-D [bind_address:]port] [-e escape_char] [-F configfile]
+           [-i identity_file] [-L [bind_address:]port:host:hostport]
+           [-l login_name] [-m mac_spec] [-O ctl_cmd] [-o option] [-p port]
+           [-R [bind_address:]port:host:hostport] [-S ctl_path]
+           [-w tunnel:tunnel] [user@]hostname [command]
+
+
+
+2.2.2 /etc/ssh/sshd_config文件详解
+
+   
+=============================================================================
+#	$OpenBSD: sshd_config,v 1.73 2005/12/06 22:38:28 reyk Exp $
+
+# This is the sshd server system-wide configuration file.  See
+# sshd_config(5) for more information.
+
+# This sshd was compiled with PATH=/usr/local/bin:/bin:/usr/bin
+
+# The strategy used for options in the default sshd_config shipped with
+# OpenSSH is to specify options with their default value where
+# possible, but leave them commented.  Uncommented options change a
+# default value.
+
+#Port 22                            #设置OpenSSH服务器监听的端口号,默认为22
+#Protocol 2,1
+Protocol 2
+#AddressFamily any
+#ListenAddress 0.0.0.0              #设置OpenSSH服务器绑定的IP地址
+#ListenAddress ::
+
+# HostKey for protocol version 1  
+#HostKey /etc/ssh/ssh_host_key      #设置包含计算机私有主机密钥的文件
+# HostKeys for protocol version 2
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_dsa_key
+
+# Lifetime and size of ephemeral version 1 server key
+#KeyRegenerationInterval 1h
+#ServerKeyBits 768                  #设置服务器密钥的位数，最小值为512，默认为为1024
+
+# Logging
+# obsoletes QuietMode and FascistLogging
+#SyslogFacility AUTH                #设置在记录来自sshd的消息的时候，是否给出设备代码
+SyslogFacility AUTHPRIV
+#LogLevel INFO                      #设置记录sshd日志消息的级别
+
+# Authentication:
+
+#LoginGraceTime 2m                  #设置如果用户不能成功登陆，在切断连接之前服务器需要等待的时间
+#PermitRootLogin yes                #设置root用户是否能够使用ssh登录
+#StrictModes yes                    #设置在接收登录请求之前是否检查用户主目录和rhosts文件的权限和所有权。
+#MaxAuthTries 6
+
+#RSAAuthentication yes              #设置是否允许只有RSA安全验证
+#PubkeyAuthentication yes
+#AuthorizedKeysFile	.ssh/authorized_keys
+
+# For this to work you will also need host keys in /etc/ssh/ssh_known_hosts
+#RhostsRSAAuthentication no         #设置是否允许用rhosts或/etc/hosts.equiv加上RSA进行安全验证
+# similar for protocol version 2
+#HostbasedAuthentication no
+# Change to yes if you don't trust ~/.ssh/known_hosts for
+# RhostsRSAAuthentication and HostbasedAuthentication
+#IgnoreUserKnownHosts no            #设置sshd是否在进行RhostsRSAAuthentication安全验证的时候忽略用户的~/.ssh/known_hosts                            
+# Don't read the user's ~/.rhosts and ~/.shosts files
+#IgnoreRhosts yes                   #设置RhostsRSA验证和Hostbased验证的时候是否使用.rhosts和.shosts文件
+
+# To disable tunneled clear text passwords, change to no here!
+#PasswordAuthentication yes
+#PermitEmptyPasswords no            #设置是否允许用户口令为空字符的账号登陆，默认是no
+PasswordAuthentication yes          #设置是否允许口令验证
+
+# Change to no to disable s/key passwords
+#ChallengeResponseAuthentication yes
+ChallengeResponseAuthentication no
+
+
+//设置Kerberos选项
+# Kerberos options
+#KerberosAuthentication no
+#KerberosOrLocalPasswd yes
+#KerberosTicketCleanup yes
+#KerberosGetAFSToken no
+
+
+//设置GSSAPI选项
+# GSSAPI options
+#GSSAPIAuthentication no
+GSSAPIAuthentication yes
+#GSSAPICleanupCredentials yes
+GSSAPICleanupCredentials yes
+
+# Set this to 'yes' to enable PAM authentication, account processing, 
+# and session processing. If this is enabled, PAM authentication will 
+# be allowed through the ChallengeResponseAuthentication mechanism. 
+# Depending on your PAM configuration, this may bypass the setting of 
+# PasswordAuthentication, PermitEmptyPasswords, and 
+# "PermitRootLogin without-password". If you just want the PAM account and 
+# session checks to run without PAM authentication, then enable this but set 
+# ChallengeResponseAuthentication=no
+#UsePAM no
+UsePAM yes
+
+# Accept locale-related environment variables
+AcceptEnv LANG LANGUAGE LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES 
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT 
+AcceptEnv LC_IDENTIFICATION LC_ALL
+#AllowTcpForwarding yes
+#GatewayPorts no
+#X11Forwarding no          #设置是否允许X11转发
+X11Forwarding yes
+#X11DisplayOffset 10
+#X11UseLocalhost yes
+#PrintMotd yes             #设置sshd是否在用户登录的时候显示/etc/motd文件中的信息
+#PrintLastLog yes
+#TCPKeepAlive yes
+#UseLogin no
+#UsePrivilegeSeparation yes
+#PermitUserEnvironment no
+#Compression delayed
+#ClientAliveInterval 0
+#ClientAliveCountMax 3      #指定从客户端断开连接之前，在没有接收到响应时能够发送客户端活跃消息的次数。这个参数设置允许超时的次数。
+#ShowPatchLevel no
+#UseDNS yes
+#PidFile /var/run/sshd.pid
+#MaxStartups 10             #指定SSH守护进程并发未经身份验证连接的最大数量，默认值是10
+#PermitTunnel no
+#ChrootDirectory none
+
+# no default banner path
+#Banner /some/path
+
+# override default of no subsystems
+Subsystem	sftp	/usr/libexec/openssh/sftp-server
+
+=================================================================================================
+
+    。其它参数：
+    
+      。AllowGroups:  设置允许连接的组群
+
+      。AllowUsers:   设置允许连接的用户
+
+      。DenyGroups:   设置拒绝连接的组群
+
+      。DenyUsers:    设置拒绝连接的用户
+
+                      如果模式写为：user@host 则user和host将同时检查。
+      
+      。MaxSessions 10: 指定允许每个网络连接打开的最大会话数，默认为10
+
+
+=================================================================================================
+
+
+2.2.3 OpenSSH服务器配置实例
+
+    在公司内部配置一台OpenSSH服务器，为公司网络内的客户端计算机提供远程SSH登录服务，具体参数如下：
+
+    。OPenSSH服务器IP地址：192.168.0.242
+
+    。OpenSSH服务器监听端口：22
+
+    。不允许空口令用户登录
+
+    。禁止用户list登录
+
+    -->vim /etc/ssh/sshd_config，内容如下：
+
+    port 22
+    ListenAddress 192.168.0.242
+    Protocol 2 
+    SyslogFacility AUTHPRIV
+    PermitEmptyPasswords no
+    PasswordAuthentication yes
+    DenyUsers lisi
+    ChallengeResponseAuthentication no
+    GSSAPIAuthentication yes
+    GSSAPICleanupCredentials yes
+    UsePAM yes
+    AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+    AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+    AcceptEnv LC_IDENTIFICATION LC_ALL LANGUAGE
+    AcceptEnv XMODIFIERS
+    X11Forwarding yes
+    Subsystem sftp     /usr/libexec/openssh/sftp-server
+
+
+    2.2.4 控制sshd服务
+
+        利用service和chkconfig命令可以控制sshd服务的状态，以及当OpenSSH服务启动时自动启动服务
+
+	1.启动sshd服务
+
+	-->service sshd start
+
+	2.查看sshd服务运行状态
+
+	-->service sshd status 
+
+	3.停止sshd服务
+
+	-->service sshd stop
+
+	4.重新启动sshd服务
+
+	-->sservice sshd restart
+
+	5.重新加载sshd服务配置
+
+	-->service sshd reload
+
+	6.开机自动启动sshd服务
+
+	-->chkconfig sshd on
+
+	-->chkconfig --list sshd
+
+2.3 配置OpenSSH客户端
+
+2.3.1 Linux客户端连接
+
+    1.安装软件包
+
+    -->rpm -q openssh-clients
+
+    -->rpm -ivh openssh-clients -y   
+
+    -->rpm -ivh openssh  -y
+
+    2.远程登录程序
+
+    命令语法：ssh [选项] [用户@主机[命令]]
+
+                              ssh命令选项含义
+     -----------------------------------------------------------------------------
+                选项                             选项含义
+     -----------------------------------------------------------------------------
+        -1                       强制使用SSH v1协议
+
+
+
+
+
+
+
+    
+
+     

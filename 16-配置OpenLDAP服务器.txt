@@ -1,0 +1,600 @@
+                                                  第16章   配置OpenLDAP服务器
+
+
+16.1 LDAP简介
+
+16.12.1 什么是LDAP
+
+    目录具有以下两个主要组成部分
+
+    。数据库，数据库是分布式的，且拥有一个描述数据的规则
+
+    。访问和处理数据的各种协议
+
+    LDAP(Lightweight directory Access Protocol，轻量级目录访问协议)：是基于X.500标准的目录服务在TCP/IP协议上实现的，
+
+它是对X.500的目录协议的移植，但是简化了实现方法。LDAP是一个用来发布目录信息到许多不同资源的协议。
+
+    LDAP是实现了指定的数据结构的存储，它是一种特殊的数据库.
+
+
+16.1.2 LDAP协议
+
+    LDAP服务器通常使用LDAP协议提供目录服务，LDAP协议是跨平台的标准的协议。最常使用的则是V2和V3两个版本。
+
+16.1.3 LDAP使用优势
+
+    1.跨平台
+
+    2.费用及维护
+
+    3.复制技术
+
+    4.允许使用ACL
+
+16.1.4 LDAP基本模型
+
+    LDAP的级别模型包括：
+
+    1.信息模型
+
+    2.命名模型
+
+     带路径的文件名：DN
+
+     文件名就是RDN
+
+    3.功能模型
+
+    4.安全模型
+
+    (1)身份认证
+
+     在LDAP中提供了匿名认证、基本认证和SASL认证3种认证机制。
+
+    (2)通信安全
+
+    (3)访问控制
+
+
+16.1.5 OpenLDAP简介
+
+    OpenLDAP是LDAP应用和开发工具的自由和开源套件，用于在网络上访问目录服务。在其OpenLDAP许可证下发型，
+
+并已经被包含在众多的流行的Linux发型版中。
+ 
+    OpenLDAP主要包括以下3个部分
+
+    。slapd:独立的LDAP守护服务
+
+    。实现LDAP协议的库
+
+    。工具软件和示例客户端
+
+
+16.2 LDIF简介
+
+16.2.1 什么是LDIF
+
+   LDIF是LDAP约定的记录交换格式，以平面文本的形式存在，是大部分LDAP内容交换的基础，如复制、添加、修改等操作，
+
+都是基于LDIF文件进行操作。
+
+    LDAP目录使用对象类来定义运行哪一类的对象使用什么属性。条目中的记录通过对象类实现分类。
+
+16.2.2 对象类
+
+    在LDAP中，一个条目必须包含一个对象类属性，且需要赋予至少一个值，每一个值将用作一条LDAP条目进行数据存储的模板。
+
+    模板中包含了一个条目必须被赋值的属性和可选的属性。
+
+    对象类有3种类型：
+
+    。结构型：比如person和organizationalUnit
+
+    。辅助型：比如extensibeObject
+
+    。抽象型：比如top，抽象型的对象类不能直接使用。
+
+16.2.3 属性
+
+    属性(Attribute)类似于程序设计中的变量，可以被赋值。
+
+
+    注意：对象类是一种特殊的属性，它包含其他用到的属性以及其自身。
+
+
+16.3 OpenLDAP服务器安装和配置
+
+
+16.3.1  安装OpenLDAP服务器软件包
+
+     环境：centos 6.5
+
+     。查看是否默认安装LDAP相关的包
+
+     -->rpm -qa|grep openldap-servers
+ 
+     -->rpm -qa|grep openldap-devel
+
+     -->rpm -qa|grep openldap-clients
+
+     。安装LDAP
+
+     -->yum install cyrus-sasl-* -y
+
+     -->yum install openldap-servers openldap-devel openldap-clients -y   (或者yum install openldap-* -y)
+ 
+     
+16.3.2 /etc/openldap/slapd.conf文件详解
+
+     。生成LDAP配置文件
+
+     -->cp /usr/share/openldap-servers/slapd.conf.obsolete /etc/openldap/slapd.conf
+
+     。查看LDAP配置文件
+
+     -->vim /etc/openldap/slapd.conf 
+
+--------------------------------------------------------------------------------------------
+#
+# See slapd.conf(5) for details on configuration options.
+# This file should NOT be world readable.
+#
+
+#设置包含schema文件，schema文件都存储在/etc/openldap/schema目录中
+
+include         /etc/openldap/schema/corba.schema
+include         /etc/openldap/schema/core.schema
+include         /etc/openldap/schema/cosine.schema
+include         /etc/openldap/schema/duaconf.schema
+include         /etc/openldap/schema/dyngroup.schema
+include         /etc/openldap/schema/inetorgperson.schema
+include         /etc/openldap/schema/java.schema
+include         /etc/openldap/schema/misc.schema
+include         /etc/openldap/schema/nis.schema
+include         /etc/openldap/schema/openldap.schema
+include         /etc/openldap/schema/ppolicy.schema
+include         /etc/openldap/schema/collective.schema
+
+# Allow LDAPv2 client connections.  This is NOT the default.
+allow bind_v2
+
+# Do not enable referrals until AFTER you have a working directory
+# service AND an understanding of referrals.
+#referral       ldap://root.openldap.org
+
+pidfile         /var/run/openldap/slapd.pid
+argsfile        /var/run/openldap/slapd.args
+
+# Load dynamic backend modules
+# - modulepath is architecture dependent value (32/64-bit system)
+# - back_sql.la overlay requires openldap-server-sql package
+# - dyngroup.la and dynlist.la cannot be used at the same time
+
+
+#指定动态加载的后端模块，模块路径为/usr/lib/openldap或/usr/lib64/openldap，其中dyngroup.la
+#和dynlist.la模块不能同时使用
+
+# modulepath /usr/lib/openldap
+# modulepath /usr/lib64/openldap
+# moduleload accesslog.la
+# moduleload auditlog.la
+# moduleload back_sql.la
+# moduleload chain.la
+# moduleload collect.la
+# moduleload constraint.la
+# moduleload dds.la
+# moduleload deref.la
+# moduleload dyngroup.la
+# moduleload dynlist.la
+# moduleload memberof.la
+# moduleload pbind.la
+# moduleload pcache.la
+# moduleload ppolicy.la
+# moduleload refint.la
+# moduleload retcode.la
+# moduleload rwm.la
+# moduleload seqmod.la
+# moduleload smbk5pwd.la
+# moduleload sssvlv.la
+# moduleload syncprov.la
+# moduleload translucent.la
+# moduleload unique.la
+# moduleload valsort.la
+
+# The next three lines allow use of TLS for encrypting connections using a
+# dummy test certificate which you can generate by running
+# /usr/libexec/openldap/generate-server-cert.sh. Your client software may balk
+# at self-signed certificates, however.
+TLSCACertificatePath /etc/openldap/certs
+TLSCertificateFile "\"OpenLDAP Server\""
+TLSCertificateKeyFile /etc/openldap/certs/password
+
+# Sample security restrictions
+#       Require integrity protection (prevent hijacking)
+#       Require 112-bit (3DES or better) encryption for updates
+#       Require 63-bit encryption for simple bind
+# security ssf=1 update_ssf=112 simple_bind=64
+# Sample access control policy:
+#       Root DSE: allow anyone to read it
+#       Subschema (sub)entry DSE: allow anyone to read it
+#       Other DSEs:
+#               Allow self write access
+#               Allow authenticated users read access
+#               Allow anonymous users to authenticate
+#       Directives needed to implement policy:
+
+#设置访问控制策略
+# access to dn.base="" by * read
+# access to dn.base="cn=Subschema" by * read
+# access to *
+#       by self write
+#       by users read
+#       by anonymous auth
+#
+# if no access controls are present, the default policy
+# allows anyone and everyone to read anything but restricts
+# updates to rootdn.  (e.g., "access to * by * read")
+#
+# rootdn can always read and write EVERYTHING!
+
+# enable on-the-fly configuration (cn=config)
+
+
+#启用即时配置
+database config
+access to *
+        by dn.exact="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
+        by * none
+
+# enable server status monitoring (cn=monitor)
+
+#启用服务器状态监控
+database monitor
+access to *
+        by dn.exact="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read
+        by dn.exact="cn=Manager,dc=my-domain,dc=com" read
+        by * none
+#######################################################################
+# database definitions
+#######################################################################
+#LDAP数据库定义
+
+database        bdb
+suffix          "dc=my-domain,dc=com"
+checkpoint      1024 15
+rootdn          "cn=Manager,dc=my-domain,dc=com"
+# Cleartext passwords, especially for the rootdn, should
+# be avoided.  See slappasswd(8) and slapd.conf(5) for details.
+# Use of strong authentication encouraged.
+# rootpw                secret
+# rootpw                {crypt}ijFYNcSNctBYg
+
+# The database directory MUST exist prior to running slapd AND 
+# should only be accessible by the slapd and slap tools.
+# Mode 700 recommended.
+directory       /var/lib/ldap
+
+
+#为数据库索引维护
+# Indices to maintain for this database
+index objectClass                       eq,pres
+index ou,cn,mail,surname,givenname      eq,pres,sub
+index uidNumber,gidNumber,loginShell    eq,pres
+index uid,memberUid                     eq,pres,sub
+index nisMapName,nisMapEntry            eq,pres,sub
+
+#设置数据库的复制
+# Replicas of this database
+#replogfile /var/lib/ldap/openldap-master-replog
+#replica host=ldap-1.example.com:389 starttls=critical
+#     bindmethod=sasl saslmech=GSSAPI
+#     authcId=host/ldap-master.example.com@EXAMPLE.COM
+                                                                                                               
+--------------------------------------------------------------------------------------------
+
+
+    1.模式(schema)
+
+    openLDAP一般默认有多个模式，存储在/etc/openldap/schema目录中。其中LDAP V3中必须要有的模式是：
+
+    /etc/openldap/schema/core.schema文件，它给出了LDAP V3中最基本的对象类和属性定义。
+
+    -->ls /etc/openldap/schema/
+
+collective.ldif    core.schema     dyngroup.ldif         java.schema  openldap.ldif    ppolicy.schema
+collective.schema  cosine.ldif     dyngroup.schema       misc.ldif    openldap.schema
+corba.ldif         cosine.schema   inetorgperson.ldif    misc.schema  pmi.ldif
+corba.schema       duaconf.ldif    inetorgperson.schema  nis.ldif     pmi.schema
+core.ldif          duaconf.schema  java.ldif             nis.schema   ppolicy.ldif
+
+    2.参数
+
+    在/etc/openldap/slapd.conf文件中可以添加和修改的主要参数
+
+    。allow bind_v2：允许LDAP v2客户端进行连接
+
+    。pidfile   /var/run/openldap/slapd.pid：设置OpenLDAP的PID文件
+
+    。argsfile  /var/run/openldap/slapd.args: 设置包含当前正在运行的slapd进程锁用到的命令行参数的文件
+
+    。database bdb：设置OpenLDAP使用的数据库
+
+    。suffix     "dc=my-domain,dc=com" :设置LDAP目录后缀
+
+    。rootdn     "cn=MAnager,dc=my-domain,dc=com": 社会自LDAP目录管理员
+
+    。root pw secret： 设置管理员密码，这里使用明文的密码"secret"，这样设置不安全，最好使用加密密码。
+
+    。directory /var/lib/ldap: 设置LDAP数据库目录，改目录权限为700
+
+    。index.objectClass:设置目录项索引，可以根据需要设置相关索引，以加快查询速度。
+
+
+
+    3.访问控制策略
+
+#设置访问控制策略
+# access to dn.base="" by * read
+# access to dn.base="cn=Subschema" by * read
+# access to *
+#       by self write      #允许自己写访问
+#       by users read      #允许通过验证的用户读访问
+#       by anonymous auth  #允许匿名用户进行身份验证
+
+
+
+以下是访问控制侧露的示例内容：
+access to attr=userPassword
+          by self write
+	  by anonymous auth  #只能由自己修改，允许匿名用户进行身份验证。
+
+
+access to attr-mail
+          by dn="cn-Manager,dc=sh,dc=com" writemail
+	  by self write
+	  by anonymous auth  #只能由自己修改，允许匿名用户进行身份验证
+
+access to dn=".*,dc=sh,dc=com"
+          by self write
+	  by * read          #允许所有人查询，不受控制访问限制的信息。
+
+
+16.3.3 设置LDAP管理员密码
+
+    命令语法：slappasswd[选项]
+
+                      ss=kaooasswd命令选项含义
+    ------------------------------------------------------------------------------
+     -h<加密方案>    指定加密方案，它支持{CRYPT},{MD5}、{SSHA}和{SHA}等方式，默认
+                     值是{SSHA}
+    ------------------------------------------------------------------------------
+     -v              启用详细信息模式
+     ------------------------------------------------------------------------------
+     -g              生成随机密码
+    ------------------------------------------------------------------------------
+     -s<密码>        生成哈希密码
+    ------------------------------------------------------------------------------
+     -u              生成RFC2307值(默认)
+    ------------------------------------------------------------------------------
+     -c  crypt-salt-format    生成{CRYPT}密码
+    ------------------------------------------------------------------------------
+    
+    例16.1：生成SSHA方案密码
+
+    -->slappasswd
+
+       New password:                #输入LDAP管理员密码
+       Re-enter new password: 
+
+       {SSHA}WS7H02m0XL6vS3CxMRl8jhXxyDnGQ95b  #此行就是LDAP管理员的加密密码（SSHA加密方案）
+
+    例16.2：生成随机密码
+
+    -->slappasswd -g
+
+       /w4g/kuJ
+
+
+    例16.3：生成哈希密码
+
+    -->slappasswd -s redhat
+
+       {SSHA}5WJs8m+rUG6pJaFIEnMS/yaToSnamYCH
+
+
+    例16.4：生成CRYPT方案密码
+
+    -->slappasswd -c crypt-salt-format
+
+       New password:                #输入LDAP管理员密码
+       Re-enter new password:       #再次输入LDAP管理员密码
+       {CRYPT}crM7iGWT/1u.Y
+
+    例16.5：生成MD5方案密码
+
+    -->slappasswd -h {MD5}
+
+       New password: 
+       Re-enter new password: 
+       {MD5}b+K12rHkQG1FUDqjecAJyw==   #这行就是LDAP管理员的加密密码（MD5）加密方案
+
+ 
+16.3.4 OpenLDAP服务器配置实例
+
+    在公司内部配置一台OpenLDAP服务器，为公司网络内的客户端计算机提供目录服务，具体参数如下：
+
+    。OpenLDAP目录管理员：Manager
+
+    。OpenLDAP目录管理员密码使用MD5加密
+
+    。OpenLDAP使用的数据库：bdb
+
+    。允许LDAPv2的客户端进行连接
+
+    。OpenLDAP数据库路径：/var/lib/ldap
+
+    1.复制模板文件
+
+    -->cp /usr/share/openldap-servers/slapd.conf.obsolete /etc/openldap/slapd.conf
+
+
+    2.设置LDAP管理员密码
+
+    -->slappasswd -h {MD5}
+
+       New password: 
+       Re-enter new password: 
+       {MD5}b+K12rHkQG1FUDqjecAJyw== 
+
+    3.编辑/etc/openldap/slapd.conf文件
+
+    -->vim /etc/openldap/slapd.conf
+
+atabase monitor
+access to *
+        by dn.exact="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read
+        by dn.exact="cn=Manager,dc=sh,dc=com" read   #修改此行dc=sh
+        by * none
+
+#######################################################################
+# database definitions
+#######################################################################
+
+database        bdb
+suffix          "dc=sh,dc=com"               #修改此行dc=sh,dc=com
+checkpoint      1024 15
+rootdn          "cn=Manager,dc=sh,dc=com"    #修改此行cn=Manager,dc=sh,dc=com
+rootpw   {MD5}b+K12rHkQG1FUDqjecAJyw==       #这个密码为第2步生成的密码
+
+    其它配置默认.
+
+    4.复制DB_CONFIG文件
+
+    使用以下命令复制/usr/share/openldap-servers/DB_CONFIG.example文件为/var/lib/ldap/DB_CONFIG
+
+    -->cp /usr/share/openldap-servers/DB_CONFIG.example  /var/lib/ldap/DB_CONFIG
+
+    5.设置/var/lib/ldap目录所有者
+
+    使用以下命令递归设置/var/lib/ldap目录用户所有者和组群所有者为ldap
+
+    -->chown -R ldap.ldap /var/lib/ldap
+
+    6.删除/etc/openldap/slapd.d目录内的所有内容
+
+      否则不能完成LDAP服务的数据添加和数据查找
+
+    -->rm -rf /etc/openldap/slapd.d/*
+
+
+    7.启动slapd服务
+
+    -->servuce skaod start
+
+ls: 无法访问/etc/openldap/slapd.d//cn=config/olcDatabase*.ldif: 没有那个文件或目录
+
+
+    8.查看slapd进程
+
+    -->netstat -alpo|grep slapd
+
+tcp        0      0 *:ldap                      *:*                         LISTEN      2431/slapd          off (0.00/0/0)
+tcp        0      0 *:ldap                      *:*                         LISTEN      2431/slapd          off (0.00/0/0)
+unix  2      [ ACC ]     STREAM     LISTENING     31051  2431/slapd          /var/run/ldapi
+unix  2      [ ]         DGRAM                    31045  2431/slapd          
+
+    9.测试OpenLDAP配置文件
+
+    -->slapd -T test -f /etc/openldap/slapd.conf 
+
+       config file testing succeeded     #代表配置文件正确
+ 
+    10.检测服务设置
+
+    如果对目录树的设置不正确，就算slapd服务正常启动，也不能完成OpenLDAP服务的数据添加和数据查找功能
+
+    -->ldapsearch -x -b "-s base '(objectclass=*)' namingContexts"
+
+ldapsearch -x -b "-s base '(objectclass=*)' namingContexts"
+# extended LDIF
+#
+# LDAPv3
+# base <-s base '(objectclass=*)' namingContexts> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# search result
+search: 2
+result: 34 Invalid DN syntax
+text: invalid DN
+
+# numResponses: 1
+
+16.3.5 控制slapd服务
+
+    使用service和chkconfig命令可以控制slapd服务的状态，以及当OpenLDAP服务器启动时自动启动服务
+
+    1.启动slapd服务
+
+    -->service slapd start
+
+    2.查看slapd服务运行状态
+
+    -->service slapd status 
+
+    slapd (pid  2431) 正在运行...
+
+    3.停止slapd服务
+
+    -->service slapd stop
+
+    4.重启启动slapd服务
+
+    -->service slapd restart
+
+    5.开机自动启动slapd服务
+
+    -->chkconfig slapd on
+
+    -->chkconfig --list slapd
+
+       slapd          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+
+16.3.6  检查OpenLDAP配置文件
+
+    使用slaptest命令可以检查OpenLDAP配置文件的一致性。
+
+    命令语法：slaptest [选项]
+
+                      slaptest命令选项含义
+    -------------------------------------------------------------------------
+        选项                              选项含义
+    -------------------------------------------------------------------------
+     -n<数据量数量>          打开并测试配置文件中列出的指定数量的数据库
+    -------------------------------------------------------------------------
+     -Q                      安静模式
+    -------------------------------------------------------------------------
+     -d<调试级别>            使用指定的调试级别锁定义的调试信息
+    -------------------------------------------------------------------------
+     -f<slapd.conf文件>      指定替代的slapd.conf文件
+    -------------------------------------------------------------------------
+     -F<配置目录>            指定一个配置目录  
+    -------------------------------------------------------------------------
+     -u                      启用dry-run模式
+    -------------------------------------------------------------------------
+     -v                      启用详细模式
+    -------------------------------------------------------------------------
+
+    例：16.6 检查OpenLDAP配置文件/etc/openldap/slapd.conf文件
+
+    -->slaptest -f /etc/openldap/slapd.conf -v
+
+       config file testing succeeded
+
+

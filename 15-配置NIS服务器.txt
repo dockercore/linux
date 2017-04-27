@@ -1,0 +1,1746 @@
+                                     第15章 配置NIS服务器
+
+
+
+15.1 NIS简介
+
+15.11.1  什么是NIS
+
+    NIS(Network Information Service,网络信息服务)是Sun公司在1985年开发的一项目录服务
+
+技术，用来控制系统管理数据库。NIS简化了UNIX和Linux系统桌面客户端的管理共走，客户端
+
+利用它可以使用中心服务器的管理文件。桌面系统的用户无需建立他们自己的/etc/passwd，他们只
+
+简单地使用维护在NIS服务器的文件即可。
+
+
+    NIS用于提供客户端的使用者进行相关参数查询，比如UShi用着的账户、密码、UID、主目录和Shell
+
+等信息，都可以通过NIS服务器来查询。
+
+
+15.1.2 NIS主机类型
+
+    NIS服务器的作用是充当主机配置信息的中央数据库，在NIS环境中有主NIS服务器、 从NIS服务器以及
+
+NIS客户机3种类型的主机。
+
+
+    1. 主NIS服务器
+
+    主NIS服务器会维护所有NIS客户机机所使用的文件。比如passwd、group及许多及其他NIS客户机所使用的
+
+文件，都被保存到主NIS服务器上，主NIS服务器上保存着这些信息的权威副本。
+
+    2. 从NIS服务器
+
+    从NIS服务器用于维护主NIS服务器的数据文件副本。从NIS服务器提供了一种荣誉，减轻主NIS服务器的工作负荷。
+
+    3. NIS客户机
+
+    NIS客户机通过NIS服务器来完成登录时的身份验证过程。
+
+
+15.2 NIS服务器安装和配置
+
+15.2.1 安装NIS服务器软件包
+
+    -->rpm -q ypserv
+
+       package ypserv is not installed
+
+    -->yum install ypserv -y
+
+
+15.2.2 /etc/ypserv.conf文件详解
+
+    该文件由【参数设置】和【访问控制设置】两部分组成。
+
+    默认/etc/ypserv.conf内容如下：
+
+    -->more /etc/ypserv.conf
+
+
+//第一部分： 参数设置
+
+dns: no
+
+files: 30
+
+# slp: no
+# slp_timeout: 3600
+xfr_check_port: yes
+
+
+
+//第二部分：访问控制设置
+
+
+# Host                     : Domain  : Map              : Security 
+#
+# *                        : *       : passwd.byname    : port 
+# *                        : *       : passwd.byuid     : port
+
+
+*			   : *       : shadow.byname    : port
+*			   : *       : passwd.adjunct.byname : port
+
+# *                        : *       : *                : none
+
+  
+    1. 参数设置
+
+    。dns:no  :设置是否使用DNS进行解析
+
+    。files:30: 设置将30个数据库资料读入高速缓存中。
+
+    。slp:no:   是否需要使用SLP服务
+
+    。slp_timeout:3600 :警告多少秒应该使用SLP重新注册ypserv
+
+    。xfr_check_port:yes :用于主从NIS服务器环境下，主从NIS服务器同步数据的时候使用的
+
+      端口号是否小于1024
+
+
+    2.访问控制设置
+
+    # Host                     : Domain  : Map              : Security 
+
+
+                         访问控制
+    -------------------------------------------------------------------------
+         字段                               描述
+    -------------------------------------------------------------------------
+         Host               客户端，可以使用IP地址或者是网络地址
+    --------------------------------------------------------------------------
+         Domain             NIS域名
+    --------------------------------------------------------------------------
+         Map                可用映射（数据库)名称, "*" 代表所有的映射  
+    --------------------------------------------------------------------------
+         Security           安全性设置，有以下3种方式：
+
+	                    none:可以连接NIS服务器
+
+			    port：只允许端口号小于1024才能连接NIS服务器
+
+			    deny: 拒绝连接NIS服务器
+    --------------------------------------------------------------------------
+
+    以下是NIS访问控制设置举例：
+
+    127.0.0.0/255.0.0.0          :*       :　　　　　*    :none
+
+    表示所有来自本地的客户单进行产需请求
+
+
+    192.168.0.0/255.255.255.0    :*       :          *     :none
+
+    表示允许192.168.0.0/255.255.255.0网络的客户端进行查询请求
+
+
+    *                            :*       :          *     :deny
+    
+    表示拒绝所有客户端继续拧查询请求
+
+
+15.2.3 设置NIS域名
+
+
+    要设置NIS域名，需要使用nisdomainname命令。如果需要永久设置，则编辑/etc/rc.d/rc.local文件，
+
+在该文件内添加nisdomainname命令语句。
+
+    1.使用nisdomainname命令
+
+    使用nisdomainname命令可以显示或设置系统的NIS/YP域名
+
+    命令语法：
+
+    nisdomainname [NISy域名]
+
+    例15.1: 设置NIS域名为fulong
+
+    -->nisdomainname fulong
+
+
+    例15.2 显示NIS域名
+
+    -->nisdomainname 
+
+       fulong
+
+    2.编辑/etc/rc.d/rc.local文件
+
+    nisdomainname命令设置NIS域名只是临时生效，重启失效，编辑/etc/rc.d/rc.local文件，添加NIS域名
+
+    -->vim /etc/rc.d/rc.local
+
+       /bin/nisdomainname fulong  #在文件最后添加
+
+
+15.2.4 创建NIS数据库
+
+    使用/usr/lib64/ypinit命令可以安装和建立NIS数据库
+
+    命令语法：
+
+    /usr/lib64/yp/ypinit [选项]
+
+
+                         /usr/lib64/yp/ypinit命令选项含义
+    -----------------------------------------------------------------------------
+       选项                                     选项信息
+    -----------------------------------------------------------------------------
+       -m                           创建一个主NIS服务器上的数据库
+    -----------------------------------------------------------------------------
+       -s <主NIS服务器>             设置一个从NIS服务器，主从NIS服务器上复制数据库
+    ------------------------------------------------------------------------------
+
+    注意：使用/usr/lib64/yp/ypinit命令时一定要使用绝对路径，不能只使用ypinit
+
+    例15.3：创建NIS数据库
+
+    -->service ypserv start
+
+       启动 YP 服务器的服务：                                     [确定]
+
+
+    -->/usr/lib64/yp/ypinit -m  (此处先不用创建，后面有详细说明)
+
+
+    。查看生成的目录和文件
+
+    -->ls /var/yp/fulong/
+
+group.bygid   hosts.byaddr  mail.aliases  passwd.byname  protocols.byname    rpc.byname    services.byname         ypservers
+group.byname  hosts.byname  netid.byname  passwd.byuid   protocols.bynumber  rpc.bynumber  services.byservicename
+
+
+                                 NIS映射描述
+    -----------------------------------------------------------------------------
+      映射                                    描述
+    -----------------------------------------------------------------------------
+     group.bygid                   包含以组群ID做为关键字的组安全信息
+    -----------------------------------------------------------------------------
+     group.byname                  包含以组群名作为关键字的组安全信息
+    -----------------------------------------------------------------------------
+     passwd.byname                 包含以用户名作为关键字的口令信息
+    -----------------------------------------------------------------------------
+     passwd.byuid                  与passwd.byname相同，但关键字为用户ID
+    -----------------------------------------------------------------------------
+     hosts.byname                  包含计算机名和IP地址，以计算机名作为关键字
+    -----------------------------------------------------------------------------
+     hosts.byaddr                  包含计算机名和IP地址，以IP地址作为关键字
+    -----------------------------------------------------------------------------
+     protocols.bynumber            与protocols.byname相同，但关键字为协议号
+    -----------------------------------------------------------------------------
+     protocols.byname              包含网络可识别的网络协议
+    -----------------------------------------------------------------------------
+     services.byname               列出网络可识别的Internet服务，关键字为端口或协议
+    -------------------------------------------------------------------------------
+     rpc.bynumber                  包含系统可识别的RPC的程序号和名称，关键字为RPC程序号
+    -----------------------------------------------------------------------------------
+     ypservers                     列出网络可识别的NIS服务器
+    ------------------------------------------------------------------------------------
+     mail.aliases                  包含别名和邮件地址，以别名作为关键字
+    ------------------------------------------------------------------------------------
+     netid.byname                  用于UNIX形式的验证。包含计算机名和邮件地址(包括域名)
+                                   如果存在可用的netid文件，则除了查询通过其他文件提供的
+				   数据外，还会查询该文件
+     ------------------------------------------------------------------------------------
+
+15.2.5 NIS服务器配置实例
+
+    在公司内部配置一台NIS服务器，为公司网络内客户端计算机提供身份验证服务，具体参数如下：
+
+    。NIS服务器主机名：Master1
+
+    。NIS服务器IP地址：192.168.0.203
+
+    。NIS域名：fulong
+
+    。不使用DNS进行解析
+
+    。设置将30个数据库资料读入高速缓存中
+
+    。不需要使用SLP服务
+
+    。经过3600秒使用SLP重新注册ypserv
+
+    主从NIS服务器同步数据的时候使用的端口号小于1024
+
+    1.创建系统用户zhangsan
+
+    -->useradd zhangsan
+
+    -->passwd zhangsan
+
+    2.设置NIS域名
+
+    -->nisdomainname  fulong
+
+    。修改/etc/rc.d/rc.local
+
+    -->vim /etc/rc.d/rc.local
+
+    /bin/nisdomainname fulong  #添加
+
+
+    3.编辑/etc/sysconfig/netwok文件
+
+    -->vim /etc/sysconfig/network
+
+    NETWORKING=yes
+    HOSTNAME=Master1
+    NISDOMAINAME=fulong   #添加
+    GATEWAY=192.168.0.1
+
+    4.编辑/etc/ypserv.conf文件
+
+    -->vim /etc/ypserv.conf 内容如下：
+
+dns: no
+files: 30
+
+slp: no
+slp_timeout: 3600
+
+xfr_check_port: yes
+
+
+*                          : *       : shadow.byname    : port
+*                          : *       : passwd.adjunct.byname : port
+
+127.0.0.0/255.0.0.0        : *       :       *          : none
+192.168.0.0/255.255.255.0  : *       :       *          : none
+*                          : *       :       *          : deny
+
+
+    。编辑/etc/hosts文件,并加入其它主机的主机名和IP地址的映射关系
+
+    -->vim /etc/hosts
+
+       127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4  #必须打开这个注释
+       192.168.0.203   Master1  #IP对应的主机名
+       192.168.0.204   Master2  #添加其它主机
+
+
+    。重启网络服务
+
+    -->/etc/init.d/network restart
+
+
+
+    5.启动ypserv服务
+
+    -->service ypserv start
+
+       启动 YP 服务器的服务：                                     [确定]
+
+
+    6.创建NIS数据库
+
+    -->/usr/lib64/yp/ypinit -m
+
+At this point, we have to construct a list of the hosts which will run NIS
+servers.  Master1 is in the list of NIS server hosts.  Please continue to add
+the names for the other hosts, one per line.  When you are done with the
+list, type a <control D>.
+	next host to add:  Master1
+	next host to add:    ------------------------#按Ctrl+D	
+The current list of NIS servers looks like this:
+
+Master1
+
+Is this correct?  [y/n: y]  y  -----------------------#输入y
+We need a few minutes to build the databases...
+Building /var/yp/fulong/ypservers...
+Running /var/yp/Makefile...
+gmake[1]: Entering directory `/var/yp/fulong'
+Updating passwd.byname...
+Updating passwd.byuid...
+Updating group.byname...
+Updating group.bygid...
+Updating hosts.byname...
+Updating hosts.byaddr...
+Updating rpc.byname...
+Updating rpc.bynumber...
+Updating services.byname...
+makedbm: warning: malformed input data (ignored)
+Updating services.byservicename...
+Updating netid.byname...
+Updating protocols.bynumber...
+Updating protocols.byname...
+Updating mail.aliases...
+gmake[1]: Leaving directory `/var/yp/fulong'
+
+Master1 has been set up as a NIS master server.
+
+Now you can run ypinit -s Master1 on all slave server.
+
+
+
+    8.建立信任群
+
+    使用/etc/netgroup文件来建立NIS服务器所信任的客户端，在默认情况下该文件是不存在的。
+
+    文件格式如下：
+
+    host,user,domain
+
+    。host: 主机
+
+    。user: 用户
+
+    。domain:域
+
+    创建空文件：
+
+    -->touch /etc/netgroup
+
+    9.启动ypasswdd服务
+
+    -->service yppasswdd start
+   
+       启动 YP 口令服务：                                         [确定]
+
+    -->service yppasswdd status
+
+       rpc.yppasswdd (pid  4936) 正在运行...
+
+15.2.6 控制ypserv服务
+
+    1.启动ypserv服务
+
+    -->service ypserv start
+
+    2.查看ypserv服务运行状态
+
+    -->service ypserv status
+
+       ypserv (pid  4381) 正在运行..
+
+    3.停止ypserv服务
+
+    -->service ypserv stop 
+
+    4.重新启动ypserv服务
+
+    -->service ypserv restart
+
+       停止 YP 服务器的服务：                                     [确定]
+       启动 YP 服务器的服务：                                     [确定]
+
+    5.重新加载ypserv服务
+
+    -->service ypserv reload
+
+       Reloading securenets and ypserv.conf file:                 [确定]
+
+    6.开机自动启动ypserv服务
+
+    -->chkconfig ypserv on
+
+    -->chkconfig --list ypserv
+
+       ypserv         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+15.3 配置NIS客户端（192.168.0.204）
+
+    -->yum install  yp-tools ypbind glibc -y  （客户端192.168.0.204）
+
+15.3.1 /etc/nsswitch.conf文件详解
+
+     /etc/nsswitch.conf文件是系统数据库和名称服务器交换的配置文件，该文件是通过安装glibc
+
+软件包生成的。
+
+     -->more /etc/nsswitch.conf 
+#
+# /etc/nsswitch.conf
+#
+# An example Name Service Switch config file. This file should be
+# sorted with the most-used services at the beginning.
+#
+# The entry '[NOTFOUND=return]' means that the search for an
+# entry should stop if the search in the previous entry turned
+# up nothing. Note that if the search failed due to some other reason
+# (like no NIS server responding) then the search continues with the
+# next entry.
+#
+# Valid entries include:
+#
+#	nisplus			Use NIS+ (NIS version 3)
+#	nis			Use NIS (NIS version 2), also called YP
+#	dns			Use DNS (Domain Name Service)
+#	files			Use the local files
+#	db			Use the local database (.db) files
+#	compat			Use NIS on compat mode
+#	hesiod			Use Hesiod for user lookups
+#	[NOTFOUND=return]	Stop searching if not found so far
+#
+
+# To use db, put the "db" in front of "files" for entries you want to be
+# looked up first in the databases
+#
+# Example:
+#passwd:    db files nisplus nis
+#shadow:    db files nisplus nis
+#group:     db files nisplus nis
+
+passwd:     files
+shadow:     files
+group:      files
+
+#hosts:     db files nisplus nis dns
+hosts:      files dns
+
+# Example - obey only what nisplus tells us...
+#services:   nisplus [NOTFOUND=return] files
+#networks:   nisplus [NOTFOUND=return] files
+#protocols:  nisplus [NOTFOUND=return] files
+#rpc:        nisplus [NOTFOUND=return] files
+#ethers:     nisplus [NOTFOUND=return] files
+#netmasks:   nisplus [NOTFOUND=return] files     
+
+bootparams: nisplus [NOTFOUND=return] files
+
+ethers:     files
+netmasks:   files
+networks:   files
+protocols:  files
+rpc:        files
+services:   files
+
+netgroup:   nisplus
+
+publickey:  nisplus
+
+automount:  files nisplus
+aliases:    files nisplus
+
+
+    详述文件格式内容
+
+    1.数据库
+
+    /etc/nsswitch.conf文件中可用的数据库如下：
+
+    ----------------------------------------------------------------------------------------
+      数据库                                     描述
+    ----------------------------------------------------------------------------------------
+       aliases              邮件别名，提供了一个全系统的机制来重定向邮件到本地收件人
+    ----------------------------------------------------------------------------------------
+       group                用户组
+    ----------------------------------------------------------------------------------------
+       hosts                主机名称和编号
+    ----------------------------------------------------------------------------------------   
+       ethers               以太网号码
+    -----------------------------------------------------------------------------------------
+       netgroup             网络主机和用户的广泛列表，用于访问规则
+    -----------------------------------------------------------------------------------------
+       networks             网络名称和编号
+    -----------------------------------------------------------------------------------------
+       passwd               用户的密码
+    -----------------------------------------------------------------------------------------
+       protocols            网络协议
+    -----------------------------------------------------------------------------------------
+       rpc                  远程过程调用的名称和号码
+    -----------------------------------------------------------------------------------------
+       services             网络服务
+    ------------------------------------------------------------------------------------------
+       shadow               影子用户密码
+    ------------------------------------------------------------------------------------------
+       publickey            为Secure_RPC使用NFS和NIS+公钥和秘钥
+    -------------------------------------------------------------------------------------------
+       ethers               以太网号码
+    -------------------------------------------------------------------------------------------
+
+
+    2.服务
+
+    服务是指使用不同的数据来源查询需要解析的信息，在/etc/nsswitch.conf文件中指定的服务如下：
+
+                                           服  务
+    -----------------------------------------------------------------------------------------------
+             服务                                             描述
+    -----------------------------------------------------------------------------------------------
+             nisplus                                      使用NIS+(NIS v3)
+    -----------------------------------------------------------------------------------------------
+             nis                                          使用NIS(NIS v2)，也称为YP
+    -----------------------------------------------------------------------------------------------
+             dns                                          使用DNS
+    -----------------------------------------------------------------------------------------------
+             files                                        使用本地文件
+    -----------------------------------------------------------------------------------------------
+             db                                           使用本地数据库文件(.db)
+    -----------------------------------------------------------------------------------------------
+             compat                                       在精简模式使用NIS
+    -----------------------------------------------------------------------------------------------
+             hesiod                                       用户查找使用Hesiod
+    -----------------------------------------------------------------------------------------------
+             [NOTFOUND=return]                            到目前为止如果没有找到，则停止搜索
+    -----------------------------------------------------------------------------------------------
+
+    3.状态
+
+    在服务中可以使用以下语法定义服务在什么状况下要执行什么动作
+
+    [状态=动作]
+
+    在/etc/nsswitch.conf文件中可以制度能够的状态
+
+                               状态
+    ----------------------------------------------------------------------------------------------
+       状态                                               描述
+    ----------------------------------------------------------------------------------------------
+       sucess           没有发生错误，则返回所需条目，默认操作时return 
+    ----------------------------------------------------------------------------------------------
+       notfound         在查找过程中没有找到所需要的值，默认操作时continue
+    -----------------------------------------------------------------------------------------------
+       unavail          服务是永久不可用，这可以意味着所需的文件不可用，或者对已DNS，服务器不可用
+                        或不允许查询
+    -----------------------------------------------------------------------------------------------
+       tyagain          服务暂时不可用，这可能意味着一个文件被锁定或服务器目前无法接受更多的连接。
+                        默认操作时continue
+    ------------------------------------------------------------------------------------------------
+       
+    
+    4.动作
+
+    符合状态的时候，可以指定要执行的动作
+                                         动作
+    --------------------------------------------------------------------------------------------------
+        动作                                               描述
+    ---------------------------------------------------------------------------------------------------
+       return                                     返回解析结果
+    ---------------------------------------------------------------------------------------------------
+       continue                                   继续执行下一个模块
+    ---------------------------------------------------------------------------------------------------
+
+
+
+    15.3.2 /etc/yp.conf文件详解
+
+
+    /etc/yp.conf文件是NIS绑定配置文件， 在启动或接收指定信号时从ypbind中读取该文件，这些条目用于初始绑定。
+
+    -->more /etc/yp.conf，内容如下：
+
+# /etc/yp.conf - ypbind configuration file
+# Valid entries are
+#
+# domain NISDOMAIN server HOSTNAME
+#	Use server HOSTNAME for the domain NISDOMAIN.
+#
+# domain NISDOMAIN broadcast
+#	Use  broadcast  on  the local net for domain NISDOMAIN
+#
+# domain NISDOMAIN slp
+#	Query local SLP server for ypserver supporting NISDOMAIN
+#
+# ypserver HOSTNAME
+#	Use server HOSTNAME for the  local  domain.  The
+#	IP-address of server must be listed in /etc/hosts.
+#
+# broadcast
+#	If no server for the default domain is specified or
+#	none of them is rechable, try a broadcast call to
+#	find a server.
+#
+
+
+
+    。domain NISDOMAIN server HOSTNAME: 为指域与使用指定服务器
+
+    。domain NISDOMAIN broadcast: 在本地网络为指定域使用广播
+
+    。ypserver HOSTNAME: 为本地域使用指定服务器，服务器IP地址必须在/etc/hosts文件中存在。
+
+    。domain IDSDOMIAIN slp: 为主机上运行的ypserv和分发域查询本地运行的服务器
+
+    。broadcast: 如果没有其他服务器给出或所有的人都无法访问，尝试使用广播呼叫为默认域找一台服务器。
+
+
+ 15.3.3 命令行方式配置(客户端192.168.0.204)
+
+
+    以下步骤进行Linux系统的配置，使其成为NIS客户端
+
+    1.安装软件包
+
+    -->rpm -q ypbind
+
+       ypbind-1.20.4-30.el6.x86_64
+
+     -->rpm -q yp-tools
+
+        yp-tools-2.9-12.el6.x86_6
+
+     没安装的话执行安装：
+
+     -->yum install  yp-tools ypbind glibc -y
+
+
+    2.编辑/etc/hosts文件
+
+    -->vim /etc/hosts
+
+    127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+    #::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+    192.168.0.204  Master2
+    192.168.0.203  Master1  #添加NIS服务器IP与主机对应关系
+
+
+    3.加入域
+
+    加入NIS域fulong，保证客户端和服务器端的NIS域名一样
+
+    -->nisdomainname fulong
+
+    -->nisdomainname 
+
+       fulong
+
+    。修改/etc/rc.d/rc.local
+
+    -->vim /etc/rc.d/rc.local  
+
+      /bin/nisdomainname fulong  #添加
+
+
+    4.编辑/etc/sysconfig/network文件
+
+    -->vim /etc/sysconfig/network
+
+       DISDOMAIN=fulong   #添加
+
+
+    5.编辑/etc/nsswitch.conf
+
+    设置自passwd、shadow、group和hosts在本地查询不到结果数据的时候，从NIS服务器上进行查询。
+
+    -->vim /etc/nsswitch.conf ,修改后为：
+
+passwd:     files nis        #添加nis
+shadow:     files nis        #添加nis
+group:      files nis        #添加nis
+hosts:      files nis  dns   #添加nis
+
+bootparams: nisplus [NOTFOUND=return] files
+
+ethers:     files
+netmasks:   files
+networks:   files
+protocols:  files
+rpc:        files
+services:   files
+
+netgroup:   nisplus
+
+publickey:  nisplus
+
+automount:  files nisplus
+aliases:    files nisplus
+
+
+    6.编辑/etc/yp.conf文件
+
+    设置NIS服务器的主机名和NIS域名，在该文件末尾添加以下内容
+
+    -->vim /etc/yp.conf
+
+    domain fulong            #NIS域名
+    ypserver Master1 #Master1为203 NIS服务器IP
+
+
+    7.启动ypbind服务
+
+    -->/etc/init.d/network restart
+
+    -->service ypbind start
+
+    启动 NIS 服务：                                            [确定]
+    绑定 NIS 服务：.                                           [确定]
+
+
+    8.开机自动启动ypbind服务
+
+    -->service ypserv restart  #服务器端203上
+
+    -->chkconfig ypbind on
+
+    -->chkconfig --list ypbind
+
+       ypbind         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+   
+
+    9.查看端口号
+
+    使用prcinfo命令查看ypbind使用的端口号
+
+    -->rpcinfo -p localhost
+
+   program vers proto   port  service
+    100000    4   tcp    111  portmapper
+    100000    3   tcp    111  portmapper
+    100000    2   tcp    111  portmapper
+    100000    4   udp    111  portmapper
+    100000    3   udp    111  portmapper
+    100000    2   udp    111  portmapper
+    100007    2   udp    887  ypbind
+    100007    1   udp    887  ypbind
+    100007    2   tcp    890  ypbind
+    100007    1   tcp    890  ypbin
+
+
+    可以看到ypbind使用的端口号是887(udp协议、890为tcp协议)
+
+    -->netstat -lnp|grep 111
+
+    tcp        0      0 0.0.0.0:111                 0.0.0.0:*                   LISTEN      6094/rpcbind        
+    tcp        0      0 :::111                      :::*                        LISTEN      6094/rpcbind        
+    udp        0      0 0.0.0.0:111                 0.0.0.0:*                               6094/rpcbind        
+    udp        0      0 :::111                      :::*                                    6094/rpcbind       
+
+
+
+15.3.4 图形方式配置NIS客户端
+
+    在Linux客户端系统中安装ypbind、yp-tools和glibc软件包以及修改/etc/hosts文件之后，就
+
+可以通过图形方式配置NIS客户端。
+
+    -->系统-->管理-->验证
+
+    -->"识别和验证"-->用户账户配置：
+
+                        用户账户数据库：NIS
+
+		        NIS域：fulong
+
+		        NIS服务器：192.168.0.203
+ 
+                      验证配置：
+
+		        验证方法:NIS密码
+
+     -->应用
+
+     接着会自动启动rpcbind和ypbind服务
+
+15.3.5 文本方式配置NIS客户端
+		     
+   在linux客户端系统中安装ypbind、yp-tools和glibc软件包以及修改/etc/hosts文件之后，就可以通过文本
+
+方式配置NIS客户端
+
+   终端输入：authconfig-tui
+
+   -->用户信息-->选中"使用NIS"-->下一步
+
+   -->域：fulong 
+
+      服务器：Master 或IP(192.168.0.203)
+
+
+   -->确定
+
+
+
+   。编辑authconfig 
+   
+   -->vim /etc/sysconfig/authconfig 
+
+   USENIS=yes  #默认为yes，不是的话自行修改
+
+   。编辑system-auth文件
+
+   -->vim /etc/pam.d/system-auth
+ 
+      password    sufficient    /lib64/security/pam_unix.so  nullok use_authtok md5  shadow  nis  #添加
+
+
+   。启动ypbind腹肌
+
+   -->service portmap start  #没有这个服务
+
+   -->/etc/init.d/ypbind restart
+
+
+
+
+15.4 NIS客户端检测
+
+    配置好NIS服务器和NIS客户端之后，使用yptest、ypwhich、ypcat、ypmatc、yppasswd、ypchsh、ypset和yppoll
+
+命令进行NIS客户端检测。
+
+15.4.1 yptest 
+
+    使用yptest命令可以调用不同的NIS函数来测试NIS配置是否正确
+
+    语法： yptest [选项]
+
+                           yptest命令选项含义
+    ----------------------------------------------------------------------------
+       选项                              选项含义
+    ----------------------------------------------------------------------------
+      -u<用户>                使用现有的NIS用户进行测试
+    -----------------------------------------------------------------------------
+      -h<主机名>              在指定主机上查询ypserv
+    -----------------------------------------------------------------------------
+      -q                      安静模式，不显示信息
+    -----------------------------------------------------------------------------
+      -d <域>                 使用指定域，而不是默认的域
+    -----------------------------------------------------------------------------
+      -m <映射>               使用指定映射进行测试
+    -----------------------------------------------------------------------------
+
+    例15.4 测试NIS配置是否正确
+
+    -->yptest
+
+yptest
+Test 1: domainname
+Configured domainname is "fulong"
+
+Test 2: ypbind
+Used NIS server: Master1
+
+Test 3: yp_match
+WARNING: No such key in map (Map passwd.byname, key nobody)
+
+Test 4: yp_first
+oracle oracle:$6$Fe2drCZ314GtXePf$L3.m9r1HypkXdxqZm5dIdBJ8sEwzcA/gbG1iBzVpcc2W5ZzrJKCQ/NWiJi7anaIuk0ebhUJwOMBRnnTwpopwi1:500:500:oracle:/home/oracle:/bin/bash
+
+Test 5: yp_next
+nginx nginx:$6$esL3wNL3$FQSZ80EgZpZ6YE1EbcPyPlZ8woN87OubRiDmSUE6cMj.Op9jTiFma140W6FjcACtHDhKaosAtS1t8KQge/9of/:507:507::/home/nginx:/bin/bash
+weblogic weblogic:$6$pbH21yLT$LyVDGPiDdobN5Bo9FtFhQABPXlBV54xEMrN0r7g3TdM3I097AsaU11569/zHcJFfG8xoRN8Go9g.oMg9VmEM4/:503:503::/home/weblogic:/bin/bash
+lisi lisi:$6$6cIxvalF$hVhg55za0Fhnh15lL8Dwr5WqxNXp4b05nr7q79dFO6dj0hk4k35rkgTwxQwRhgd1i.FEmz7eafu4rVn1HbpTU0:506:506::/home/lisi:/bin/bash
+virtualuser virtualuser:!!:505:505::/home/ftpuser:/bin/bash
+zabbix zabbix:!!:501:501::/home/zabbix:/bin/bash
+zhangsan zhangsan:$6$pZv1yYaI$rpso11M1ngqkQmkB/asGFtZhAp5bT155MKKYbW70EfLFgOVOJbV7VDfSQWFzZBaJOWMOtsdiRUfiH4mLRIV501:508:508::/home/zhangsan:/bin/bash
+yhq yhq:$6$e2VP5r2z$B2DdfhCs0QpL5n0OzuZkIMph/h8VfX2/FjBLHN73Hsjkk1RLhOk6xCt7s47ayTrRMZD.MBXIQgsAfla.iiGJz1:502:502::/home/yhq:/bin/bash
+
+Test 6: yp_master
+Master1
+
+Test 7: yp_order
+1434604984
+
+Test 8: yp_maplist
+protocols.bynumber
+services.byname
+netid.byname
+services.byservicename
+ypservers
+mail.aliases
+group.byname
+group.bygid
+hosts.byaddr
+passwd.byuid
+hosts.byname
+passwd.byname
+rpc.byname
+protocols.byname
+rpc.bynumber
+
+Test 9: yp_all
+oracle oracle:$6$Fe2drCZ314GtXePf$L3.m9r1HypkXdxqZm5dIdBJ8sEwzcA/gbG1iBzVpcc2W5ZzrJKCQ/NWiJi7anaIuk0ebhUJwOMBRnnTwpopwi1:500:500:oracle:/home/oracle:/bin/bash
+nginx nginx:$6$esL3wNL3$FQSZ80EgZpZ6YE1EbcPyPlZ8woN87OubRiDmSUE6cMj.Op9jTiFma140W6FjcACtHDhKaosAtS1t8KQge/9of/:507:507::/home/nginx:/bin/bash
+weblogic weblogic:$6$pbH21yLT$LyVDGPiDdobN5Bo9FtFhQABPXlBV54xEMrN0r7g3TdM3I097AsaU11569/zHcJFfG8xoRN8Go9g.oMg9VmEM4/:503:503::/home/weblogic:/bin/bash
+lisi lisi:$6$6cIxvalF$hVhg55za0Fhnh15lL8Dwr5WqxNXp4b05nr7q79dFO6dj0hk4k35rkgTwxQwRhgd1i.FEmz7eafu4rVn1HbpTU0:506:506::/home/lisi:/bin/bash
+virtualuser virtualuser:!!:505:505::/home/ftpuser:/bin/bash
+zabbix zabbix:!!:501:501::/home/zabbix:/bin/bash
+zhangsan zhangsan:$6$pZv1yYaI$rpso11M1ngqkQmkB/asGFtZhAp5bT155MKKYbW70EfLFgOVOJbV7VDfSQWFzZBaJOWMOtsdiRUfiH4mLRIV501:508:508::/home/zhangsan:/bin/bash
+yhq yhq:$6$e2VP5r2z$B2DdfhCs0QpL5n0OzuZkIMph/h8VfX2/FjBLHN73Hsjkk1RLhOk6xCt7s47ayTrRMZD.MBXIQgsAfla.iiGJz1:502:502::/home/yhq:/bin/bash
+1 tests failed
+
+
+   //在Test9：yp_all下面出现了 NIS服务器上的所有账户信息，在代表NIS配置正确
+
+   
+15.4.2 ypwhci 
+
+   使用ypwhich命令可以列出NIS服务器的名称以及昵称转换表。如果不带任何选项，它为本地主机给出
+
+NIS服务器。
+
+   命令语法：
+
+   ypwhich [选项][主机名]
+
+                           ypwhich命令选项含义
+    ------------------------------------------------------------------------------------------
+       选项                                       选项含义
+    -----------------------------------------------------------------------------------------
+      -d<域>                    使用指定域，而不是默认的域
+    -----------------------------------------------------------------------------------------
+      -t                        禁止映射昵称转换
+    -----------------------------------------------------------------------------------------
+      -m <映射名|映射昵称>      查找映射的主NIS服务器
+    -----------------------------------------------------------------------------------------
+      -x                        显示映射的昵称转换表。这会列出该命令知道的昵称，并显示与每个
+                                昵称相关联的映射名。
+    ------------------------------------------------------------------------------------------
+
+    例15.5 查看映射昵称为paswd的主NIS服务器
+
+    -->ypwhich -m passwd
+
+       Master1
+
+    例15.6 查看映射hosts.byname的NIS服务器
+
+    -->ypwhich -t -m hosts.byname
+
+       Master1
+
+
+    例15.7 显示NIS服务器的名称
+
+    -->ypwhich 
+
+       Master1
+
+
+    例15.8 查看映射的主NIS服务器
+
+    -->ypwhich -m
+
+protocols.bynumber Master1
+services.byname Master1
+netid.byname Master1
+services.byservicename Master1
+ypservers Master1
+mail.aliases Master1
+group.byname Master1
+group.bygid Master1
+hosts.byaddr Master1
+passwd.byuid Master1
+hosts.byname Master1
+passwd.byname Master1
+rpc.byname Master1
+protocols.byname Master1
+rpc.bynumber Master1
+
+    例15.9 显示映射昵称转换表
+
+    -->ypwhich -x
+
+Use "ethers"	for map "ethers.byname"
+Use "aliases"	for map "mail.aliases"
+Use "services"	for map "services.byname"
+Use "protocols"	for map "protocols.bynumber"
+Use "hosts"	for map "hosts.byname"
+Use "networks"	for map "networks.byaddr"
+Use "group"	for map "group.byname"
+Use "passwd"	for map "passwd.byname"
+
+
+15.4.3 ypcat 
+
+    使用ypcat命令可以在NIS数据库中指定映射名显示所有键的值，可以是映射名或映射昵称。
+
+    命令语法：
+
+    ypcat [选项][映射名|映射昵称]
+
+                                           ypcat命令选项含义
+    --------------------------------------------------------------------------------
+      选项                                    选项含义
+    --------------------------------------------------------------------------------
+      -h<主机名>             在指定主机上查询ypserv  
+    --------------------------------------------------------------------------------  
+      -x                     显示映射昵称转换表。该表列出了命令知道的映射昵称并表示
+                             出每个昵称关联的映射名
+    --------------------------------------------------------------------------------
+      -d<域>                 使用指定域，而不是默认的域
+    --------------------------------------------------------------------------------
+      -k                     显示映射中键值为空或是不为映射值一部分的关键字。
+                            （任何从在/etc/目录下有ASCII版本的文件派生出来的映射都不
+			      属于这个类）
+    --------------------------------------------------------------------------------
+      -t                     禁止映射昵称转换
+    --------------------------------------------------------------------------------
+
+    例15.10：显示NIS服务器上映射昵称为passwd的值
+
+    -->ypcat passwd
+
+oracle:$6$Fe2drCZ314GtXePf$L3.m9r1HypkXdxqZm5dIdBJ8sEwzcA/gbG1iBzVpcc2W5ZzrJKCQ/NWiJi7anaIuk0ebhUJwOMBRnnTwpopwi1:500:500:oracle:/home/oracle:/bin/bash
+nginx:$6$esL3wNL3$FQSZ80EgZpZ6YE1EbcPyPlZ8woN87OubRiDmSUE6cMj.Op9jTiFma140W6FjcACtHDhKaosAtS1t8KQge/9of/:507:507::/home/nginx:/bin/bash
+weblogic:$6$pbH21yLT$LyVDGPiDdobN5Bo9FtFhQABPXlBV54xEMrN0r7g3TdM3I097AsaU11569/zHcJFfG8xoRN8Go9g.oMg9VmEM4/:503:503::/home/weblogic:/bin/bash
+lisi:$6$6cIxvalF$hVhg55za0Fhnh15lL8Dwr5WqxNXp4b05nr7q79dFO6dj0hk4k35rkgTwxQwRhgd1i.FEmz7eafu4rVn1HbpTU0:506:506::/home/lisi:/bin/bash
+virtualuser:!!:505:505::/home/ftpuser:/bin/bash
+zabbix:!!:501:501::/home/zabbix:/bin/bash
+zhangsan:$6$pZv1yYaI$rpso11M1ngqkQmkB/asGFtZhAp5bT155MKKYbW70EfLFgOVOJbV7VDfSQWFzZBaJOWMOtsdiRUfiH4mLRIV501:508:508::/home/zhangsan:/bin/bash
+yhq:$6$e2VP5r2z$B2DdfhCs0QpL5n0OzuZkIMph/h8VfX2/FjBLHN73Hsjkk1RLhOk6xCt7s47ayTrRMZD.MBXIQgsAfla.iiGJz1:502:502::/home/yhq:/bin/bash
+
+    例15.11：显示NIS服务器上映射昵称为hosts值
+
+    -->ypcat hosts
+
+192.168.0.188   zabbix_agent_188
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+192.168.0.203   Master1
+192.168.0.204   Master2
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+
+    例15.12 查看NIS服务器上映射passwd.byuid的值
+
+    -->ypcat -t passwd.byuid
+
+weblogic:$6$pbH21yLT$LyVDGPiDdobN5Bo9FtFhQABPXlBV54xEMrN0r7g3TdM3I097AsaU11569/zHcJFfG8xoRN8Go9g.oMg9VmEM4/:503:503::/home/weblogic:/bin/bash
+zabbix:!!:501:501::/home/zabbix:/bin/bash
+zhangsan:$6$pZv1yYaI$rpso11M1ngqkQmkB/asGFtZhAp5bT155MKKYbW70EfLFgOVOJbV7VDfSQWFzZBaJOWMOtsdiRUfiH4mLRIV501:508:508::/home/zhangsan:/bin/bash
+lisi:$6$6cIxvalF$hVhg55za0Fhnh15lL8Dwr5WqxNXp4b05nr7q79dFO6dj0hk4k35rkgTwxQwRhgd1i.FEmz7eafu4rVn1HbpTU0:506:506::/home/lisi:/bin/bash
+yhq:$6$e2VP5r2z$B2DdfhCs0QpL5n0OzuZkIMph/h8VfX2/FjBLHN73Hsjkk1RLhOk6xCt7s47ayTrRMZD.MBXIQgsAfla.iiGJz1:502:502::/home/yhq:/bin/bash
+oracle:$6$Fe2drCZ314GtXePf$L3.m9r1HypkXdxqZm5dIdBJ8sEwzcA/gbG1iBzVpcc2W5ZzrJKCQ/NWiJi7anaIuk0ebhUJwOMBRnnTwpopwi1:500:500:oracle:/home/oracle:/bin/bash
+nginx:$6$esL3wNL3$FQSZ80EgZpZ6YE1EbcPyPlZ8woN87OubRiDmSUE6cMj.Op9jTiFma140W6FjcACtHDhKaosAtS1t8KQge/9of/:507:507::/home/nginx:/bin/bash
+virtualuser:!!:505:505::/home/ftpuser:/bin/bash
+
+    例15.13：显示fulong域中映射昵称为passwd的值
+
+    -->ypcat -d fulong passwd
+
+oracle:$6$Fe2drCZ314GtXePf$L3.m9r1HypkXdxqZm5dIdBJ8sEwzcA/gbG1iBzVpcc2W5ZzrJKCQ/NWiJi7anaIuk0ebhUJwOMBRnnTwpopwi1:500:500:oracle:/home/oracle:/bin/bash
+nginx:$6$esL3wNL3$FQSZ80EgZpZ6YE1EbcPyPlZ8woN87OubRiDmSUE6cMj.Op9jTiFma140W6FjcACtHDhKaosAtS1t8KQge/9of/:507:507::/home/nginx:/bin/bash
+weblogic:$6$pbH21yLT$LyVDGPiDdobN5Bo9FtFhQABPXlBV54xEMrN0r7g3TdM3I097AsaU11569/zHcJFfG8xoRN8Go9g.oMg9VmEM4/:503:503::/home/weblogic:/bin/bash
+lisi:$6$6cIxvalF$hVhg55za0Fhnh15lL8Dwr5WqxNXp4b05nr7q79dFO6dj0hk4k35rkgTwxQwRhgd1i.FEmz7eafu4rVn1HbpTU0:506:506::/home/lisi:/bin/bash
+virtualuser:!!:505:505::/home/ftpuser:/bin/bash
+zabbix:!!:501:501::/home/zabbix:/bin/bash
+zhangsan:$6$pZv1yYaI$rpso11M1ngqkQmkB/asGFtZhAp5bT155MKKYbW70EfLFgOVOJbV7VDfSQWFzZBaJOWMOtsdiRUfiH4mLRIV501:508:508::/home/zhangsan:/bin/bash
+yhq:$6$e2VP5r2z$B2DdfhCs0QpL5n0OzuZkIMph/h8VfX2/FjBLHN73Hsjkk1RLhOk6xCt7s47ayTrRMZD.MBXIQgsAfla.iiGJz1:502:502::/home/yhq:/bin/bash
+
+    例15.14：显示映射昵称转换表
+
+    -->ypcat -x
+
+Use "ethers"	for map "ethers.byname"
+Use "aliases"	for map "mail.aliases"
+Use "services"	for map "services.byname"
+Use "protocols"	for map "protocols.bynumber"
+Use "hosts"	for map "hosts.byname"
+Use "networks"	for map "networks.byaddr"
+Use "group"	for map "group.byname"
+Use "passwd"	for map "passwd.byname"
+
+
+15.4.4 ypmatch
+
+    使用ypmatch命令可以显示NIS映射中指定键的值。
+
+    命令语法：
+
+                                   ypmatch命令选项
+    ----------------------------------------------------------------------------------------
+       选项                                  选项含义
+    ----------------------------------------------------------------------------------------
+       -d<域>                 使用指定域名，而不是默认的域
+    ----------------------------------------------------------------------------------------
+       -k                     显示映射键
+    ----------------------------------------------------------------------------------------
+       -t                     禁止映射昵称转换
+    ----------------------------------------------------------------------------------------
+       -x                     显示映射的昵称转换表，这会列出该命令知道的昵称，并显示与每个
+                              昵称相关联的映射名
+    -----------------------------------------------------------------------------------------
+
+    例15.15 显示映射名passwd.byname的键zhangsan的值
+
+    -->ypmatch zhangsan passwd.byname
+
+       zhangsan:$6$pZv1yYaI$rpso11M1ngqkQmkB/asGFtZhAp5bT155MKKYbW70EfLFgOVOJbV7VDfSQWFzZBaJOWMOtsdiRUfiH4mLRIV501:508:508::/home/zhangsan:/bin/bash
+
+
+    例15.16 显示映射名group.bygid的键500的值
+
+    -->ypmatch 500 group.bygid
+
+       oracle:!!:500:
+
+    例15.17 显示映射昵称转换表
+
+    -->ypmatch -x
+
+Use "ethers"	for map "ethers.byname"
+Use "aliases"	for map "mail.aliases"
+Use "services"	for map "services.byname"
+Use "protocols"	for map "protocols.bynumber"
+Use "hosts"	for map "hosts.byname"
+Use "networks"	for map "networks.byaddr"
+Use "group"	for map "group.byname"
+Use "passwd"	for map "passwd.byname"
+
+
+
+15.4.5 yppasswd
+
+    使用yppasswd命令可以在NIS数据库中更改用户的NIS密码，Shell和通用信息
+
+    命令语法：
+
+    yppasswd[选项][用户]
+
+    ---------------------------------------------------------------------------
+     选项                                         选项含义
+    ---------------------------------------------------------------------------
+      -f                               更改用户的全名和相关信息
+    ---------------------------------------------------------------------------
+      -l                               更改登录Shell类型
+    ---------------------------------------------------------------------------
+      -p                               更改用户的NIS密码
+    ---------------------------------------------------------------------------
+
+    例15.18 更改用户zhangsan的NIS密码
+
+    -->ypchsh zhangsan
+
+Changing NIS account information for zhangsan on Master1.
+Please enter root password:           ------------------------#输入zhangsan密码 
+
+Changing login shell for zhangsan on Master1.
+To accept the default, simply press return. To use the
+system's default shell, type the word "none".
+Login shell [/bin/bash]:    ----------------------------------#回车
+
+The login shell has been changed on Master1.
+
+
+
+15.4.6 ypchsh
+
+    使用ypset命令可以再NIS数据库中更改用户的登录Shell类型
+
+    命令语法：ypchsh [用户]
+
+
+    例15.20 更改用户zhangsan的登录shell
+
+    -->ypchsh zhangsan
+
+Changing NIS account information for zhangsan on Master1.
+Please enter root password:
+
+Changing login shell for zhangsan on Master1.
+To accept the default, simply press return. To use the
+system's default shell, type the word "none".
+Login shell [/bin/bash]: /bin/bash ------------------------#收入与shell类型
+Error while changing the login shell.  (有点问题)
+The login shell has not been changed on Master1.
+
+
+
+
+15.4.7 ypset
+
+    使用ypset命令可以绑定ypbind到特定的NIS服务器
+
+    命令语法：ypset[选项][NIS服务器]
+
+                                 ypset命令选项
+    -----------------------------------------------------------------
+        选项                                     选项含义
+    -----------------------------------------------------------------
+       -h<主机名>            设置ypbind绑定到指定主机
+    -----------------------------------------------------------------
+       -d<域>                使用指定域，而不是默认的域
+    -----------------------------------------------------------------
+
+    例：绑定主机192.168.0.188的ypbind到NIS服务器Master1上
+
+    -->ypset -d fulong -h 192.168.0.188 Master1 
+    
+    #188为客户端主机,fulong为NIS域，Master1为203 NIS服务器主机名
+
+
+15.4.8 yppoll
+
+    使用yppoll命令可以显示当前服务器上使用的NIS映射的顺序号(标识号)。
+
+yppoll命令使用ypserv守护程序显示映射名参数指定的映射的顺序号。顺序号
+
+是映射的标识号，该号码由系统分配。每当映射被更新时，这个号码就会更改。
+
+    命令语法：
+
+    yppoll [选项][映射名]
+
+                                        ypppoll命令选项含义
+    --------------------------------------------------------------------------
+        选项                                    选项含义
+    --------------------------------------------------------------------------
+        -d<域>                使用指定域，而不是默认的域
+    --------------------------------------------------------------------------
+        -h<主机>              指定一个NIS服务器而不是使用默认服务器
+    --------------------------------------------------------------------------
+
+    例15.22 显示位于主机Master1上的hosts.byname映射的顺序号
+
+    -->yppoll -h Master1 hosts.byname
+
+Domain fulong is supported.
+Map hosts.byname has order number 1434604984. [Thu Jun 18 13:23:04 2015]
+The master server is Master1.
+
+    例15.23：显示位于域fulong上的hosts.byname映射顺序号。
+
+    -->yppoll -d fulong hosts.byname
+
+Domain fulong is supported.
+Map hosts.byname has order number 1434604984. [Thu Jun 18 13:23:04 2015]
+The master server is Master1.
+
+
+15.5 NIS服务器高级配置
+
+15.5.1 配置NIS服务器使用固定端口(192.168.0.203 NIS服务器)
+
+    ypserv使用端口号935，fypxfrd使用端口号936
+
+    1.编辑/etc/sysconfig/network
+
+    YPSERV_ARGS="-p 935"
+    YPXFRD_ARGS="-p 936"
+
+    2.重启network服务
+
+    -->service network restart
+
+正在关闭接口 eth0：                                        [确定]
+关闭环回接口：                                             [确定]
+弹出环回接口：                                             [确定]
+弹出界面 eth0：                                            [确定]
+
+    3.重新启动ypserv服务
+
+    -->service ypserv restart
+
+停止 YP 服务器的服务：                                     [确定]
+启动 YP 服务器的服务：                                     [确定]
+
+
+    4.重启ypxfrd服务
+
+    -->service ypxfrd restart
+
+停止 YP 映射图服务器：                                     [失败]
+启动 YP 映射图服务器：                                     [确定]
+
+    5.查看端口号
+
+    -->rpcinfo -p
+
+   program vers proto   port  service
+    100000    4   tcp    111  portmapper
+    100000    3   tcp    111  portmapper
+    100000    2   tcp    111  portmapper
+    100000    4   udp    111  portmapper
+    100000    3   udp    111  portmapper
+    100000    2   udp    111  portmapper
+    100024    1   udp  52948  status
+    100024    1   tcp  51638  status
+    100005    1   udp  35230  mountd
+    100005    1   tcp  37253  mountd
+    100005    2   udp  46499  mountd
+    100005    2   tcp  44593  mountd
+    100005    3   udp  47017  mountd
+    100005    3   tcp  58062  mountd
+    100003    2   tcp   2049  nfs
+    100003    3   tcp   2049  nfs
+    100003    4   tcp   2049  nfs
+    100227    2   tcp   2049  nfs_acl
+    100227    3   tcp   2049  nfs_acl
+    100003    2   udp   2049  nfs
+    100003    3   udp   2049  nfs
+    100003    4   udp   2049  nfs
+    100227    2   udp   2049  nfs_acl
+    100227    3   udp   2049  nfs_acl
+    100021    1   udp  47159  nlockmgr
+    100021    3   udp  47159  nlockmgr
+    100021    4   udp  47159  nlockmgr
+    100021    1   tcp  38437  nlockmgr
+    100021    3   tcp  38437  nlockmgr
+    100021    4   tcp  38437  nlockmgr
+    100009    1   udp    809  yppasswdd
+    100004    2   udp    935  ypserv
+    100004    1   udp    935  ypserv
+    100004    2   tcp    935  ypserv
+    100004    1   tcp    935  ypserv
+ 600100069    1   udp    936  fypxfrd
+ 600100069    1   tcp    936  fypxfrd
+
+     可以看到ypserv使用的端口号为：935，fypxfrd使用的端口号为936
+
+
+15.5.2 自动挂载NIS用户主目录
+
+    配置NIS服务器和NIS客户单，使得在NIS客户端可以自动挂载NIS用户主目录
+
+    1.NIS服务器配置(192.168.0.203)
+
+    (1)创建系统用户lisi
+
+    -->mkdir /nishome
+
+    -->useradd -d /nishome/lisi lisi
+
+    -->passwd lisi
+
+更改用户 lisi 的密码 。
+新的 密码：
+重新输入新的 密码：
+passwd： 所有的身份验证令牌已经成功更新。
+
+    (2)重新生成NIS数据库
+
+    -->/usr/lib64/yp/ypinit -m
+
+At this point, we have to construct a list of the hosts which will run NIS
+servers.  Master1 is in the list of NIS server hosts.  Please continue to add
+the names for the other hosts, one per line.  When you are done with the
+list, type a <control D>.
+	next host to add:  Master1
+	next host to add:     --------------------------#Ctrl+D
+The current list of NIS servers looks like this:
+
+Master1
+
+Is this correct?  [y/n: y]  y  -------------------------#y
+We need a few minutes to build the databases...
+Building /var/yp/fulong/ypservers...
+Running /var/yp/Makefile...
+gmake[1]: Entering directory `/var/yp/fulong'
+Updating passwd.byname...
+Updating passwd.byuid...
+Updating group.byname...
+Updating group.bygid...
+Updating hosts.byname...
+Updating hosts.byaddr...
+Updating rpc.byname...
+Updating rpc.bynumber...
+Updating services.byname...
+makedbm: warning: malformed input data (ignored)
+Updating services.byservicename...
+Updating netid.byname...
+Updating protocols.bynumber...
+Updating protocols.byname...
+Updating mail.aliases...
+gmake[1]: Leaving directory `/var/yp/fulong'
+
+Master1 has been set up as a NIS master server.
+
+Now you can run ypinit -s Master1 on all slave server.
+
+
+    (3)设置NFS服务器
+
+    -->vim /etc/exports 
+
+    /nishome/lisi      *(rw)  #添加
+
+    (4)重新启动nfs服务
+
+    -->service nfs restart
+
+关闭 NFS 守护进程：                                        [确定]
+关闭 NFS mountd：                                          [确定]
+关闭 NFS 服务：                                            [确定]
+Shutting down RPC idmapd:                                  [确定]
+启动 NFS 服务：                                            [确定]
+启动 NFS mountd：                                          [确定]
+启动 NFS 守护进程：                                        [确定]
+正在启动 RPC idmapd：                                      [确定]
+
+    -->service nfs status
+
+rpc.svcgssd 已停
+rpc.mountd (pid 4808) 正在运行...
+nfsd (pid 4823 4822 4821 4820 4819 4818 4817 4816) 正在运行...
+
+
+    2.NIS客户端配置(192.168.0.188)
+
+    (1)编辑/etc/auto.master文件
+
+    -->vim /etc/auto.misc
+
+/misc  /etc/auto.misc    #这3行也没有，添加
+/net   -hosts
++auto.master
+/nishome /etc/auto.home  #添加这个
+
+    (2)创建/etc/auto.home文件
+
+    -->vim  /etc/auto.home
+
+    *                     -fstype=nfs                        192.168.0.203:/nishome/&
+
+
+    (3)重新启动autofs服务
+
+    -->service autofs restart
+
+      停止 automount：                                           [确定]
+      正在启动 automount：                                       [确定]
+
+    (4)客户端测试
+
+    -->[root@zabbix_agent_188 etc]# su - lisi
+
+       创建目录 '/nishome/lisi'。
+
+       [lisi@zabbix_agent_188 ~]$ 
+
+    -->pwd
+
+       /nishome/lisi   #可以看到lisi的主目录是:/nishome/lisi
+
+    
+     (5)查看NFS挂载情况
+
+     -->df /nishome/lisi/
+
+       文件系统	            1K-块      已用      可用     已用% 挂载点
+      /dev/sda2            100791728    405432  95266296   1%    /
+
+      NFSf服务器共享目录192.168.0.203:/nishome/lisi已经自动挂载到本地的/nishome/lis目录。
+
+
+15.5.3 更新NIS数据库
+
+    使用NIS服务器存储用户账户信息，平时会经常创建、修改和删除用户账户，这是就需要手动
+
+更新NIS数据库，不然会导致NIS客户端无法获取修改后的用户信息。
+
+    1.NIS服务器配置(192.168.0.203)
+
+    (1)创建新用户
+
+    -->useradd wangwu
+
+    (2)更新NIS数据库
+
+    -->make -C /var/yp/
+
+make: Entering directory `/var/yp'
+gmake[1]: Entering directory `/var/yp/fulong'
+Updating passwd.byname...
+Updating passwd.byuid...
+Updating group.byname...
+Updating group.bygid...
+Updating netid.byname...
+gmake[1]: Leaving directory `/var/yp/fulong'
+make: Leaving directory `/var/yp'
+
+
+    2. NIS客户端测试
+
+    在NIS客户端上使用以下命令进行测试，检测到用户wangwu的信息
+
+    -->ypmatch wangwu passwd.byname
+
+       wangwu:!!:510:510::/home/wangwu:/bin/bash
+
+
+15.5.4 配置从NIS服务器
+
+    从NIS服务器用于维护主NIS服务器的数据文件副本。从NIS服务器提供了一种冗余，减轻了
+
+主NIS服务器的工作负荷。
+
+    1.主NIS服务器配置(192.168.0.203)
+
+    (1)编辑/var/yp/ypserver文件
+
+    -->Vim /var/yp/ypserver，添加NIS域中的从NIS服务器主机名
+
+    Master1        #主NIS服务器主机名
+   
+    node-rac1      #从NIS服务器主机名
+
+    (2)重新启动ypxfrd服务
+
+    -->service ypxfrd restart
+
+       停止 YP 映射图服务器：                                     [确定]
+       启动 YP 映射图服务器：                                     [确定]
+
+
+    (3)开机自动启动ypxfrd服务
+
+    -->chkconfig ypxfrd on
+
+    -->chkconfig --list ypxfrd
+
+       ypxfrd         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+    2.从NIS服务器配置(192.168.0.233)
+
+    (1)安装ypserv软件包
+
+    -->yum install ypserv -y
+
+    -->yum install ypbind yp-tools glibc -y
+
+
+    (2)编辑/etc/hosts文件
+
+    -->vim /etc/hosts
+
+    192.168.0.203  Master1
+    192.168.0.233  node-rac1
+
+    (3)设置NIS域名
+
+    -->nisdomainname fulong
+
+    -->vim /etc/rc.d/rc.local
+
+    /bin/nisdomainname fulong
+
+    (4)同步数据库
+
+    -->/usr/lib64/yp/ypinit -s Master1
+
+We will need a few minutes to copy the data from Master1.
+Transferring protocols.bynumber...
+Trying ypxfrd ... success
+
+Transferring services.byname...
+Trying ypxfrd ... success
+
+Transferring netid.byname...
+Trying ypxfrd ... success
+
+Transferring services.byservicename...
+Trying ypxfrd ... success
+
+Transferring ypservers...
+Trying ypxfrd ... success
+
+Transferring mail.aliases...
+Trying ypxfrd ... success
+
+Transferring group.byname...
+Trying ypxfrd ... success
+
+Transferring group.bygid...
+Trying ypxfrd ... success
+
+Transferring hosts.byaddr...
+Trying ypxfrd ... success
+
+Transferring passwd.byuid...
+Trying ypxfrd ... success
+
+Transferring hosts.byname...
+Trying ypxfrd ... success
+
+Transferring passwd.byname...
+Trying ypxfrd ... success
+
+Transferring rpc.byname...
+Trying ypxfrd ... success
+
+Transferring protocols.byname...
+Trying ypxfrd ... success
+
+Transferring rpc.bynumber...
+Trying ypxfrd ... success
+
+
+node-rac1's NIS data base has been set up.
+If there were warnings, please figure out what went wrong, and fix it.
+
+At this point, make sure that /etc/passwd and /etc/group have
+been edited so that when the NIS is activated, the data bases you
+have just created will be used, instead of the /etc ASCII files.
+
+
+    (5)查看/var/yp目录
+
+    -->ls /var/yp
+
+       2015/6/18fulong  Makefile
+
+    -->ls /var/yp/fulong
+
+group.bygid   hosts.byaddr  mail.aliases  passwd.byname  protocols.byname    rpc.byname    services.byname         ypservers
+group.byname  hosts.byname  netid.byname  passwd.byuid   protocols.bynumber  rpc.bynumber  services.byservicename
+
+
+
+    (6)编辑/etc/yp.conf文件 
+
+    设置从NIS服务器的主机名和NIS域名
+
+    -->vim /etc/yp.conf
+
+    domain fulong
+    ypserver node-rac1   #ode-rac1 为从服务器主机名
+
+
+    (7)启动ypbind服务
+
+    -->service ypbind start
+
+    (8)启动ypserv服务
+
+    -->service ypserv start
+
+
+    3.同步设置
+
+    在主NIS服务器更新数据库之后，需要在从NIS服务器使用/usr/lib64/yp/ypxfr命令
+
+同步数据库信息，保持最新数据，否则从NIS服务器数据便会不准确。
+
+    注意：/usr/lib64/yp/ypxfr命令时一定要使用绝对路径，不能只使用ypxfr
+
+    使用/usr/lib64/yp/ypxfr命令可以将NIS映射从指定NIS服务器转移到本地主机
+
+    命令语法：
+
+    /usr/lib64/yp/ypxfr [选项] [映射名]
+
+                                      /usr/lib64/yp/ypxfr命令选项含义
+    --------------------------------------------------------------------------------
+      选项                                       选项含义
+    --------------------------------------------------------------------------------
+      -f                     强制转移，即使主NIS服务器上的版本没有本地版本新
+    ---------------------------------------------------------------------------------
+      -c                    阻止发送请求Clear Current Map到本地ypserv守护程序。如果运行
+                             ypxfr命令时本地没有运行ypserv守护程序，请使用此标志。否则
+			     ypxfr命令显示错误消息，且转移失败。
+    ------------------------------------------------------------------------------------
+      -d<域>                 指定NIS域
+    ------------------------------------------------------------------------------------
+      -p<目录>               为映射更改指定目录
+    ------------------------------------------------------------------------------------
+      -s<源域>               指定源域，从中传递一个映射
+    ------------------------------------------------------------------------------------
+      -h <源主机>            从指定主机上获取映射
+    ------------------------------------------------------------------------------------
+
+    例15.24 将passwd.byuid映射主从NIS服务器转移到从NIS服务器（需要先更新主NIS服务器数据库）
+
+    -->/usr/lib64/yp/ypinit -s Master1
+
+    -->/usr/lib64/yp/ypxfr passwd.byuid
+
+
+
+
+
+

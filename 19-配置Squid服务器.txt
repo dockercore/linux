@@ -1,0 +1,1210 @@
+                                             第19章 配置Squid服务器
+
+
+19.1 代理服务器简介
+
+19.1.1 什么是代理服务器
+
+    代理服务器的功能就是代理网络用户去取的网络信息，代理服务器好像一个大的缓存区，
+
+能够显著地提高网页浏览的速度和效率，还能起到防火墙的作用。
+
+19.1.2 代理服务器的功能
+
+    1.充当局域网与外部网络的连接出口
+
+    2.防火墙功能
+
+    3.网址过滤和访问权限限制。
+
+    4。提高访问速度。
+
+    5.节省IP地址开销
+
+
+19.1.3 代理服务器类型
+
+    代理服务器类型有：【标准代理服务器】、【透明代理服务器】和【反向代理服务器】3种
+
+
+
+19.1.4 Squid简介
+
+    Squid是一个主流的代理服务器和Web缓存服务器软件，可以运行在UNIX/Linux系统上。
+
+    Squid是一个缓存Internet数据的一个软件，它接收用户的下载申请，并自动处理所下载的数据。
+
+    Squid是一个高性能的代理缓存服务器，可以加快浏览Internet的速度。
+
+    Squid将数据源缓存在内存中，同时也缓存DNS查询的结果，还支持非模块化的DNS查询，对失败的请求进行
+
+消极缓存。
+
+    Squid使用访问控制列表ACL和访问权限列表ARL，他们通过组织特定的网络连接来减少潜在的Internet非法连接，
+
+可以使用这些列表来确保内部网络的主机无法访问有威胁的或不适宜的站点。
+
+
+19.2 Squid服务器安装和配置
+
+19.2.1 安装Squid服务器软件包
+
+    。查看是否已经安装了squid
+
+    -->rpm -q squid
+
+    package squid is not installed
+    
+
+    。安装squid软件包
+
+    -->yum install squid -y
+
+
+19.2.2 /etc/squid/squid.conf文件详解
+
+
+     该文件由【访问控制列表】、【参数设置】和【刷新模式条目】3部分组成
+
+     1. /etc/squid/squid.conf文件组成
+
+     2. 参数
+
+     3. 刷新模式条目 
+     
+     #默认有以下内容，表示设置刷新模式，用于确定一个网页进入缓存后在缓存中停留的时间。
+
+     refresh_pattern规则仅仅应用到没有明确过时期限的响应。
+
+
+refresh_pattern ^ftp:           1440    20%     10080
+refresh_pattern ^gopher:        1440    0%      1440
+refresh_pattern -i (/cgi-bin/|\?) 0     0%      0
+refresh_pattern .               0       20%     4320
+
+19.2.3 Squid访问控制列表
+
+    Squid服务器支持访问控制功能，通过该功能可以有效地控制客户是否能够连接到代理服务器，以及
+
+控制客户是否能够获取指定的访问资源。使用acl命令对不同性质的客户进行分类并赋予名称，然后使用
+
+http_access命令对一类客户试试允许(allow)还是拒绝(deny)操作。
+
+
+acl manager proto cache_object
+acl localhost src 127.0.0.1/32 ::1
+acl to_localhost dst 127.0.0.0/8 0.0.0.0/32 ::1
+
+# Example rule allowing access from your local networks.
+# Adapt to list your (internal) IP networks from where browsing
+# should be allowed
+acl localnet src 10.0.0.0/8     # RFC1918 possible internal network
+acl localnet src 172.16.0.0/12  # RFC1918 possible internal network
+acl localnet src 192.168.0.0/16 # RFC1918 possible internal network
+acl localnet src fc00::/7       # RFC 4193 local private network range
+acl localnet src fe80::/10      # RFC 4291 link-local (directly plugged) machines
+
+acl SSL_ports port 443
+acl Safe_ports port 80          # http
+acl Safe_ports port 21          # ftp
+acl Safe_ports port 443         # https
+acl Safe_ports port 70          # gopher
+acl Safe_ports port 210         # wais
+acl Safe_ports port 1025-65535  # unregistered ports
+acl Safe_ports port 280         # http-mgmt
+acl Safe_ports port 488         # gss-http
+acl Safe_ports port 591         # filemaker
+acl Safe_ports port 777         # multiling http
+acl CONNECT method CONNECT
+
+
+                      Squid访问控制列表类型
+    ---------------------------------------------------------------------------------
+       ACL类型                           描述
+    --------------------------------------------------------------------------------
+        scr                              源IP地址
+    --------------------------------------------------------------------------------
+        dst                              目的IP地址
+    --------------------------------------------------------------------------------
+        srcdomain                        源域名
+    --------------------------------------------------------------------------------
+        dstdomain                        目的域名
+    ---------------------------------------------------------------------------------
+        srcdom_regex                     使用正则表达式匹配源域名
+    ----------------------------------------------------------------------------------
+        dstdom_regex                     使用正则表达式匹配目的域名
+    ----------------------------------------------------------------------------------
+        port                             访问端口
+    ----------------------------------------------------------------------------------
+        proto                            访问协议
+    ----------------------------------------------------------------------------------
+        method                           请求方法
+    ----------------------------------------------------------------------------------
+        url_regex                        使用正则表达式匹配特定的一类URL（网站目录)
+    -------------------------------------------------------------------------------------
+        urlpath_regex                    使用正则表达式匹配特定的一类URL(网站中的一类页面) 
+    -------------------------------------------------------------------------------------
+        maxconn                          最大访问连接数
+    --------------------------------------------------------------------------------------
+        time                             访问时间
+    --------------------------------------------------------------------------------------
+        arp                              客户端MAC地址
+    --------------------------------------------------------------------------------------
+        proxy_auth                       通过外部程序进行用户认证
+    ---------------------------------------------------------------------------------------
+        http_status                      状态代码
+    ---------------------------------------------------------------------------------------
+
+
+                             时间表示法
+    --------------------------------------------------------------------------------------
+      简写                              全称                             含义
+    --------------------------------------------------------------------------------------
+       M                                Monday                          星期一
+   --------------------------------------------------------------------------------------    
+       T                                Tuesday                         星期二
+   --------------------------------------------------------------------------------------
+       W                                Wednesday                       星期三
+   --------------------------------------------------------------------------------------
+       H                                Thursday                        星期四
+   --------------------------------------------------------------------------------------
+       F                                Friday                          星期五
+   --------------------------------------------------------------------------------------
+       A                                Saturday                        星期六
+   ---------------------------------------------------------------------------------------
+       S                                Sunday                          星期日
+   ---------------------------------------------------------------------------------------
+
+
+
+                           匹配模式
+    ---------------------------------------------------------------------------------
+      符号                                        描述
+    ---------------------------------------------------------------------------------
+      ^                                     匹配数据的开头
+    ---------------------------------------------------------------------------------
+      $                                     匹配数据的结尾
+    ---------------------------------------------------------------------------------
+      .                                     匹配任何字符
+    ---------------------------------------------------------------------------------
+      \                                     匹配标点符号
+    ---------------------------------------------------------------------------------
+      [ab]                                  匹配一个字符，a或b
+    ---------------------------------------------------------------------------------
+      [a-z]                                 匹配任意一个小写字母
+    ---------------------------------------------------------------------------------
+      [a-z 0-9]                             匹配任意小写字母或数字
+    ---------------------------------------------------------------------------------
+
+    例19.1 禁止IP地址为192.168.0.5的客户端使用代理服务器
+
+    -->acl acl_1 src 192.168.0.5
+
+    -->http_access deny acl_1
+
+    例19.2 使用文件的方式禁止IP地址为192.168.0.5和192.168.0.55客户端使用代理服务器
+
+    -->vim  /etc/squid/acl #新建的
+
+    192.168.0.5
+    192.168.0.55
+
+    -->vim /etc/squid/squid.conf 添加
+
+    acl acl_2 src "/etc/squid/acl"
+    http_access deny acl_2
+
+
+
+    例19.3 禁止网络192.168.0.0的客户端使用代理服务器
+
+    acl acl_3 192.168.0.0/24
+
+    http_access deny acl_3
+
+    例19.4 禁止来自sh.com域的客户端使用代理服务器
+
+    acl acl_4 srcdomain  .sh.com
+
+    http_access deny acl_4
+
+    例19.5 屏蔽网站www.sina.com
+
+    acl acl_5 dstdomain -i www.sina.com
+    acl_access deny acl_5
+
+
+    例19.6 屏蔽所有包含sex的URL路径
+
+    acl acl_6 url_regex -i sex
+    http_access deny acl_6
+
+
+    例19.7 限制网络192.168.0.0的客户端并发的最大连接数为3
+
+    acl acl_7 src  192.168.0.0/24
+    acl acl_8 maxconn 3
+    http_access deny acl_7 acl_8
+
+    例19.8 禁止下载gif和bmp文件
+
+    acl acl_9 urlpath_regex -i \.gif$\.bmp$
+    http_access deny acl_9
+
+
+    例19.9 禁止用户访问端口21 、80、1000-1024
+
+    acl acl_10 port 21 80 1000-1024
+    http_access deny acl_10
+
+
+    例19.10 限制所有员工只能在周一到周五9:00~18:00使用代理服务器
+
+    acl acl_11 src 0.0.0.0/0.0.0.0
+    acl acl_12 time MTWHF 9:00-18:00
+    http_access allow acl_11 acl_12
+
+
+    例19.11 禁止MAC地址为00:0c:29:32:84:5f的客户端使用代理服务器
+
+    acl acl_13 arp 00:0c:29:32:84:5f
+    http_access deny acl-13
+
+    例19.12： 禁止通过HTTP和FTP协议浏览网站
+
+    acl acl_14 proto HTTP FTP
+    http_access deny acl_15
+
+    例19.13 禁止请求方法GET和POST
+
+    acl acl_15 method GET POST
+    http_access deny acl_15
+
+    例19.14 禁止通过外部程序REQUIRED进行用户认证
+
+    acl acl_16 proxy_auth REQUIRED
+    http_access deny acl_16
+
+
+    例19.15 禁止状态代码200和301
+
+    acl acl_17 http_status 200 301
+    http_access deny acl_17
+
+
+    例19.16 屏蔽所有包含".foo"和".com"的源域名
+
+    acl acl_18 srcdom_regex -i \.foo\.com
+    http_access deny acl_18
+
+    例19.17 屏蔽所有包含".foo"和".com"的目的域名
+
+    acl acl_19 dstdom_regex -i \.foo\.com
+    http_access deny acl_19
+
+
+19.2.4 Squid服务器配置实例
+
+   在公司内部配置一台Squid服务器，为公司网络内的客户端计算机提供代理上网服务，具体参数如下：
+
+   。Squid服务器IP地址:192.168.0.204
+
+   。Squid服务器监听端口号：3128
+
+   。内存缓存区大小：512MB
+
+   。磁盘缓存：目录为/var/spool/squid，容量大小为20480MB(20GB),一级子目录16个，二级子目录256个
+
+   。缓存日志文件路径：/var/log/squid/cache.log
+
+   。网页缓存日志路径：/var/log/squid/store.log
+
+   。访问日志文件路径：/var/log/squid/access.log
+
+   。squid进程所有者：squid
+
+   。squid进程所属组：squid 
+
+   。DNS服务器IP地址：114.114.114.114
+
+   。可见计算机主机名:192.168.0.2
+
+   。Squid服务器管理员电子邮件地址：root@yhq.com
+
+   。允许使用代理服务的网络：192.168.0.0/24
+
+   1.打开内核路由转发功能。
+
+   -->vim /etc/sysclt.conf，将
+
+   net.ipv4.ip_forward = 1  #改为1
+
+   -->sysctl -p
+
+   2.编辑/etc/squid/squid.conf文件
+
+   在：http_access deny all 下面添加：
+
+acl client src 192.168.0.0/24
+http_access allow client
+
+http_port 3128
+hierarchy_stoplist cgi-bin ?
+cache_mem 512 MB
+cache_dir ufs /var/spool/squid 20480 15 256
+cache_log /var/log/squid/cache.log
+cache_access_log /var/log/squid/access.log
+cache_store_log /var/log/squid/store.log
+cache_effective_user squid
+cache_effective_user squid
+cache_effective_group squid
+dns_nameservers 114.114.114.114
+visible_hostname  192.168.0.204 #squid服务器IP
+cache_mgr root@yhq.com
+coredump_dir /var/spool/squid
+
+    3.检查配置文件语法
+
+    -->squid -k parse
+
+2015/05/26 00:07:20| Processing Configuration File: /etc/squid/squid.conf (depth 0)
+2015/05/26 00:07:20| Initializing https proxy context
+
+
+    4.初始化squid
+
+    -->squid -z  #使用以下命令初始化squid,创建缓存目录
+
+2015/05/26 00:08:02| Creating Swap Directories
+2015/05/26 00:08:02| /var/spool/squid exists
+2015/05/26 00:08:02| Making directories in /var/spool/squid/00
+2015/05/26 00:08:02| Making directories in /var/spool/squid/01
+2015/05/26 00:08:03| Making directories in /var/spool/squid/02
+2015/05/26 00:08:03| Making directories in /var/spool/squid/03
+2015/05/26 00:08:03| Making directories in /var/spool/squid/04
+2015/05/26 00:08:04| Making directories in /var/spool/squid/05
+2015/05/26 00:08:04| Making directories in /var/spool/squid/06
+2015/05/26 00:08:04| Making directories in /var/spool/squid/07
+2015/05/26 00:08:04| Making directories in /var/spool/squid/08
+2015/05/26 00:08:04| Making directories in /var/spool/squid/09
+2015/05/26 00:08:05| Making directories in /var/spool/squid/0A
+2015/05/26 00:08:05| Making directories in /var/spool/squid/0B
+2015/05/26 00:08:05| Making directories in /var/spool/squid/0C
+2015/05/26 00:08:05| Making directories in /var/spool/squid/0D
+2015/05/26 00:08:05| Making directories in /var/spool/squid/0E
+
+    。查看一级缓存目录，一级子目录为16个  #实际为15个
+
+    -->00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E
+
+    。查看二级缓存目录，二级子目录为256个
+
+    -->ls /var/spool/squid/00
+
+00  08  10  18  20  28  30  38  40  48  50  58  60  68  70  78  80  88  90  98  A0  A8  B0  B8  C0  C8  D0  D8  E0  E8  F0  F8
+01  09  11  19  21  29  31  39  41  49  51  59  61  69  71  79  81  89  91  99  A1  A9  B1  B9  C1  C9  D1  D9  E1  E9  F1  F9
+02  0A  12  1A  22  2A  32  3A  42  4A  52  5A  62  6A  72  7A  82  8A  92  9A  A2  AA  B2  BA  C2  CA  D2  DA  E2  EA  F2  FA
+03  0B  13  1B  23  2B  33  3B  43  4B  53  5B  63  6B  73  7B  83  8B  93  9B  A3  AB  B3  BB  C3  CB  D3  DB  E3  EB  F3  FB
+04  0C  14  1C  24  2C  34  3C  44  4C  54  5C  64  6C  74  7C  84  8C  94  9C  A4  AC  B4  BC  C4  CC  D4  DC  E4  EC  F4  FC
+05  0D  15  1D  25  2D  35  3D  45  4D  55  5D  65  6D  75  7D  85  8D  95  9D  A5  AD  B5  BD  C5  CD  D5  DD  E5  ED  F5  FD
+06  0E  16  1E  26  2E  36  3E  46  4E  56  5E  66  6E  76  7E  86  8E  96  9E  A6  AE  B6  BE  C6  CE  D6  DE  E6  EE  F6  FE
+07  0F  17  1F  27  2F  37  3F  47  4F  57  5F  67  6F  77  7F  87  8F  97  9F  A7  AF  B7  BF  C7  CF  D7  DF  E7  EF  F7  FF
+    
+
+    -->ls -l  /var/spool/squid/00|grep "^d"|wc -l
+
+       256
+
+19.2.5 控制squid服务
+
+    1.启动squid服务
+
+    -->service squid start
+
+       正在启动 squid：.                                          [确定]
+
+    -->netstat -antu|grep 3128
+
+       tcp        0      0 :::3128                     :::*                        LISTEN 
+
+    -->ps -ef|grep squid
+
+root      3333     1  0 00:24 ?        00:00:00 squid -f /etc/squid/squid.conf
+squid     3336  3333  0 00:24 ?        00:00:00 (squid) -f /etc/squid/squid.conf
+squid     3337  3336  0 00:24 ?        00:00:00 (unlinkd)
+root      3342  3199  0 00:25 pts/1    00:00:00 grep squid
+
+    -->ls /var/spool/squid
+
+    2.查看squid服务运行状态
+
+    -->service squid status
+
+    squid (pid  3336) 正在运行...
+
+    3.停止squid服务
+
+    -->service squid stop
+
+    停止 squid：................                               [确定]
+
+    4.重新启动squid服务
+
+    -->service squid restart
+
+    5.开机自动启动squid服务
+
+    -->chkconfig squid on
+
+    -->chkconfig --list squid
+
+       squid          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+19.3 配置Squid客户端
+
+    Squid服务器可以支持linux和非linux客户端
+
+19.3 Linux客户端配置
+
+    图形界面
+
+    -->应用程序-->Internet-->firefox Web Browser,打开浏览器
+
+    -->编辑-->首选项-->高级-->网络-->设置-->手动配置代理：
+
+                                            HTTP代理：192.168.0.204  端口:3128
+
+					    勾选:为所有协议使用相同代理
+
+					    不使用代理：localhost,127.0.0.1  #默认的
+
+     -->确定-->关闭。
+
+     打开浏览器测试是否可以上网。
+
+
+19.3.2 Windows客户端配置
+
+     使用win7 IE浏览器测试 #
+
+     -->工具-->Internet选项-->连接-->局域网设置
+
+     -->代理服务器：勾选“为LAN使用代理服务器”
+
+        地址：192.168.0.204   端口：3128
+
+     -->应用-->关闭
+
+     打开浏览器测试是否可以上网。
+
+
+19.4 Squid日志
+
+19.4.1 Squid日志文件简介
+
+    Squid服务器的日志文件默认都存储在/var/log/squid目录中，用来记录访问日志、缓存日志和网页缓存日志
+
+在文件中可以使用access_log参数指定access.log日志文件，使用cache_log参数指定cache.log日志文件，使用
+
+cache_store_log参数指定store.log日志文件。
+
+    -->cd /var/log/squid
+
+    -->ls
+       access.log  cache.log  squid.out  store.log
+
+
+                        squid日志文件
+    --------------------------------------------------------------------
+        文件                                     描述 
+    --------------------------------------------------------------------
+     /var/log/squid/access.log           Squid访问日志文件
+    --------------------------------------------------------------------
+     /var/log/squid/cache.log            Squid缓存日志文件
+    --------------------------------------------------------------------
+     /var/log/squid/store.log            Squid网页缓存日志文件
+    --------------------------------------------------------------------
+
+     access.log日志输出：
+
+     1432571768.265  15642 192.168.0.188 TCP_MISS/200 66727 GET http://www.centos.org/assets/js/jquery.min.js - DIRECT/85.12.30.227 text/javascript
+     1432571819.679  60117 192.168.0.188 TCP_MISS/200 8615 CONNECT www.baidu.com:443 - DIRECT/61.135.169.121 -
+    
+
+                            /var/log/squid/access.log日志文件输出信息描述
+     ----------------------------------------------------------------------------------
+         输出信息                                      信息描述
+     ----------------------------------------------------------------------------------
+        1432571768.265                           客户端访问时间
+     ----------------------------------------------------------------------------------
+        15642                                    处理缓存花费的时间，但是为毫秒
+     ----------------------------------------------------------------------------------
+        192.168.0.188                            客户端IP地址或者是FQDN
+     ----------------------------------------------------------------------------------
+        TCP_MISS/200                             结果信息编码/状态信息编码
+     ----------------------------------------------------------------------------------
+        66727                                    缓存字节数
+     ----------------------------------------------------------------------------------
+        GET                                      HTTP请求方法
+     ----------------------------------------------------------------------------------
+      http://www.centos.org/assets/js/jquery.min.js  目的地址URL
+     ----------------------------------------------------------------------------------
+        -                                        默认未使用
+     ----------------------------------------------------------------------------------
+       DIRECT/85.12.30.227                       缓存界别/目的IP地址
+     ----------------------------------------------------------------------------------
+       text/javascript                          缓存对象类型
+     ----------------------------------------------------------------------------------
+
+
+                                 squid访问日志状态信息编码描述
+     ------------------------------------------------------------------------------------
+         状态信息编码                                     描述
+     ------------------------------------------------------------------------------------ 
+         102                                              正在处理中
+     ------------------------------------------------------------------------------------ 
+         200                                              完成缓存
+     ------------------------------------------------------------------------------------ 
+         205                                              更新缓存内容
+      ------------------------------------------------------------------------------------ 
+         304                                              未更新缓存内容
+      ------------------------------------------------------------------------------------ 
+         305                                              使用代理服务器
+      ------------------------------------------------------------------------------------ 
+         400                                              错误的请求
+      ------------------------------------------------------------------------------------
+         403                                              没有权限，拒绝访问
+      ------------------------------------------------------------------------------------
+         404                                              找不到缓存数据
+      ------------------------------------------------------------------------------------
+         408                                              请求时间过期
+      ------------------------------------------------------------------------------------
+         503                                              服务不可用
+      ------------------------------------------------------------------------------------
+         505                                              HTTP版本不支持
+      ------------------------------------------------------------------------------------
+         507                                              存储空间不足
+      ------------------------------------------------------------------------------------
+
+                               缓存级别编码
+      ---------------------------------------------------------------------------------------------
+          缓存级别编码                                    描述
+      ---------------------------------------------------------------------------------------------
+           DIRECT                                       直接从目标网站获取缓存对象
+      ---------------------------------------------------------------------------------------------
+           SIBLING_HIT                                  从同级缓存服务器获取缓存对象
+      ---------------------------------------------------------------------------------------------
+           PARENT_HIT                                   从父级缓存服务器获取缓存对象
+      ---------------------------------------------------------------------------------------------
+           CD_PARENT_HIT                                从内存摘要表获知缓存对象在父级缓存服务器中
+      ---------------------------------------------------------------------------------------------
+           CD_SIBLING_HIT                               从内存摘要表获知缓存对象在同级缓存服务器中
+      ---------------------------------------------------------------------------------------------                     
+
+
+19.4.2 使用webalizer实现Squid流量分析
+
+    webalizer是一款高效、免费的服务器日志分析程序，其分析结果以HTML文件格式进行保存，从而可以方便地
+
+通过Web服务器进行浏览。
+
+    1.安装webalizer软件包
+
+    查看是否安装了webalizer软件
+
+    -->rpm -q webalizer
+
+       package webalizer is not installed
+
+    安装
+
+    -->yum install webalizer -y
+
+    2.配置webalizer
+
+    (1)编辑/etc/squid/webalizer_squid.conf文件
+
+    -->cp /etc/webalizer.conf /etc/squid/webalizer_squid.conf
+
+    -->chmod 755  /etc/squid/webalizer_squid.conf
+
+    -->vim /etc/squid/webalizer_squid.conf
+
+       LogFile        /var/log/httpd/access_log  #默认
+       LogType squid                             #去掉注释改为:
+       OutputDir      /var/www/html/usage_squid  #去掉注释改为:
+
+    (2)创建/var/www/html/usage_squid目录，并复制相关文件
+    
+    -->mkdir /var/www/html/usage_squid
+
+    -->cp /var/www/usage/msfree.png  /var/www/html/usage_squid/
+
+    -->cp /var/www/usage/webalizer.png /var/www/html/usage_squid/
+
+    (3)生成统计分析
+
+    如需要定时生成统计分析，使用cron
+
+     #crontab -e
+
+     添加如下配置行，使得webalizer每晚9点生成当天的Squid流量统计分析结果：
+
+     21 0 * * * /usr/bin/webalizer -c /etc/squid/webalizer_squid.conf 
+
+    -->webalizer -c /etc/squid/webalizer_squid.conf 
+
+
+    报错：
+    Error: Skipping record (bad date): [01/jan/1970:08:03:12 -0000] [1]
+    Error: Skipping record (bad date): [01/jan/1970:08:03:12 -0000] [2]
+
+    解决方法：暂无
+
+    3.访问webalizer
+
+    -->service httpd start
+
+    -->http://192.168.0.204/usage_squid ,即可看到详细信息。
+
+    -->单击:"Month"下面的月份查看详细信息。
+
+
+19.5 Squid服务器高级配置
+
+   通过Web网页的方式访问cachemgr.cgi，可以查询Squid服务器的缓存活、内存的使用和分配、时间队列、IP地址
+
+的缓存状态以及DNS的查询统计等信息。
+
+   1.复制cachemgr.cgi文件
+
+   -->ls -l /usr/lib64/squid/cachemgr.cgi 
+
+      -rwxr-xr-x 1 root root 49752 10月 16 2014 /usr/lib64/squid/cachemgr.cgi  #默认情况下存在这个文件，因为安装squid包时已经安装了。
+
+   -->cp /usr/lib64/squid/cachemgr.cgi /var/www/cgi-bin/cp /usr/lib64/squid/cachemgr.cgi /var/www/cgi-bin/
+
+   2.编辑/etc/squid/cachemgr.conf文件
+
+   -->cat /etc/squid/cachemgr.conf   #默认的，不用修改
+
+# This file controls which servers may be managed by
+# the cachemgr.cgi script
+#
+# The file consists of one server per line on the format
+#   hostname:port  description
+#
+# Specifying :port is optional. If not specified then
+# the default proxy port is assumed. :* or :any matches
+# any port on the target server.
+#
+# hostname is matched using shell filename matching, allowing
+# * and other shell wildcards.
+localhost  
+
+   3.编辑/etc/httpd/conf.d/squid.conf文件
+
+   -->cat /etc/httpd/conf.d/squid.conf  #默认的，不用修改
+
+#
+# This is /etc/httpd/conf.d/squid.conf
+#
+
+ScriptAlias /Squid/cgi-bin/cachemgr.cgi /usr/lib64/squid/cachemgr.cgi
+
+# Only allow access from localhost by default
+<Location /Squid/cgi-bin/cachemgr.cgi>
+ order allow,deny
+ allow from localhost
+ # Add additional allowed hosts as needed
+ # allow from .example.com
+</Location>
+
+
+
+    4.访问缓存管理网页
+
+    -->http://192.168.0.204/cgi-bin/cachemgr.cgi， 默认为：
+
+    Cache Server:Other
+
+    Cache Host:localhost  #localhost不用修改
+
+    Cache Port: 3128
+
+    -->单击"Continue..." 
+
+    打开网页，可以进行Squid缓存的管理。
+
+
+19.5.2 Squid安全设置
+
+    可以使用Squid对内部网络用户上网进行认证。
+
+    在默认情况下，Squid不带任何认证程序，可以通过外部认证程序实现认证功能，一般有NCSA认证、
+
+PAM认证、LDAP认证、SMB认证和SASL认证。这些外部认证程序都存储在/usr/lib64/squid目录中。
+
+    注意：Squid不支持在透明代理模式下启用用户身份认证功能。
+    
+    。查看/usr/lib64/squid目录章的外部认证程序
+
+    -->ls /usr/lib64/squid/
+
+cachemgr.cgi      fakeauth_auth   negotiate_kerb_auth       pop3.pl      squid_db_auth         squid_radius_auth  yp_auth
+digest_edir_auth  getpwname_auth  negotiate_kerb_auth_test  sasl_auth    squid_kerb_auth       squid_session
+digest_ldap_auth  ip_user_check   no_check.pl               smb_auth     squid_kerb_auth_test  squid_unix_group
+digest_pw_auth    msnt_auth       ntlm_smb_lm_auth          smb_auth.pl  squid_ldap_auth       unlinkd
+diskd             ncsa_auth       pam_auth                  smb_auth.sh  squid_ldap_group      wbinfo_group.pl
+
+    1.创建认证账号文件
+
+    添加zhangsan、lisi认证账号，不用操作系统中创建用户
+
+    -->htpasswd -c /etc/squid/passwd zhangsan
+
+New password: 
+Re-type new password: 
+Adding password for user zhangsan
+
+    -->htpasswd /etc/squid/passwd lisi
+
+New password: 
+Re-type new password: 
+Adding password for user lisi
+    
+    。查看认证账号文件
+
+    -->cat /etc/squid/passwd 
+
+zhangsan:8LEgFeEbTnll2
+lisi:JqPCuQ34HnGjs
+
+   2.编辑/etc/squid/squid.conf文件
+
+   -->vim /etc/squid/squid.conf,添加修改以下参数：
+
+   在文件最后添加：
+
+auth_param basic program /usr/lib64/squid/ncsa_auth /etc/squid/passwd  //设置认证方式为basic，认证程序需要读取的账户文件为/etc/squid/passwd
+auth_param basic children 5                #设置认证程序的进程数是5
+auth_param basic credentialsttl 2 hours    #设置认证程序有效期为2个小时，当第一次认证有效期后，需要重新进行用户名、密码验证，才能访问外网资源。
+auth_param basic realm This is fulong.com's Squid proxy caching  #设置认证提示内容
+acl auth_user proxy_auth REQUIRED
+http_access allow auth_user           
+
+   最后2条：定义名为auth_user的访问控制列表，类型为proxy_auth，列表值为REQUIRED，允许经过认证的用户使用Squid访问。
+
+
+   3.重启Squid服务
+
+   -->service squid restart
+
+
+   4.客户端访问
+
+   客户端打开Mozilla Firefox浏览器访问:
+
+   -->http://192.168.0.204:3128
+
+   -->用户名：zhangsan 
+
+      密码：  ******
+
+   用户登录之后才能使用Squid代理上网
+
+19.5.3 配置Squid透明代理
+
+    透明代理服务器和标准代理服务器的功能完全相同，但是透明代理操作对客户端浏览器是透明的，
+
+在代理客户端上，不需要指定代理服务器的IP地址和端口号。透明代理服务器阻断网络通信，并且过滤
+
+出访问外部的HTTP协议(80端口)流量。
+
+    1.Squid服务器配置
+
+    (1)编辑/etc/squid/squid.conf文件
+
+    -->vim /etc/squid/squid.conf
+
+    http_port 192.168.0.204:3128 transparent   #IP为 squid服务器IP
+
+    (2)重启squid服务器
+
+    -->service squid restart
+
+
+    2. NAT服务器配置
+
+    (1)打开内核路由转发功能
+
+    -->vim /etc/sysctl.conf
+
+    net.ipv4.ip_forward = 1
+
+    -->sysctl -p 
+
+    (2)添加iptables规则
+
+    （或者关闭iptables）
+
+    -->service iptables start
+    
+    -->ptables -t nat -A PREROUTING -i eth0 -p tcp -s 192.168.0.0/24 --dport 80 -j REDIRECT --to-ports 3128
+
+    -->service iptables save
+
+      iptables：将防火墙规则保存到 /etc/sysconfig/iptables：     [确定]
+
+
+    注意：Squid服务器和NAT服务器一般都配置在同一台服务器上。
+
+
+    3.客户端配置（192.168.0.188）
+
+    (1)编辑网卡配置文件
+
+    -->vim /etc/sysconfig/network-scripts/ifcfg-eth0 
+  
+    GATEWAY=192.168.0.204   #修改为squid 服务器地址。
+
+    -->vim /etc/sysconfig/network
+
+    GATEWAY=192.168.0.204 
+
+    -->/etc/init.d/network restart
+
+正在关闭接口 eth0： 设备状态：3 (断开连接)
+                                                           [确定]
+关闭环回接口：                                             [确定]
+弹出环回接口：                                             [确定]
+弹出界面 eth0： 活跃连接状态：激活的
+活跃连接路径：/org/freedesktop/NetworkManager/ActiveConnection/1
+                                                           [确定]
+
+    (2)浏览器代理设置
+
+     
+    -->应用程序-->Internet-->firefox Web Browser,打开浏览器
+
+    -->编辑-->首选项-->高级-->网络-->设置-->无代理
+
+    客户端测试是否可以上网。如果不行最好关闭squid服务器防火墙或检查防火墙配置。
+
+
+19.5.4 配置Squid反向代理。
+
+    反向大力服务器是指为Internent用户访问企业Web网站他i共缓存加速的代理服务。当用户浏览器
+
+发出一个HTTP请求时，通过域名解析将请求定向到反向代理服务器，然后由反向大力服务器处理请求。
+
+反向大力服务器一般只缓存可缓存的数据，而一些CGI脚本程序或者ASP之类的程序一般不缓存。它根据
+
+从Web服务器返回的HTTP头标记来缓存静态页面。
+
+
+    实例：在公司内部配置一台Squid服务器，实现反向代理功能，将访问192.168.0.204的80端口的数据包
+
+    转发192.168.0.188的80端口，具体参数如下：
+
+    。Squid服务器IP： 192.168.0.204
+
+    。Web服务器：192.168.0.188
+
+    。客户端服务器：192.168.0.205
+
+    
+    1.编辑/etc/squid/squid.conf文件  #192.168.0.204主机
+
+    -->vim /etc/squid/squid.conf
+    
+    http_port 192.168.0.204:80 vhost  #修改，并在下面添加如下：
+    cache_peer 192.168.0.188  parent 80 0 originserver weight=5 max-conn=30  
+--------------------------------------------------------------------------------------
+http_port 192.168.0.204:80 accel vhost vport
+cache_peer 192.168.0.188  parent 80 0 no-query originserver
+
+。vhost和vport指的是所采用的虚拟主机的方式：基于IP地址和基于端口的；
+
+。cache_peer 192.168.0.188 parent 80 0 no-query originserver：指定真实Web Server的IP地址；
+
+。cache_peer_domain www.test.com 192.168.0.188：告诉反向代理服务器，当客户端有对www.test.com的访问请求时，
+
+  需要从真实Web Server 192.168.0.188上取得数据；
+--------------------------------------------------------------------------------------   
+    2.重新启动squid服务
+
+    -->service squid restart
+
+    
+    3.访问Web网站
+
+    在主机192.168.0.205的Mozilla Firefox中输入：http://192.168.0.204,将重定向到
+
+    http://192.168.0.188的Web网站。
+
+
+19.5.5 Squid服务器性能优化
+
+    由于缓存区产生了大量的置换操作，为维护缓存数据的置换效率，需要调整大力服务器的cache_swap
+
+
+    。half_closed_clients off  
+
+    有时候由于用户的不正常操作，可能会使Squid的TCP连接处于半关闭状态，这时该TCP连接的房段已经关闭，
+
+而接收端正常工作。默认Squid将一直保持这种处于半关闭状态的TCP连接，直到返回套接字的读写错误才将其
+
+关闭。如果将改值设置为off，则一旦客户端返回"no more data to read"信息，Squid就立即关闭该连接。
+
+    。cache_swap_low 90
+
+    设置当缓存容量达到cache_swap_high参数设置的最高限度百分比时，开始删除数据直到cache_swap_low设置的百分比。
+
+
+    。cache_swap_high 95
+
+    限制缓存区增长占缓存目录空间百分比的最高限度。如果网络越大，使用代理服务的用户越多，百分比就应该设置的比默认
+
+值更低一些。该值大于95%以上时，系统会不稳定。
+
+   。maximum_object_size 1024KB
+
+   设置保存数据对象的大小。如果数据对象大于该值，将不会保存在缓存目录中。
+
+
+   。hierarchy_stoplist cgi-bin?
+
+   在参数后面设置URL字符串，当请求中包含这些字符串的时候，代理服务器就会直接向互联网获取数据，而不会向其他代理服务器
+
+   查询。URL字符串为空的时候，使用其他代理服务器的缓存数据。
+
+   。prefer_direct off
+
+   设置Squid服务器获取缓存数据的方式。设置为on表示代理服务器不能从父级服务器那里获取数据。设置为off表示本地代理服务器
+
+   可以获取父级代理服务器的缓存数据。
+
+
+   1.编辑/etc/squid/squid.conf文件
+
+   文件最后添加：
+
+half_closed_clientS off
+hierarchy_stoplist cgi-bin ?
+cache_swap_low 80
+cache_swap_high 85
+maximum_object_size 4096 KB
+
+   2.重启squid服务
+
+   -->service squid restart
+
+
+    
+
+   
+
+
+
+
+
+
+    
+
+
+
+  
+
+
+
+
+-------------------------------------------------------------------------------------------------
+源码安装Webalizer:
+
+Webalizer 的配置不是很困难，但是对于新手来说，安装起来却十分的麻烦，本文将详细叙述安装过程，帮你一步一步走向成功！ 
+
+　　Webalizer 吹牛在一台 200 Mhz 的普通 Pentium 机器上处理一万条记录只需要一秒钟，但是在我的赛扬机器上可没有那么快。大概是我做了 IP 地址的反向解析的缘故。但是，不论速度如何，我认为 Webalizer 尽管不能和某些商业软件的界面媲美，但是和其他的开源软件比起来，其统计能力要强得多。 
+
+　　一. 安装 
+
+　　Webalizer 需要用到相关的 jpeg, png 和 zlib库，这些库一般不缺省安装，因此初学者会感到难于下手。由于这些库具有相关性，因此下面的安装步骤不能颠倒： 
+
+　　1、jpeg 库的安装 
+　　从 http://www.ijg.org/ 下载 jpeg 库，解开压缩文件后，进入到这个目录： 
+　　./configure 
+　　make 
+　　make install 
+　　cd .. 
+　　2、zlib 库的安装 
+　　从 http://www.info-zip.org/pub/infozip/zlib/ 下载 zlib 库后， 
+
+　　gunzip zlib*.tar.gz 
+　　tar -xvpf zlib-1.1.3.tar 
+　　mv zlib-1.1.3 zlib 
+　　cd zlib 
+　　./configure 
+　　make 
+　　make test 
+　　make install 
+　　cd .. 
+
+3、libpng 库的安装 
+
+
+　　从 http://www.libpng.org/ 下载 libpng 后： 
+
+　　gunzip libpng*.tar.gz 
+　　tar -xvpf libpng-1.0.10.tar 
+　　mv libpng-1.0.10 libpng 
+　　cd libpng 
+　　cp scripts/makefile.linux makefile 
+　　make 
+　　make test 
+　　make install 
+　　cd .. 
+
+　　你还可以从 http://www.freetype.org/download.html 选择下载 freetype 字库，但是这个步骤不是必须的。 
+　　cd freetype* 
+　　make setup 
+　　make 
+　　make install 
+　　cd .. 
+
+　　下面我们就可以开始安装 gd 库了： 
+　　从 http://www.boutell.com/gd/ g下载 d-1.8.4.tar.gz ： 
+
+cd gd-1.8.4 
+
+　　#如果需要使用 Xpm 或者 TrueType 支持，在 make 之前修改 Makefile。 
+
+　　make 
+
+　　#很多人会经历找不到 gd.h 的问题，建议你在硬盘上搜索老的 gd.h 版本，然后 make install 
+
+　　接下来，我们就可以开始安装 Webalizer 了，从 http://www.mrunix.net/webalizer/ 下载后： 
+
+　　cd webalizer-2.01-06 
+　　./configure 
+　　make 
+　　make install 
+
+　　如果不是通过源码编译的方法来安装 Webalizer 的话，你需要备份 /etc/webalizer.conf。 
+
+　　如果需要使用 DNS 反向解析功能的话，我们还需要安装 Berkeley DB。具体的安装可以参考文档：DNS.README。 
+二. 配置： 
+
+　　一个普通的配置文件为： 
+　　HideReferrer www.freelamp.com 
+　　Incremental yes 
+　　PageType htm* 
+　　PageType cgi 
+　　PageType php 
+　　PageType pl 
+　　IgnoreHist no 
+　　CountryGraph yes 
+　　IndexAlias index.cgi 
+　　IndexAlias index.php 
+　　HideReferrer Direct Request 
+　　HideURL *.gif 
+　　HideURL *.GIF 
+　　HideURL *.jpg 
+　　HideURL *.JPG 
+　　HideURL *.png 
+　　HideURL *.PNG 
+　　GroupURL /cgi-bin/* CGI Scripts 
+　　GroupURL /images/* Images 
+　　GroupReferrer yahoo.com/ Yahoo! 
+　　GroupReferrer excite.com/ Excite 
+　　GroupReferrer infoseek.com/ InfoSeek 
+　　GroupReferrer webcrawler.com/ WebCrawler 
+　　GroupReferrer google.com/ Google 
+　　GroupReferrer lycos.com/ Lycos 
+　　GroupReferrer metacrawler.com/ Metacrawler 
+　　GroupAgent MSIE Internet Exploder 
+　　GroupAgent Mozilla Netscape 
+　　GroupShading yes 
+　　MangleAgents 3 
+
+
+　　然后我们运行
+   /usr/local/bin/webalizer -Q -c /root/webalizer.conf -n www.freelamp.com -o /home/freelamp/public_html/log/ /home/freelamp/logs/freelamp.log 
+  把这句话写入 crontab ，我们就能从http://www.freelamp.com/log/ 看到日志统计结果了。
+安装III--------------------------------------------
+
+最近在搞Linux下resin 服务器的日志分析,网上对webalizer这个工具评价挺高的,而且它是免费的,因此我就安装起来.
+    需求:
+     由于webalizer在做报表时需要用到绘图,因此在安装webalzer前要先装libpng 库,和gd库从
+     http://aleron.dl.sourceforge.net/sourceforge/libpng/libpng-1.2.7-config.tar.gz 下载gd-1.2.7.tar.gz后考到一个目录下解压
+tar -xfzv libpng-1.2.7.tar.gz
+cd  libpng解压所在目录
+./configure
+make
+make install
+--------------libpng安装完毕---
+现在开始 gd 库
+从 http://www.boutell.com/gd/http/gd-2.0.28.tar.gz  下载gd.2.0.28.tar.gz
+tar -xfzv gd-2.0.28.tar.gz
+cd gd解压目录
+./configure
+make
+make install
+----------------gd库安装完-----
+现在开始安装webalizer了
+1.从webalizer的官方站点http://www.mrunix.net/webalizer/下载webalizer，当前的最新版本是webalizer-2.01-10-src.tgz。
+2.首先解开源代码包：
+tar xvzf webalizer-2.01-10-src.tgz
+3.在生成的目录中有个lang目录，该目录中保存了各种语言文件，有繁体中文版本和简体中文版.
+
+4.然后进入生成的目录：
+./configure
+./configure make --with-language=simplified_chinese
+make
+make install
+5.编译成功后，会产生一个webalizer可执行文件，可以将其拷贝到/usr/sbin/目录下：
+cp webalizer /usr/sbin/
+然后就可以开始配置webalizer了。(配置按自己的实际情况配置,里面有详细的注释)
+配置文件默认是/etc/webalizer.conf
+测试:
+用root 登陆,执行 /etc/rc.d/webalizer 
+正常时提示:
+
+使用日志文件 /home/smp/resin/logs/access.log (clf)
+输出结果到 /home/smp/resin/webapps/itemLog
+产生报表的主机名是 '192.168.1.102:8080'
+正在读取历史信息文件... webalizer.hist
+正在生成报表 ---- 为  十一月 2004
+正在生成综合报表
+正在保存历史信息文件...
+287 条记录 共用时 0.04 秒
+
+为了让webzlizer按计划运行,所有现在我写一个脚本:(在/etc/rc.c/webalizer)
+export HOME=/
+export PATH=/usr/bin
+export LD_LIBRARY_PATH=/usr/local/lib
+export NLS_LANG=american_america.ZHS16GBK
+export CLASSPATH=/usr/local/lib
+export LANG=zh_CN.gb2312i
+#!/bin/sh
+/usr/bin/webalizer > /etc/rc.d/out.log
+
+注意环境变量一定要配,不然执行不了的
+在crontab -e 中添加
+59 23 * * * /etc/rc.d/webalizer -c /etc/webalizer.conf
+现在大功告成了.
+
+
+
+
+
+    
+
+
+
+
+   
+      
+
+
+   
+

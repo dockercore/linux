@@ -1,0 +1,1706 @@
+                                        第10章 配置Nginx服务器
+
+
+
+10.1 Nginx简介
+
+    Nginx是一款由俄罗斯程序员Igor Sysoev开发的轻量级网页服务器、反向代理服务器以及电子邮件
+
+(POP3/IMAP)代理服务器。Nginx是一个安装非常简单，配置文件非常简介（还能够支持per语法）Bugs非常
+
+少的服务器。
+
+    Nginx相对于Apache、lighttpd具有占用内存少， 稳定性高等有点，并且依靠并发能力强、丰富的模块库
+
+以及友好灵活的配置而闻名。
+
+    Nginx能够支持高达5万个并发连接数的响应，在高连接并发的情况下，Nginx是Apache服务器不错的替代品。
+
+Nginx有效的高并发支持和高效的负载均衡是选择它理由。
+
+    Nginx作为负载均衡服务器，既可以在内部直接支持Rails和PHP程序对外进行服务，也可以支持作为HTTP代理
+
+服务器对外进行服务。Nginx采用C编写。开销比Perlbal要好很多。
+
+10.2 Nginx服务器安装和配置
+
+10.2.1 源码编译安装nginx软件
+
+    下载网址：http://nginx.org/
+
+    下载：nginx-1.6.3.tar.gz  (最新版本：1.9.1)
+
+    1.安装pcre
+
+    -->rpm -qa|grep pcre
+
+    pcre-static-7.8-6.el6.x86_64
+    pcre-7.8-6.el6.x86_64
+    pcre-devel-7.8-6.el6.x86_64
+
+
+    -->yum install pcre-* openssl-* -y
+
+    
+    2.创建用户nginx
+
+    -->useradd nginx
+
+    -->passwd nginx
+
+    3.安装nginx软件
+
+    -->tar -zxf nginx-1.6.3.tar.gz 
+
+    -->cd nginx-1.6.3
+
+    -->./configure \    
+--user=nginx \
+--group=nginx \
+--prefix=/usr/local/nginx-1.4.4 \
+--sbin-path=/usr/sbin/nginx \
+--conf-path=/etc/nginx/nginx.conf \
+--error-log-path=/var/log/nginx/error.log \
+--http-log-path=/var/log/nginx/access.log \
+--http-client-body-temp-path=/tmp/nginx/client_body \
+--http-proxy-temp-path=/tmp/nginx/proxy \
+--http-fastcgi-temp-path=/tmp/nginx/fastcgi \
+--pid-path=/var/run/nginx.pid \
+--lock-path=/var/lock/subsys/nginx \
+--with-http_stub_status_module \
+--with-http_ssl_module \
+--with-http_gzip_static_module
+
+
+
+
+
+
+修改为一个包中配置文件：
+
+
+    -->./configure \
+--user=nginx \
+--group=nginx \
+--prefix=/usr/local/nginx-1.4.4 \
+--sbin-path=/usr/local/nginx-1.4.4/sbin/nginx \
+--conf-path=/usr/local/nginx-1.4.4/nginx/nginx.conf \
+--error-log-path=/var/log/nginx/error.log \
+--http-log-path=/var/log/nginx/access.log \
+--http-client-body-temp-path=/tmp/nginx/client_body \
+--http-proxy-temp-path=/tmp/nginx/proxy \
+--http-fastcgi-temp-path=/tmp/nginx/fastcgi \
+--pid-path=/var/run/nginx.pid \
+--lock-path=/var/lock/subsys/nginx \
+--with-http_stub_status_module \
+--with-http_ssl_module \
+--with-http_gzip_static_module
+
+    -->make
+
+    -->make install
+
+
+
+
+    。安装第三方模块
+
+    -->./configure \
+--user=nginx \
+--group=nginx \
+--prefix=/usr/local/nginx-1.4.4 \
+--sbin-path=/usr/sbin/nginx \
+--conf-path=/etc/nginx/nginx.conf \
+--error-log-path=/var/log/nginx/error.log \
+--http-log-path=/var/log/nginx/access.log \
+--http-client-body-temp-path=/tmp/nginx/client_body \
+--http-proxy-temp-path=/tmp/nginx/proxy \
+--http-fastcgi-temp-path=/tmp/nginx/fastcgi \
+--pid-path=/var/run/nginx.pid \
+--lock-path=/var/lock/subsys/nginx \
+--with-http_stub_status_module \
+--with-http_ssl_module \
+--with-http_gzip_static_module \
+--add-module=../ngx_cache_purge-2.1
+
+# ./configure --prefix=/usr/local/nginx-1.4.1 \
+ --with-http_stub_status_module \
+ --with-http_ssl_module --with-http_realip_module \
+ --with-http_image_filter_module \
+ --add-module=../ngx_cache_purge-2.1
+
+# make
+# /usr/local/nginx-1.4.1/sbin/nginx -s stop
+# cp objs/nginx /usr/local/nginx/sbin/nginx
+# /usr/local/nginx-1.4.1/sbin/nginx
+
+
+     。查看安装的模块
+
+     -->nginx -V
+
+
+10.2.2 /etc/nginx/nginx.conf文件详解
+
+    配置文件主要由4部分组成：
+
+    。main(全局设置)：设置的参数将影响其他所有设置。
+
+    。server(主机设置)：主要用户指定主机和端口。
+
+    。upstream(负载均衡服务器设置)：主要用于负载均衡，设置一系列的后端服务器。
+
+    。location(URL匹配特定位置的设置)：用于匹配网页位置。
+
+
+    4者之间的关系：
+
+    server 继承main， location 继承server， upstream 既不会继承其它设置页不会被继承。
+
+    在4个部分当中，每个部分都包含若干参数，这些参数主要包含nginx的主模块指令、事件模块指令、
+
+HTTP核心模块指令，同时每个部分还可以使用其它HTTP模块指令。
+
+    -->more /etc/nginx/nginx.conf
+
+
+//第一部分：参数设置：
+
+#user  nobody;
+worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+//设置连接数最大值
+events {
+    worker_connections  1024;
+}
+
+
+第二部分：Web服务器设置
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+
+//设置访问日志文件格式
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+
+keepalive_timeout  65;
+
+    #gzip  on;
+
+ 
+//设置HTTP服务器
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+//默认请求
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+//设置虚拟主机的错误信息返回页面
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+
+//代理PHP脚本到Apache侦听127.0.0.1:80
+
+        #location ~ \.php$ {
+
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+
+
+//PHP脚本请求全部转发到FastCGI处理，使用FastCGI默认配置
+
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+
+//禁止访问.htaccess文件
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+//配置虚拟主机 （通过IP地址、名称、端口方式)
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+//设置HTTPS服务器
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    在/etc/nginx/nginx.conf文件中可以添加和修改的主要参数：
+
+    。 user nobody:                      #设置nginx运行用户和组群
+
+    。user epoll;                        #使用网络I/O模型，linux系统建议使用epoll
+
+    。worker_processes 1;                #设置nginx启动进程数量，通常设置成和CPU的数量一样
+
+    。include mime.types;                #设定mime类型，类型由mime.type文件定义。
+
+    。error_log  log/error.log notice;   #设置nginx全局错误日志文件。日志文件类型可以是debug、info、notice、
+
+                                          warn、error或crit
+
+    。pid   logs/nginx.pid;              #设置nginx的PID文件
+
+    。worker_connections 1024;           #单个后台工作进程的最大并发连接数
+
+
+    。include   mime.types;              #设置文件扩展名与文件类型映射表
+
+    。default_type   application/octet-stream;   #设置默认文件类型。
+
+    。gzip  on;                          #设置是否开启gzip压缩
+
+    。keepalive_timeout  65              #设置客户端连接保持活动的超时时间。在超过这个时间之后，服务器会关闭该连接。
+
+    。access_log logs/access.log  main;  #设置访问nginx日志文件
+
+    。tcp_nopush on;                     #告诉nginx在一个数据包里发送所有头文件，而不一个接一个地发送。
+
+    。sendfile  on;                      #开启高效文件传输模式，指定nginx是否调用sendfile函数来输出文件，对于普通应用
+
+                                          必须设置为on。 如果是用来进行下载等磁盘I/O重负载应用，可以设置为off以平衡磁盘
+
+					  与网络I/O处理速度，降低系统负载。
+
+    。client_max_body_size 10m;          #允许客户端请求的最大文件容量。
+
+    。client_body_buffer_size 128K;      #缓冲区代理缓冲用户端请求的最大字节数
+
+    。listen     80;                     #设置nginx服器监听的端口：
+
+    。server_name localhost;             #设置绑定的主机名、域名或IP地址
+
+    。charset koi8-r;                    #设置字符编码
+
+    。access_log  logs/host.access.log main;   #设置虚拟主机访问日志文件
+
+    。root html;                         #设置nginx服务器默认网站的根目录位置
+
+    。index  index.html index.htm        #设置首页索引文件的名称
+
+    。error_page    404                  #设置虚拟主机的错误信息返回页面。特别注意，错误信息返回页面大小一定要超过512KB，
+
+                                          否则会被浏览器替换为默认的错误页面。
+
+    。ssl_certificate   cert.pem;        #指定SSL证书
+
+    。ssl_certficate_key cert.key;       #指定SSL证书密钥
+
+ 
+10.2.3 Nginx服务器配置实例
+
+    在公司内部配置一台Nginx服器，为公司网络内的客户端计算机提供Web服务，具体参数如下：
+
+    。Nginx服务器监听端口：80
+
+    。nginx运行用户：nginx
+
+    。nginx运行组群：nginx
+
+    。服务器主机名：Master1
+
+    。定义首页索引文件的名称：index.html和idnex.htm
+
+    。连接超时时间：65秒
+
+    。启动进程数量：8个
+
+    。全局错误日志文件：/var/log/nginx/error.log
+
+    。访问日志文件：/var/log/nginx/access.log
+
+    。Nginx服务器的PID文件：/var/run/nginx.pid
+
+    。默认网站的根目录位置: /var/www/nginx
+
+    。单个后台工作进程进程的最大并发连接数：204800
+
+    。Web网站字符编码:utf-8
+
+
+    1.创建/var/www/nginx目录
+
+    -->mkdir /var/www/nginx
+
+    -->echo  This is www.fulong.com > /var/www/nginx/index.html
+
+
+    2.编辑/etc/nginx/nginx.conf文件
+ 
+    -->vim /etc/nginx/nginx.conf
+
+user  nginx nginx;
+worker_processes  8;
+
+error_log   /var/log/nginx/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  204800;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  logs/access.log  main;
+
+    sendfile        on;
+    tcp_nopush      on;
+    keepalive_timeout  65;
+
+    server {
+        listen       80;
+        server_name  Master1;  #Master1为主机名
+
+    charset utf-8;
+
+    location / {
+        root   /var/www/nginx;
+        index  index.html index.htm;
+     }
+    error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+    }
+
+   文件中未指出的部分均默认
+
+
+
+   。创建相关文件和目录
+
+   -->mkdir /tmp/nginx
+
+   -->touch /tmp/nginx/client_body
+
+    -->mkdir /opt/nginx/logs             #mkdir /usr/local/nginx-1.2.6/logs
+
+    -->touch /opt/nginx/logs/access.log  #touch  /usr/local/nginx-1.2.6/logs/access.log
+
+    -->touch /var/www/nginx/favicon.ico  #
+
+    -->touch /var/www/nginx/favicon.ico
+
+
+    3.测试nginx配置文件
+
+    使用nginx -t命令测试nginx配置文件是否设置正确。
+
+    -->nginx -t
+
+    nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+    nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+-------------------------------------------------------------------------------------------------
+如果报错：
+nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: [emerg] getpwnam("nginx") failed
+nginx: configuration file /etc/nginx/nginx.conf test failed
+
+
+解决方法1：
+      在nginx.conf中 把user nobody的注释去掉既可
+解决方法2：
+      错误的原因是没有创建www这个用户，应该在服务器系统中添加www用户组和用户www，如下命令：
+
+#/usr/sbin/groupadd -f www
+#/usr/sbin/useradd -g www www
+
+-------------------------------------------------------------------------------------------------
+
+    4.启动nginx服务
+
+    -->nginx
+
+
+    5.查看nginx进程是否存在
+
+    -->ps -ef |grep nginx
+
+root      8112     1  0 14:54 ?        00:00:00 nginx: master process nginx
+nginx     8113  8112  5 14:54 ?        00:00:00 nginx: worker process
+nginx     8114  8112  3 14:54 ?        00:00:00 nginx: worker process
+nginx     8115  8112  2 14:54 ?        00:00:00 nginx: worker process
+nginx     8116  8112  7 14:54 ?        00:00:00 nginx: worker process
+nginx     8117  8112  2 14:54 ?        00:00:00 nginx: worker process
+nginx     8118  8112  7 14:54 ?        00:00:00 nginx: worker process
+nginx     8119  8112  2 14:54 ?        00:00:00 nginx: worker process
+nginx     8120  8112  2 14:54 ?        00:00:00 nginx: worker process
+root      8122  3588  0 14:54 pts/2    00:00:00 grep nginx
+
+
+    6.查看端口号
+
+    -->netstat -antu|grep 80
+
+tcp        0      0 0.0.0.0:80                  0.0.0.0:*                   LISTEN      
+tcp        0      0 192.168.0.203:3306          192.168.0.204:53807         ESTABLISHED 
+tcp        1      0 192.168.0.203:40367         124.40.53.10:80             CLOSE_WAIT  
+tcp        0      0 ::ffff:127.0.0.1:8005       :::*                        LISTEN      
+
+
+   7.访问Nginx网站
+
+   -->http://192.168.0.203/
+
+   输出：This is www.fulong.com 
+
+10.2.4 控制Nginx服务器
+
+    命令语法：
+
+    nginx [选项]
+
+                                     nginx命令选项含义
+    -------------------------------------------------------------------------------------
+       选项                                             选项含义
+    -------------------------------------------------------------------------------------
+       -p <前缀>                     设置前缀路径，默认为/opt/nginx
+    -------------------------------------------------------------------------------------
+       -c <文件名>                   设置配置文件，默认为/etc/nginx/nginx.conf
+    -------------------------------------------------------------------------------------
+       -v                            显示版本信息并退出
+    -------------------------------------------------------------------------------------
+       -t                             测试配置并退出
+    -------------------------------------------------------------------------------------
+       -q                             配置测试过程中抑制非错误信息
+    --------------------------------------------------------------------------------------
+       -s <信号>                      将stop、quit、reopen、reload信号发送到nginx主进程。
+     --------------------------------------------------------------------------------------
+     
+     例10.1 启动nginx服务
+
+     -->nginx
+
+     例10.2 停止nginx服务
+
+     -->nginx -s stop
+
+     例10.3 退出nginx
+
+     -->nginx -s quit 
+
+     例10.4 重新打开nginx 
+
+     -->nginx -s reopen
+
+     例10.5 重新加载nginx服务配置
+
+     -->nginx -s reload
+
+     例10.6 显示nginx版本信息和配置选项
+
+     -->nginx -V
+
+nginx version: nginx/1.6.3
+built by gcc 4.4.7 20120313 (Red Hat 4.4.7-11) (GCC) 
+TLS SNI support enabled
+configure arguments: --user=nginx --group=nginx --prefix=/opt/nginx --sbin-path=/usr/sbin/nginx 
+--conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log 
+--http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/tmp/nginx/client_body 
+--http-proxy-temp-path=/tmp/nginx/proxy --http-fastcgi-temp-path=/tmp/nginx/fastcgi 
+--pid-path=/var/run/nginx.pid --lock-path=/var/lock/subsys/nginx --with-http_stub_status_module 
+--with-http_ssl_module --with-http_gzip_static_module
+
+
+10.2.5 Nginx日志文件
+
+   在/etc/nginx/nginx.conf文件中，与nginx服务器日志有关的参数主要有log_format和access_log
+
+   1. log_format
+
+   -->/etc/nginx/nginx.conf中，默认有如下内容：
+   
+   
+   log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+   log_format语法格式：
+
+   log_format   格式名称   格式样式
+
+                                          nginx日志变量
+   -----------------------------------------------------------------------------------------
+         变量                                           描述
+   -----------------------------------------------------------------------------------------
+       $remote_addr和$http_x_forwarded_for         用来记录客户端的IP地址
+   -----------------------------------------------------------------------------------------
+       $remote_user                                用来记录客户端用户名称
+   -----------------------------------------------------------------------------------------
+       $time_local                                 用来记录访问时间与时区
+   -----------------------------------------------------------------------------------------
+       $request                                    用来记录请求的URL和HTTP协议
+   -----------------------------------------------------------------------------------------
+       $status                                     用来记录请求状态，成功是200
+   ------------------------------------------------------------------------------------------
+       $body_bytes_sent                            记录发送给客户端文件主机内容大小
+   ------------------------------------------------------------------------------------------
+       $http_referer                               用来记录从哪个页面链接访问过来的
+   ------------------------------------------------------------------------------------------
+       $http_user_agent                            记录客户端浏览器的相关信息
+   ------------------------------------------------------------------------------------------
+
+   示例：  log_format  logformat  '$http_x_forwarded_for-$remote_user[$time_local]'
+                                  '"$request" '$status $body_bytes_send'
+				  '"$http_referer" "$http_user_agent"';
+    
+
+    2. access_log
+
+    在/etc/nginx/nginx.conf文件中默认有以下内容，使用access_log指定nginx日志文件的存储路径和日志格式
+
+    access_log      logs/access.log         main;
+
+    在定义日志文件的存储路径的目录(logs目录)时，nginx进程设置的用户和组群必须有对该路径创建文件的权限。
+
+    access_log语法格式：
+
+    access_log   存储路径     格式名称
+
+
+    实例：
+
+    access_log   /var/log/nginx/access.log  main;  #修改为
+
+
+    如果不想启用nginx日志，使用以下内容
+
+    access_log off;    
+
+
+   -->cd /var/log
+
+   -->chown -R  nginx:nginx nginx/
+
+   -->touch /var/log/nginx/access.log
+
+  
+   3. 查看nginx日志文件
+
+   -->cat access.log 
+
+192.168.0.27 - - [15/Jun/2015:15:58:02 +0800] "GET / HTTP/1.1" 200 23 "-" "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0)" "-"
+192.168.0.27 - - [15/Jun/2015:15:58:03 +0800] "GET /favicon.ico HTTP/1.1" 404 570 "-" "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0)" "-"
+
+
+                                   Nginx日志描述
+    -----------------------------------------------------------------------------------------------
+        输出信息                                信息描述
+    -----------------------------------------------------------------------------------------------
+        192.168.0.27                           客户端的IP地址
+    -----------------------------------------------------------------------------------------------
+        -                                      客户端用户名称， "_"表示没有取得信息
+    ------------------------------------------------------------------------------------------------
+       [15/Jun/2015:15:58:02 +0800]            访问时间与时区
+    ------------------------------------------------------------------------------------------------
+        "GET / HTTP/1.1"                       请求的URL和HTTP协议
+    ------------------------------------------------------------------------------------------------
+        200                                    请求状态
+    ------------------------------------------------------------------------------------------------
+        23                                     发送给客户端主体文件内容大小
+    ------------------------------------------------------------------------------------------------
+        "_"                                    从哪个页面链接访问过来的，"_"表示没有取得信息
+    ------------------------------------------------------------------------------------------------
+      "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1;    客户端浏览器信息。
+    ------------------------------------------------------------------------------------------------  
+
+ 10.3 实现nginx服务开机自动启动
+
+ 10.3.1 创建/etc/rc.d/init.d/nginx文件
+
+     -->vim /etc/rc.d/init.d/nginx  （此脚本有问题）
+
+#!/bin/bash
+
+#nginx   Start up the Nginx server dademon
+#chkconfig: 2345 85 15
+#processname: nginx
+
+nginxd=/usr/sbin/nginx
+nginx_config=/etc/nginx/nginx.conf
+nginx_pid=/var/run/nginx.pid
+RETVAL=0
+prog="nginx"
+
+# Source function library.
+./etc/rc.d/init.d/functions
+
+# Source networking configuration 
+./etc/sysconfig/network
+
+#Check that networking is up.
+[ ${NETWORKING} ="no" ] && exit 0
+[ -x $nginxd ] || exit 0
+
+# Start nginx daemons functions.
+start() {
+if [ -e $nginx_pid];then
+echo "nginx already running..."
+exit 1
+fi
+echo -n $ "Starting $prog:"
+daemon $nginxd -c ${nginx_config}
+RETVAL=$?
+echo 
+[ $RETVAL = 0] &&  touch /var/lock/subsys/nginx
+return $RETVAL
+}
+
+# Stop nginx daemons functions.
+stop {
+echo -n $"Stopping $prog:"
+kill proc $nginxd
+RETVAL=$?
+echo
+[ $RETVAL = 0 ]  && rm -f /var/lock/subsys/nginx /var/run/nginx.pid
+}
+
+reload() {
+echo -n $"Reloading $prog:"
+#kill -HUP `cat ${nginx_pid}`
+killproc $nginxd -HUP
+RETVAL=$?
+echo
+}
+
+#See how we were called.
+case "$1" in
+start)
+start
+;;
+stop)
+stop
+;;
+reload)
+reload
+;;
+restart)
+stop 
+start
+;;
+status)
+status $prog
+RETVAL=$?
+;;
+*)
+echo $" Usage:$prog {start|stop|restart|reload|status|help}"
+exit 1
+esac 
+exit $RETVAL
+
+
+
+    。为脚本赋执行权限
+
+    -->chmod u+x /etc/rc.d/init.d/nginx 
+
+或下面这个脚本：
+
+    -->vim /etc/rc.d/init.d/nginx 
+
+
+#!/bin/bash
+# nginx Startup script for the Nginx HTTP Server
+# it is v.0.0.2 version.
+# chkconfig: - 85 15
+# description: Nginx is a high-performance web and proxy server.
+#              It has a lot of features, but it's not for everyone.
+# processname: nginx
+# pid /usr/local/server/nginx/nginx.pid;
+# config: /usr/local/nginx/conf/nginx.conf
+nginxd=/usr/local/server/nginx/sbin/nginx
+nginx_config=/usr/local/server/nginx/conf/nginx.conf
+nginx_pid=/usr/local/server/nginx/nginx.pid
+RETVAL=0
+prog="nginx"
+# Source function library.
+. /etc/rc.d/init.d/functions
+# Source networking configuration.
+. /etc/sysconfig/network
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+[ -x $nginxd ] || exit 0
+# Start nginx daemons functions.
+start() {
+if [ -e $nginx_pid ];then
+   echo "nginx already running...."
+   exit 1
+fi
+   echo -n $"Starting $prog: "
+   daemon $nginxd -c ${nginx_config}
+   RETVAL=$?
+   echo
+   [ $RETVAL = 0 ] && touch /var/lock/subsys/nginx
+   return $RETVAL
+}
+# Stop nginx daemons functions.
+stop() {
+        echo -n $"Stopping $prog: "
+        killproc $nginxd
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f /var/lock/subsys/nginx /var/run/nginx.pid
+}
+# reload nginx service functions.
+reload() {
+    echo -n $"Reloading $prog: "
+    #kill -HUP `cat ${nginx_pid}`
+    killproc $nginxd -HUP
+    RETVAL=$?
+    echo
+}
+# See how we were called.
+case "$1" in
+start)
+        start
+        ;;
+stop)
+        stop
+        ;;
+reload)
+        reload
+        ;;
+restart)
+        stop
+        start
+        ;;
+status)
+        status $prog
+        RETVAL=$?
+        ;;
+*)
+        echo $"Usage: $prog {start|stop|restart|reload|status|help}"
+        exit 1
+esac
+exit $RETVAL
+
+ 
+    -->chmod u+x /etc/rc.d/init.d/nginx 
+
+    -->chkconfig --add nginx 
+
+    -->chkconfig --level 35 nginx on  
+
+
+
+
+10.3.2 控制nginx服务
+
+    1.启动nginx服务
+
+    -->service nginx start
+
+
+    2.查看nginx服务运行状态
+
+    -->service nginx status
+
+    3.停止nginx
+
+    -->service nginx stop
+
+
+    4.重新启动nginx
+
+    -->service nginx  restart
+
+    5.重新加载nginx服务
+
+    -->service nginx reload
+
+    6.添加nginx服务
+
+    -->chkconfig --add nginx
+
+    7.开机自动启动nginx服务
+
+    -->chkconfig nginx on 
+
+    -->chkconfig --list|grep nginx
+
+nginx          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+10.4 Nginx高级配置
+
+10.4.1 虚拟目录
+
+    在Nginx服务器中，默认指定的网站根目录是/var/www/nginx，如果存储在其他目录，
+
+可以通过别名方式创建迅目录。
+
+                                 虚拟目录和文件物理位置
+    -----------------------------------------------------------------------
+      物理位置                   别名                      URL
+    ------------------------------------------------------------------------
+      /var/www/nginx            主目录              http://www.fulong.com
+    ------------------------------------------------------------------------
+     /var/xuni                  xuni                http://www.fulong.com/xuni
+    --------------------------------------------------------------------------
+
+
+    1. 创建虚拟目录
+
+    -->mkdir /var/xuni
+
+    -->echo This is /var/xuni Directory > /var/xuni/index.html
+
+    2.编辑/etc/nginx/nginx.conf文件
+
+    实现虚拟目录有两种方法，人选一种来配置
+
+    (1)第一种方法：使用alias
+
+    -->vim /etc/nginx/nginx.conf
+
+    在server{}部分添加以下内容：
+
+        location /xuni {
+            alias /var/xuni;
+            index index.html;
+        }  
+
+    (2)第二种方法：使用root
+
+
+    在server{}部分添加以下内容：
+
+        location /xuni {
+            root /var;
+            index index.html;
+        }  
+
+
+    3.重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx 
+
+    4.访问虚拟目录
+
+    -->http://192.168.0.203/xuni/
+
+    输出：This is /var/xuni Directory
+
+
+10.4.2 Nginx启用gzip压缩
+
+    使用Nginx的gzip_static模块将启用gzip压缩，支持在线实时压缩输出数据流。
+
+    1.查看是否安装gzip_static模块
+
+    -->nginx -V
+nginx version: nginx/1.6.3
+built by gcc 4.4.7 20120313 (Red Hat 4.4.7-11) (GCC) 
+TLS SNI support enabled
+configure arguments: --user=nginx --group=nginx --prefix=/opt/nginx
+--sbin-path=/usr/sbin/nginx --conf-path=/etc/nginx/nginx.conf 
+--error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log
+--http-client-body-temp-path=/tmp/nginx/client_body --http-proxy-temp-path=/tmp/nginx/proxy
+--http-fastcgi-temp-path=/tmp/nginx/fastcgi --pid-path=/var/run/nginx.pid 
+--lock-path=/var/lock/subsys/nginx --with-http_stub_status_module --with-http_ssl_module
+--with-http_gzip_static_module
+    
+    从输出看到最后有：--with-http_gzip_static_module ，说明已经安装了。
+
+
+    2.编辑/etc/nginx/nginx.conf文件
+
+    -->vim /etc/nginx/nginx.conf
+
+    在http{}部分添加以下内容：
+
+    gzip  on;              :表示是否开启gzip压缩，on表示卡其gzip压缩，实时压缩输出数据流。 #去掉注释并添加：
+    gzip_min_length 1k;    :设置允许压缩的页面最小字节数，页面字节数从header头的Content-Length中获取。默认值
+                            是0，不管页面多大都进行压缩。建议设置成大于1KB的字节数，小于1KB可能会越压越大。
+    gzip_buffers  4 16k;   :表示申请4个单位为16KB的内存作为压缩结构流缓存，默认值是申请与原始数据大小相同的内存
+                            空间来存储gzip压缩结果。
+    gzip_http_version 1.1; :设置识别HTTP协议版本，默认是1.1.，目前大部分浏览器已经支持gizp解压，使用默认即可。
+    gzip_comp_level 2;     :指定gzip压缩比，1表示压缩比最小，处理速度最快；9表示压缩比最大，传输速度快，但处理最慢，
+                            也比较消耗CPU资源。
+    gzip_types text/plain application/x-javascript text/css application/xml;   #指定压缩的类型，无论是否指定，text/hml
+                           类型总是会被压缩。
+    gzip_vary on;          :可以让前端的缓存服务器缓存经过gzip压缩的页面，比如用Squid缓存经过nginx压缩的数据。
+
+
+    3.重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx
+
+10.4.3 查看nginx工作状态
+
+    使用stub_status模块能够获取Nginx自上次启动以来的工作状态，该模块非核心模块，需要在nginx编译安装时手动指定
+
+才能使用此功能。
+
+    1.查看是否支持stub_status模块
+
+    -->nginx -V
+nginx version: nginx/1.6.3
+built by gcc 4.4.7 20120313 (Red Hat 4.4.7-11) (GCC) 
+TLS SNI support enabled
+configure arguments: --user=nginx --group=nginx --prefix=/opt/nginx
+--sbin-path=/usr/sbin/nginx --conf-path=/etc/nginx/nginx.conf 
+--error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log
+--http-client-body-temp-path=/tmp/nginx/client_body --http-proxy-temp-path=/tmp/nginx/proxy
+--http-fastcgi-temp-path=/tmp/nginx/fastcgi --pid-path=/var/run/nginx.pid 
+--lock-path=/var/lock/subsys/nginx --with-http_stub_status_module --with-http_ssl_module
+--with-http_gzip_static_module
+
+
+   。显示：--with-http_stub_status_module 便是已经安装了
+
+   2.编辑nginx.conf文件
+
+   指定启用获取nginx工作状态的功能，在该文件的server{}部分以下内容：
+
+        location /nginxstatus {
+            stub_status    on;　　　　　　　　　　　－－－－－－－#设置是否启用stub_status的工作状态统计功能，on表示启用
+            access_log     /var/log/nginx/nginxstatus.log;   -----#指定stub_status模块的访问日志文件。
+            auth_basic    "nginxstatus";                     -----#指定nginx认证机制。
+            auth_basic_user_file /etc/nginx/htpasswd;        -----#指定认证的密码文件，由于auth_basic认证采用的是与Apache兼容的密码文件，因此需要
+	                                                           用Apache的htpasswd命令来生成密码文件。
+         }
+
+    3.创建认证口令文件并添加用户
+    
+    -->htpasswd -c /etc/nginx/htpasswd admin
+
+      New password: 
+      Re-type new password: 
+      Adding password for user admin
+
+      创建了admin用户，密码yhq845541
+
+    4.重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx
+
+
+    5.查看Nginx工作状态
+
+    -->http://192.168.0.203/nginxstatus
+　
+    -->用户名：admin
+
+    -->密码:   *****
+ 
+    页面显示：
+
+    Active connections: 1 
+    server accepts handled requests
+    1 1 2 
+    Reading: 0 Writing: 1 Waiting: 0 
+
+
+                          nginxstatus网页输出信息描述
+    --------------------------------------------------------------------------------------------------------------------------
+     输出信息                          信息描述
+    --------------------------------------------------------------------------------------------------------------------------
+      Active connections:1               当前活跃的连接数
+    --------------------------------------------------------------------------------------------------------------------------
+      server accepts hadled request      Nginx当前总共处理了1个连接，成功创建1次握手，总共处理了2个请求
+      1 1 2
+    --------------------------------------------------------------------------------------------------------------------------
+      Reading: 0 Writing: 1 Waiting: 0   Nginx读取到客户端Header信息数，Writing表示Nginx返回给客户端的Header信息数，Waiting表示
+                                         Nginx已经处理完，正在等候下一次请求指令时的驻留连接数。
+    --------------------------------------------------------------------------------------------------------------------------
+    
+10.4.4 Nginx防盗链配置
+
+    盗链是指望着提供商自己不提供网站的内容，而是通过技术手段盗取一些有实力的大网站的地址（比如音乐、图片、软件的下载地址），然后
+
+存放在自己的网站中，通过这种方法盗取大网站空行和流量。这样没有任何资源的网站利用了其它网站的资源来展示给浏览者，提高了自己的访问
+
+量，而大部分浏览者又不会很容易地发现。
+
+    1.编辑nginx.conf文件
+
+    -->vim /etc/nginx/nginx/conf，在server{}部分内添加以下内容，分别针对不同的文件类型和文件目录设置防盗链。
+
+
+      //针对文件类型的防盗链设置
+
+         location ~* \.(jpg|gif|png|swf|flv|wma|wmv|asf|mp3|)$ {    #表示以这些文件为后缀的文件实现防盗链处理。
+           valid_referers none blocked *.fulong.com  fulong.com;    #表示这个请求可以正常访问上面指定的文件资源。
+           if ($invalid_referer) {
+             rewrite ^/ http://192.168.0.203/img/error.gif;
+             #return 403;                                           #如果地址不是上面指定的地址就跳转到通过rewrite指定的地址，也可以
+	                                                             直接通过return返回403错误。
+           }
+
+          }
+
+
+
+     //针对文件目录的防盗链设置
+
+         location /images {
+           root /opt/nginx/html;
+            valid_referers none blocked *.fulong.com fulong.com;    
+            if ($invalid_referer) {
+              return   403;
+           }
+         }
+
+
+
+    。创建相关目录：
+
+      -->mkdir /opt/nginx/html/img
+
+      在/opt/nginx/html/img中上传：error.gif图片
+
+
+    。重新启动nginx
+
+    -->nginx -s stop 
+
+    -->nginx 
+
+    。访问：http://192.168.0.203/img/error.gif 测试
+
+
+10.4.5 配置Nginx日志滚动
+
+    通过Nginx的信号控制功能结合脚本来实现日志的自动滚动。
+
+    1.创建日志滚动脚本文件
+    
+    -->vim /root/nginx_logrotata
+
+#!/bin/bash
+
+savepath_log='/home/nginx'
+nginxlog='/var/log/nginx'
+
+mkdir -p $savepath_log/$(date+%Y)/$date+%m)
+mv $nginxlog/access.log  $savepath_log/$(date+%Y)/$(date+%m)/access.$(date+%Y%m%d).log
+mv $nginxlog/error.log $savepath_log/$(date+%Y)/$(date+%m)/error.$(date+%Y%m%d).log
+kill -USR1 `cat /var/run/nginx.pid`
+
+（脚本有点问题）
+
+    。为脚本设置执行权限
+
+    -->chmod u+x /root/nginx_logrotate
+
+
+    2.设置crontab任务计划
+
+    -->crontab -e
+
+    0 23 * * *  /root/nginx_logrotate
+
+     
+    3.查看任务计划执行结果
+
+    -->ls /home/nginx/   #需要第二天查看
+
+10.4.6 限制Nginx访问流量
+
+    在Nginx服务器中要对用户访问进行流量控制，可以使用limit_rate参数来进行限速。该参数用于
+
+指定向客户端传输数据的速度吗，默认单位为字节/秒，该限制只针对一个连接，如果有多个连接，那么
+
+速度将是设置值的多倍。
+
+   1.编辑nginx.conf文件
+
+   -->vim /etc/nginx/nginx.conf
+
+        location / {
+            root   /var/www/nginx;
+            index  index.html index.htm;
+            limit_rate 1k;           ---------------#添加，对每一个连接限速为1KB/s
+        }
+
+
+    2.重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx 
+
+10.4.7 配置HTTPS网站
+
+    1.安装openssl和openssl-devel软件包
+
+    -->rpm -qa|grep openssl
+
+       openssl-1.0.1e-30.el6.8.x86_64
+       openssl-devel-1.0.1e-30.el6.8.x86_64
+
+    没安装的话执行安装
+
+    -->yum install openssl openssl-devel -y  (最好通过yum再次安装下，32和64位的都需要)
+
+    2.生成证书
+
+    (1)生成RSA密钥文件
+
+    生成RSA密钥文件/root/server.key，密钥长度为1024
+
+    -->openssl genrsa -des3 -out /root/server.key 1024
+
+Generating RSA private key, 1024 bit long modulus
+...............................++++++
+.++++++
+e is 65537 (0x10001)
+Enter pass phrase for /root/server.key:               #输入密钥保护密码
+Verifying - Enter pass phrase for /root/server.key:   #再次输入密钥保护密码
+
+    (2)生成证书请求文件
+
+     -->openssl req -new -key /root/server.key -out /root/server.csr
+
+Enter pass phrase for /root/server.key:        -------------------------------------#输入密钥保护密码
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:CN                                ---------#CN
+State or Province Name (full name) []:beijing                       ---------#beijing 
+Locality Name (eg, city) [Default City]:beijing                     ---------#beijing
+Organization Name (eg, company) [Default Company Ltd]:fulong        ---------#fulong
+Organizational Unit Name (eg, section) []:it                        ---------#it
+Common Name (eg, your name or your server's hostname) []:Master1    ---------#Master1
+Email Address []:root@fulong.com                                    ---------#root@fulong.com  
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:www.fulong.com                              ---------#www.fulong.com
+An optional company name []:fulong                                  ---------#fulong
+
+
+    (3)生成SSL证书密钥文件
+
+    -->openssl rsa -in /root/server.key -out /root/server_nopwd.key
+Enter pass phrase for /root/server.key:                            -----------#输入密钥保护密码
+writing RSA key
+
+
+    (4)生成SSL证书文件
+
+    生成SSL证书文件/root/server.crt，证书有效期为365天
+
+    -->openssl x509 -req -days 365 -in /root/server.csr -signkey /root/server_nopwd.key -out /root/server.crt
+
+Signature ok
+subject=/C=CN/ST=beijing/L=beijing/O=fulong/OU=it/CN=Master1/emailAddress=root@fulong.com
+Getting Private key
+
+
+
+    3.编辑/etc/nginx/nginx.conf文件
+
+    -->vim /etc/nginx/nginx.conf文件
+
+user  nginx nginx;
+worker_processes  8;
+
+error_log   /var/log/nginx/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  204800;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log   /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    tcp_nopush      on;
+
+    keepalive_timeout  65;
+
+    server {
+        listen       443 ssl;
+
+        server_name  Master1;
+        ssl on;
+        ssl_certificate /root/server.crt;
+        ssl_certificate_key /root/server_nopwd.key;
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+
+        location / {
+
+           root   /var/www/nginx;
+           index  index.html index.htm;
+        }
+       }
+    }
+
+
+    。验证文件正确性：
+
+    -->nginx -t
+
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successfu
+
+    4.重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx
+
+
+    5.查看端口号
+
+    -->netstat -antu|grep 443
+
+       tcp        0      0 0.0.0.0:443                 0.0.0.0:*                   LISTEN    
+
+    6. 访问HTTPS网站
+
+    -->https://192.168.0.203
+
+    输出：This is www.fulong.com 
+
+    表示配置正确。
+
+
+10.5 配置Nginx虚拟主机
+
+   在Nginx服务器上配置虚拟主机，可以通过基于IP地址、TCP端口号、域名3种方法来实现
+
+
+10.5.1 基于IP地址的虚拟主机
+
+    如果在同一台服务器上使用多个IP地址来区分不同的Web网站，则必须为网卡绑定多个IP地址，并且
+
+给每个网站指派唯一的IP地址。
+
+    在公司内部一台服务器上通过基于IP地址的虚拟主机方式配置两个Web网站，为公司网络内的客户端计算机
+
+提供Web服务，具体参数如下：
+
+    (1)第一步Web网站
+
+    。网站根目录：/var/www/nginx/www1.fulong.com
+
+    。网站首页：index.html
+
+    。网站IP地址：192.168.0.93
+
+    。网站访问日志：/var/log/nginx/www1.access.log
+
+    (2)第二个Web网站
+
+    。网站根目录: /var/www/nginx/www2.fulong.com
+
+    。网站首页：index.html
+
+    。网站IP地址：192.168.0.97
+
+    。网站访问日志:/var/log/nginx/www2.access.log
+
+    
+    1. 创建Web网站目录
+
+    -->mkdir /var/www/nginx/www1.fulong.com
+
+    -->mkdir /var/www/nginx/www2.fulong.com
+
+
+    2. 创建Web网站首页
+
+    -->echo This is www1.fulong.com > /var/www/nginx/www1.fulong.com/index.html
+
+    -->echo This is www2.fulong.com > /var/www/nginx/www2.fulong.com/index.html
+
+
+    3. 设置IP地址
+
+    为计算机网卡设置
+
+    -->ifconfig eth0:0 192.168.0.93 netmask 255.255.255.0
+
+    -->ifconfig eth0:1 192.168.0.97 netmask 255.255.255.0
+
+    。查看网卡设置的IP
+
+    -->ifconfig
+
+eth0      Link encap:Ethernet  HWaddr 00:0C:29:EE:FA:05  
+          inet addr:192.168.0.203  Bcast:192.168.0.255  Mask:255.255.255.0
+          inet6 addr: fe80::20c:29ff:feee:fa05/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:849713 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:217690 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:130879430 (124.8 MiB)  TX bytes:23127160 (22.0 MiB)
+
+
+eth0:0    Link encap:Ethernet  HWaddr 00:0C:29:EE:FA:05  
+          inet addr:192.168.0.93  Bcast:192.168.0.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+
+eth0:1    Link encap:Ethernet  HWaddr 00:0C:29:EE:FA:05  
+          inet addr:192.168.0.97  Bcast:192.168.0.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:1077 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:1077 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:64561 (63.0 KiB)  TX bytes:64561 (63.0 KiB)
+
+
+
+    4. 编辑/etc/nginx/nginx.conf文件
+
+    -->vim /etc/nginx/nginx.conf
+    
+user  nginx nginx;
+worker_processes  8;
+
+error_log   /var/log/nginx/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  204800;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log   /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    tcp_nopush      on;
+
+    keepalive_timeout  65;
+
+    server {
+        listen       192.168.0.93:80;
+        server_name  Master1;
+        charset utf-8;
+        access_log /var/log/nginx/www1.access.log main;
+
+        location / {
+           root   /var/www/nginx/www1.fulong.com;
+           index  index.html index.htm;
+        }
+        error_page 500 502 503 504 /50x.html;
+
+
+        location = /50x.html {
+
+           root   html;
+        }
+    }
+
+
+    server {
+        listen       192.168.0.97:80;
+        server_name  Master1;
+        charset utf-8;
+        access_log /var/log/nginx/www2.access.log main;
+
+        location / {
+           root   /var/www/nginx/www2.fulong.com;
+           index  index.html index.htm;
+        }
+        error_page 500 502 503 504 /50x.html;
+
+        location = /50x.html {
+
+           root   html;
+         }
+      }
+  }
+          
+
+    5.重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx
+
+
+    6.访问虚拟主机
+
+    -->http://192.168.0.93/
+
+    输出：This is www1.fulong.com 
+
+    -->http://192.168.0.97/
+
+    输出：This is www2.fulong.com 
+
+
+10.5.2 基于TCP端口号的虚拟主机
+
+    如果在同一台服务器上使用多个端口来区分不同的Web网站，则必须设置多个端口号，并且给每个网站指派唯一的端口号。
+
+    在公司内部一台服务器上通过基于端口号的虚拟主机方式配置两个Web网站，为公司网络内的客户端计算机提供Web服务，具体参数如下：
+
+    (1)第一个Web网站
+
+    。网站根目录:/var/www/nginx/www1.fulong.com
+
+    。网站首页：index.html
+
+    。网站端口号:80
+
+    。网站访问日志:/var/log/nginx/www1.access.log
+
+    (2)第二个Web网站
+
+    。网站根目录：/var/www/nginx/www2.fulong.com
+
+    。网站首页：index.html
+
+    。网站端口号：8080
+
+    。网站访问日志：/var/log/nginx/www2.access.log
+    
+
+    1.创建Web网站目录
+   
+
+    -->mkdir /var/www/nginx/www1.fulong.com
+
+    -->mkdir /var/www/nginx/www2.fulong.com
+
+
+    2. 创建Web网站首页
+
+    -->echo This is www1.fulong.com > /var/www/nginx/www1.fulong.com/index.html
+
+    -->echo This is www2.fulong.com > /var/www/nginx/www2.fulong.com/index.html
+
+
+    3.编辑/etc/nginx/nginx.conf文件
+
+    -->vim /etc/nginx/nginx.conf
+
+user  nginx nginx;
+worker_processes  8;
+
+error_log   /var/log/nginx/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  204800;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log   /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    tcp_nopush      on;
+
+    keepalive_timeout  65;
+
+    server {
+
+        listen       80;
+        server_name  Master1;
+        charset utf-8;
+        access_log /var/log/nginx/www1.access.log main;
+
+        location / {
+           root   /var/www/nginx/www1.fulong.com;
+           index  index.html index.htm;
+        }
+        error_page 500 502 503 504 /50x.html;
+
+        location = /50x.html {
+
+           root   html;
+        }
+    }
+
+
+    server {
+        listen       8080;
+        server_name  Master1;
+        charset utf-8;
+        access_log /var/log/nginx/www2.access.log main;
+
+        location / {
+           root   html;
+        }
+    }
+
+ }
+
+
+    4. 重新启动nginx服务
+
+    -->nginx -s stop
+
+    -->nginx
+
+
+    5. 查看端口号
+
+    -->netstat -antu|grep 80
+
+tcp        0      0 0.0.0.0:8080                0.0.0.0:*                   LISTEN      
+tcp        0      0 0.0.0.0:80                  0.0.0.0:*                   LISTEN      
+tcp        1      0 192.168.0.203:40486         124.40.53.10:80             CLOSE_WAIT  
+
+
+    6. 访问虚拟主机
+
+    -->http://192.168.0.203:80 
+
+    结果：This is www1.fulong.com 
+
+    -->http://192.168.0.203:8080
+
+    结果：This is www2.fulong.com 
+
+-------------------------------------------------------------------
+
+
+
+[root@iZ25x7z2fmaZ ~]# ls /data/hbs/hbs/
+404.html     index.jsp     login.html         META-INF  r    thirdparty  u     WEB-INF
+index.jhtml  install.html  loginsuccess.html  model     res  tmp         user  zhuzhan
+
+
+
+
+
+

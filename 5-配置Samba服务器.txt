@@ -1,0 +1,1510 @@
+                                     第5章 配置Samba服务器
+
+
+5.1 Samba简介
+
+   Samba是指通过SMB(Server Message Block，服务器信息块)协议在网络上的计算机之间远程共享Linux文件
+
+和打印服务。
+
+   SMB是基于NetBIOS(Network Basic INput/Output System，网络基本输入/输出系统)的协议，传统上用在Linux、
+  
+Windows和OS/2网络中访问远程文件和打印机，统称为共享服务。
+
+5.2 Samba服务器安装和配置
+
+5.2.1 安装Samba服务器软件包
+
+    -->rpm -qa|grep samba
+
+    没有输出则安装
+
+    -->yum install samba-* -y 
+
+    或：
+
+    -->yum install samba-common samba-client samba  samba-libs -y
+
+   
+   注意：在RHEL 6系统中，有samba3和samba4这两个版本的软件包，为了不引起软件冲突，
+
+        卸载系统中安装的所有samba 3 版本的软件包
+
+5.2.2 /etc/samba/smb.conf文件详解
+
+
+    配置文件由两部分组成：
+
+    。Global Settings(全局设置):主要用来设置Samba服务器整体运行环境的选项。
+
+    。Share Definitions(共享定义)：用来设置文件共享和打印共享资源
+
+   -->more /etc/samba/smb.conf 
+
+
+#======================= Global Settings =====================================
+//第一部分：设置全局参数内容
+	
+[global]
+	
+# ----------------------- Network Related Options -------------------------
+//设置网络关系选项：
+
+	workgroup = MYGROUP
+	server string = Samba Server Version %v
+	
+;	netbios name = MYSERVER
+	
+;	interfaces = lo eth0 192.168.12.2/24 192.168.13.2/24 
+;	hosts allow = 127. 192.168.12. 192.168.13.
+	
+# --------------------------- Logging Options -----------------------------
+//设置服务器日志选项
+
+	
+	# logs split per machine
+	log file = /var/log/samba/log.%m
+	# max 50KB per log file, then rotate
+	max log size = 50
+	
+# ----------------------- Standalone Server Options ------------------------
+//设置标准服务器选项：
+
+	security = user
+	passdb backend = tdbsam
+
+
+# ----------------------- Domain Members Options ------------------------
+//设置域成员选项：
+
+	
+;	security = domain
+;	passdb backend = tdbsam
+;	realm = MY_REALM
+
+;	password server = <NT-Server-Name>
+
+# ----------------------- Domain Controller Options ------------------------
+//设置域控制器选项
+
+	
+	
+;	security = domain
+;	passdb backend = tdbsam
+;	realm = MY_REALM
+
+;	password server = <NT-Server-Name>
+
+# ----------------------- Domain Controller Options ------------------------
+
+
+;	security = user
+;	passdb backend = tdbsam
+	
+;	domain master = yes 
+;	domain logons = yes
+	
+	# the login script name depends on the machine name
+;	logon script = %m.bat
+	# the login script name depends on the unix user used
+;	logon script = %u.bat
+;	logon path = \\%L\Profiles\%u
+	# disables profiles support by specifing an empty path
+;	logon path =          
+	
+;	add user script = /usr/sbin/useradd "%u" -n -g users
+;	add group script = /usr/sbin/groupadd "%g"
+;	add machine script = /usr/sbin/useradd -n -c "Workstation (%u)" -M -d /nohome -s /bin/false "%u"
+;	delete user script = /usr/sbin/userdel "%u"
+;	delete user from group script = /usr/sbin/userdel "%u" "%g"
+;	delete group script = /usr/sbin/groupdel "%g"
+	
+	
+# ----------------------- Browser Control Options ----------------------------
+//设置浏览器控制选项
+
+
+;	local master = no
+;	os level = 33
+;	preferred master = yes
+	
+#----------------------------- Name Resolution -------------------------------
+//设置名称解析
+
+;	wins support = yes
+;	wins server = w.x.y.z
+;	wins proxy = yes
+	
+;	dns proxy = yes
+	
+# --------------------------- Printing Options -----------------------------
+//设置打印机选项
+
+	load printers = yes
+	cups options = raw
+
+;	printcap name = /etc/printcap
+	#obtain list of printers automatically on SystemV
+;	printcap name = lpstat
+;	printing = cups
+
+# --------------------------- Filesystem Options ---------------------------
+//设置文件系统选项
+
+;	map archive = no
+;	map hidden = no
+;	map read only = no
+;	map system = no
+;	store dos attributes = yes
+
+
+#============================ Share Definitions ==============================
+第二部分：设置文件和打印共享资源
+
+//文件共享
+[homes]
+	comment = Home Directories
+	browseable = no
+	writable = yes
+;	valid users = %S
+;	valid users = MYDOMAIN\%S
+
+//打印共享
+[printers]
+	comment = All Printers
+	path = /var/spool/samba
+	browseable = no
+	guest ok = no
+	writable = no
+	printable = yes
+	
+//文件共享
+;	[netlogon]
+;	comment = Network Logon Service
+;	path = /var/lib/samba/netlogon
+;	guest ok = yes
+;	writable = no
+;	share modes = no
+	
+	
+
+//文件共享
+;	[Profiles]
+;	path = /var/lib/samba/profiles
+;	browseable = no
+;	guest ok = yes
+	
+	
+//文件共享
+;	[public]
+;	comment = Public Stuff
+;	path = /home/samba
+;	public = yes
+;	writable = yes
+;	printable = no
+;	write list = +staff
+
+
+    /etc/samba/smb.conf配置文件中：
+
+    1.变量
+
+    2.全局参数设置
+
+    3.共享定义设置
+
+
+5.2.3 Samba共享目录配置实例
+
+   1.允许匿名用户读取/it共享目录
+
+   修改/etc/samba/smb.conf，添加以下内容：
+
+   [it]            #指定共享名为it
+   comment = it    #共享目录的备注
+   path = /it      #指定共享目录的路径是/it
+   public = yes    #允许匿名用户访问
+   read only = yes #指定了这个目录是只读的权限
+
+   2.允许匿名用户读写/it共享目录
+
+   修改/etc/samba/smb.conf，添加以下内容：
+
+   [it]            #指定共享名为it
+   comment = it    #共享目录的备注
+   path = /it      #指定共享目录的路径是/it
+   guest ok = yes  #允许匿名用户访问
+   writable = yes  #指定了这个目录是可写的权限
+
+   3.允许用户zhangsan和组群jishu的用户访问/it共享目录
+
+   修改/etc/samba/smb.conf，添加以下内容：
+
+   [it]            #指定共享名为it
+   comment = it    #共享目录的备注
+   path = /it      #指定共享目录的路径是/it
+   valid users  = @jishu,zhangsan  #指定能够使用该共享目录的用户是zhangsan，以及组群jishu的用户
+   public = no     #不允许匿名用户访问
+   create mask = 0765  #设置默认创建的文件的权限是0765
+   browseable = no  #浏览资源时不能显示共享目录
+
+
+   4.只允许用户zhangsan和组jishu的用户读写/it共享目录
+
+   修改/etc/samba/smb.conf文件，在该文件末尾添加以下内容
+
+   [it]            #指定共享名为it
+   comment = it    #共享目录的备注
+   path = /it      #指定共享目录的路径是/it
+   public = no     #不允许匿名用户访问
+   writable = yes  #指定了这个目录是可写的权限
+   write list = @jishu,zhangsan  #指定能够读写该刚想目录的用户是zhangsan以及组群jishu的用户
+
+
+5.3 Samba服务器配置实例
+
+5.3.1 share级别Samba服务器配置
+
+   在公司内部配置一台Samba服务器，为公司网络内的客户端计算机提供share级别Samba服务，具体参数如下：
+
+   。Samba服务器所在工作组：workgroup
+
+   。Samba服务器描述信息：Samba Server
+
+   。Samba服务器NetBIOS名称: rhel
+
+   。Samba服务器网卡IP地址: 192.168.0.203
+
+   。允许访问Samba服务器的网络：192.168.0.0
+
+   。日志文件路径： /var/log/samba/log.%m
+
+   。日志文件大小：50000KB
+
+   。Samba服务器安全模式：share
+
+   。共享目录：/it
+
+   。访问权限：读写权限
+
+   1.创建共享目录
+
+   -->mkdir /it
+
+   -->chmod -R 757 /it
+
+   2.编辑/etc/samba/smb.conf文件
+
+   -->vim /etc/samba/smb.conf 
+
+
+#======================= Global Settings =====================================
+
+[global]
+        workgroup = workgroup
+        server string = Samba Server 
+        netbios name = rhel
+        interfaces = lo eth0 192.168.0.203/24
+        hosts allow = 127. 192.168.0.
+
+# --------------------------- Logging Options -----------------------------
+
+        log file = /var/log/samba/log.%m
+        max log size = 50000
+
+
+# ----------------------- Standalone Server Options ------------------------
+
+        security = share
+
+
+#============================ Share Definitions ==============================
+
+[it]
+        comment = it
+        path = /it
+        public = yes
+        writable = yes
+
+
+    测试：
+
+    -->service smb start
+
+    客户端访问：
+
+    -->运行：\\192.168.0.203，即可看到共享的目录it
+
+5.3.2 user级别Samba服务器配置
+
+    在公司内部配置一台Samba服务器，为公司网络内的计算机提供user级别Samba服务，
+
+具体参数如下：
+
+    。Samba服务器所在工作组：workgroup
+
+    。Samba服务器描述信息：Samba Server
+
+    。Samba服务器NetBIOS名称：rhel
+
+    。Samba服务器网卡IP地址： 192.168.0.203
+
+    。允许访问Samba服务器的网络：192.168.0.0
+
+    。日志文件路径：/var/log/samba/log.%m
+
+    。日志文件大小：50000KB
+
+    。Samba服务器安全模式：user
+
+    。对Samba密码进行加密
+
+    。密码数据库类型：tdbsam
+
+    。共享目录：/it
+
+    。/it目录的用户所有者和组群所有者为zhangsan
+
+    。访问权限：读写权限
+
+
+    1.创建系统用户
+
+    -->useradd zhangsan
+
+    -->passwd zhangsan
+
+更改用户 zhangsan 的密码 。
+新的 密码：
+重新输入新的 密码：
+passwd： 所有的身份验证令牌已经成功更新。
+
+
+    2.创建Samba账户
+
+    -->smbpasswd  -a zhangsan
+
+New SMB password:
+Retype new SMB password:
+Added user zhangsan.
+
+
+    3.创建共享目录
+
+    -->mkdir /it
+
+    -->chown -R zhangsan.zhangsan /it  #递归设置用户所有者和组群所有者为zhangsan
+
+    4.编辑/etc/samba/smb.conf文件
+
+    -->vim /etc/samba/smb.conf
+
+#======================= Global Settings =====================================
+
+[global]
+        workgroup = workgroup
+        server string = Samba Server
+        netbios name = rhel
+        interfaces = lo eth0 192.168.0.203/24
+        hosts allow = 127. 192.168.0.
+
+# --------------------------- Logging Options -----------------------------
+
+        log file = /var/log/samba/log.%m
+        max log size = 50000
+
+
+# ----------------------- Standalone Server Options ------------------------
+
+        security = user
+        passdb backend = tdbsam
+        encrypt passwords = yes
+
+#============================ Share Definitions ==============================
+
+[it]
+        comment = it
+        path = /it
+        public = no
+        writable = y
+
+
+    。测试，重启samba服务
+
+    -->service smb restart
+
+       关闭 SMB 服务：                                            [确定]
+       启动 SMB 服务：                                            [确定]
+
+
+   。客户端访问：
+
+   \\192.168.0.203--->用户名：zhangsan
+
+                      密码：******
+
+
+5.3.3 Samba打印机共享配置
+
+   在公司内部配置一台Samba共享打印机，为公司网络内的客户单计算机提供匿名Samba打印服务，具体参数如下：
+
+   。打印机共享名称：HP
+
+   。允许匿名打印
+
+   。显示共享打印机名称
+
+   -->vim /etc/samba/smb.conf
+
+#======================= Global Settings =====================================
+
+[global]
+        workgroup = workgroup
+        server string = Samba Server
+        netbios name = rhel
+        interfaces = lo eth0 192.168.0.203/24
+        hosts allow = 127. 192.168.0.
+
+# --------------------------- Logging Options -----------------------------
+
+        log file = /var/log/samba/log.%m
+        max log size = 50000
+
+
+# ----------------------- Standalone Server Options ------------------------
+
+        security = share
+        passdb backend = tdbsam
+
+# --------------------------- Printing Options -----------------------------
+
+        load printers = yes
+        cups options = raw
+
+        printcap name = /etc/printcap
+;       printcap name = lpstat
+        printing = cups
+
+
+#============================ Share Definitions ==============================
+
+[HP]
+        comment = HP printer
+        path = /var/spool/samba
+        browseable = yes
+        guest ok = yes
+        read only = yes
+        printable = yes
+
+     测试：
+
+    -->service smb restart
+
+      关闭 SMB 服务：                                            [确定]
+      启动 SMB 服务：                                            [确定]
+
+
+    客户端测试：
+
+    -->控制面板\硬件和声音\设备和打印机-->添加打印机
+
+    -->添加网络、无线或Bluetooth打印机(W)
+
+    -->正在搜索可用的打印机，搜索显示后选择打印机-->下一步
+
+    -->使用当前已安装的驱动程序(推荐)-->下一步
+
+    -->打印机名称：HP--->下一步-->完成
+
+
+5.3.4 控制smb服务
+
+    1.启动smb服务
+
+    -->service smb start
+
+       启动 SMB 服务：                                            [确定]
+
+    2.查看smb服务运行状态
+
+    -->service smb status
+
+       smbd (pid  3152) 正在运行...
+
+
+    3.停止smb服务
+
+    -->service smb stop
+
+       关闭 SMB 服务：                                            [确定]
+
+    4.重新启动smb服务
+
+    -->service smb restart
+
+       关闭 SMB 服务：                                            [确定]
+       启动 SMB 服务：                                            [确定]
+
+
+    5.重新加载smb服务配置
+
+    -->service smb reload
+
+       重新载入 smb.conf 文件：                                   [确定]
+
+     
+    6.开机自动启动smb服务
+
+    -->chkconfig smb on
+
+    -->chkconfig --list smb
+
+       smb            	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+5.3.5 Samba排错
+
+    使用testparm命令可以检查smb.conf配置文件的内部正确性。如果没有指定配置文件，那么将使用默认的
+
+/etc/samba/smb.conf文件。
+
+    命令语法：
+
+    testparm [选项] [配置文件] [主机名|主机IP地址]
+
+                          testparm命令选项含义
+    ---------------------------------------------------------------------------------------
+       选项                                    选项含义
+    --------------------------------------------------------------------------------------
+       -s                                       禁止提示输入
+    ---------------------------------------------------------------------------------------
+       -v                                       显示详细信息
+    ---------------------------------------------------------------------------------------
+       -l                                       跳过全局检查
+    ---------------------------------------------------------------------------------------
+       --show-all-parameters                    显示参数、类型和可能的值
+    ---------------------------------------------------------------------------------------
+
+    例5.1 检查/etc/samba/smb.conf配置文件的内部正确性
+
+    -->testparm /etc/samba/smb.conf
+
+Load smb config files from /etc/samba/smb.conf
+rlimit_max: increasing rlimit_max (1024) to minimum Windows limit (16384)
+Processing section "[it]"
+Processing section "[printers]"
+WARNING: The security=share option is deprecated
+Loaded services file OK.
+Server role: ROLE_STANDALONE
+Press enter to see a dump of your service definitions
+回车即可显示配置的内容
+
+
+5.4 配置Samba客户端
+
+    Samba支持Linux客户端和非linux客户端
+
+5.4.1 Linux客户端配置(192.168.0.204)
+
+    1.安装软件包
+
+    -->rpm -qa|grep samba 
+
+    -->yum install samba-common samba-client
+
+    2.使用smbclient命令显示和连接共享目录
+
+    语法：smbclient[服务名][密码][选项]
+
+
+                            smbclient命令选项含义
+    ---------------------------------------------------------------------------
+      选项                                     选项含义
+    ---------------------------------------------------------------------------
+      -L<主机>                     在主机上获取可用的共享列表
+    ---------------------------------------------------------------------------
+      -U<用户名>                   指定用户名
+    --------------------------------------------------------------------------
+      -I<IP地址>                   使用指定IP地址进行连接
+    --------------------------------------------------------------------------
+      -e                           加密SMB传输
+    --------------------------------------------------------------------------
+      -N                           不用询问密码
+    --------------------------------------------------------------------------
+      -W<工作组>                   设置工作组名称
+    --------------------------------------------------------------------------
+      -p<端口>                     指定连接端口
+    --------------------------------------------------------------------------
+      -B                           使用DNS浏览SMB服务器
+    --------------------------------------------------------------------------
+      -n<NetBIOS名称>              指定主NetBIOS名称
+    --------------------------------------------------------------------------
+      -m<等级>                     设置最大协议等级
+    --------------------------------------------------------------------------
+      -M<主机>                     向指定主机发送消息
+    --------------------------------------------------------------------------
+      -R<名称解析顺序>             设置NetBIOS名称解析顺序
+    --------------------------------------------------------------------------
+
+     例：5.2显示Samba服务器192.168.0.203上的共享资源
+
+     -->smbclient -L 192.168.0.203  #客户端测试
+
+Enter root's password:   不用输入密码
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+
+	Sharename       Type      Comment
+	---------       ----      -------
+	it              Disk      it
+	IPC$            IPC       IPC Service (Samba Server)
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+
+	Server               Comment
+	---------            -------
+
+	Workgroup            Master
+	---------            -------
+
+
+报错：Enter root's password: 
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+Server requested LANMAN password (share-level security) but 'client lanman auth = no' or 'client ntlmv2 auth = yes'
+tree connect failed: NT_STATUS_ACCESS_DENIED
+
+
+解决方法：
+
+    -->vim /etc/samba/smb.conf
+
+    security = share
+
+[it]
+        comment = it
+        path = /it
+        public = yes    #设置为yes
+        writable = yes
+        browseable = yes  #yes 
+
+。客户端hosts中添加samba服务器IP和主机名
+
+  192.168.0.204 samba
+
+  -->/etc/init.d/network restart
+
+。重启服务
+
+  -->service smb restart
+
+
+    例5.3 指定Samba用户zhangsan显示Samba服务器192.168.0.203上的共享资源
+
+ 
+  -->vim /etc/samba/smb.conf
+
+     security = user #修改为user
+
+  -->service smb restart
+
+  关闭 SMB 服务：                                            [确定]
+  启动 SMB 服务：                                            [确定]
+
+
+  -->smbclient -L 192.168.0.203 -U zhangsan   #张三访问samba共享
+
+
+Enter zhangsan's password: 
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+
+	Sharename       Type      Comment
+	---------       ----      -------
+	it              Disk      it
+	IPC$            IPC       IPC Service (Samba Server)
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+
+	Server               Comment
+	---------            -------
+
+	Workgroup            Master
+	---------            -------
+[root@Master2 ~]# smbclient -L 192.168.0.203 -U zhangsan
+Enter zhangsan's password: 
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+
+	Sharename       Type      Comment
+	---------       ----      -------
+	it              Disk      it
+	IPC$            IPC       IPC Service (Samba Server)
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+
+	Server               Comment
+	---------            -------
+
+	Workgroup            Master
+	---------            -------
+
+
+    例5.4 以用户zhangsan连接Samba服务器192.168.0.203的共享目录/it
+
+    -->smbclient //192.168.0.203/it -U zhangsan
+
+Enter zhangsan's password: 
+Domain=[WORKGROUP] OS=[Unix] Server=[Samba 3.6.23-14.el6_6]
+smb: \> ?                                                   --------------#显示
+?              allinfo        altname        archive        blocksize      
+cancel         case_sensitive cd             chmod          chown          
+close          del            dir            du             echo           
+exit           get            getfacl        geteas         hardlink       
+help           history        iosize         lcd            link           
+lock           lowercase      ls             l              mask           
+md             mget           mkdir          more           mput           
+newer          open           posix          posix_encrypt  posix_open     
+posix_mkdir    posix_rmdir    posix_unlink   print          prompt         
+put            pwd            q              queue          quit           
+readlink       rd             recurse        reget          rename         
+reput          rm             rmdir          showacls       setea          
+setmode        stat           symlink        tar            tarmode        
+timeout        translate      unlock         volume         vuid           
+wdel           logon          listconnect    showconnect    ..             
+!   
+
+
+
+    。常用的smbclient子目录描述
+
+smb: \> dir                                                ----------------------#显示共享文件
+  .                                   D        0  Tue Jun  9 14:38:05 2015
+  ..                                 DR        0  Tue Jun  9 09:02:10 2015
+  a                                   A        0  Fri May 29 11:14:49 2015
+  b.txt                               A        0  Tue Jun  9 14:38:02 2015
+
+		50396 blocks of size 1048576. 26592 blocks available
+
+smb: \> get b.txt                                          ----------------------#下载共享文件
+getting file \b.txt of size 0 as b.txt (0.0 KiloBytes/sec) (average 0.0 KiloBytes/sec)
+smb: \> pwd                                                ----------------------#显示当前路径
+Current directory is \\192.168.0.203\it\
+smb: \> md test                                            ----------------------#创建目录并查看
+smb: \> dir
+  .                                   D        0  Tue Jun  9 16:06:57 2015
+  ..                                 DR        0  Tue Jun  9 09:02:10 2015
+  a                                   A        0  Fri May 29 11:14:49 2015
+  test                                D        0  Tue Jun  9 16:06:56 2015
+  b.txt                               A        0  Tue Jun  9 14:38:02 2015
+
+		50396 blocks of size 1048576. 26592 blocks available
+smb: \> mput c.txt d.txt                                  ----------------------#向服务器上传文件并查看
+Put file c.txt? y
+putting file c.txt as \c.txt (0.0 kb/s) (average 0.0 kb/s)
+Put file d.txt? y
+putting file d.txt as \d.txt (0.0 kb/s) (average 0.0 kb/s)
+smb: \> dir
+  .                                   D        0  Tue Jun  9 16:08:11 2015
+  ..                                 DR        0  Tue Jun  9 09:02:10 2015
+  c.txt                               A        0  Tue Jun  9 16:08:10 2015
+  a                                   A        0  Fri May 29 11:14:49 2015
+  d.txt                               A        0  Tue Jun  9 16:08:11 2015
+  test                                D        0  Tue Jun  9 16:06:56 2015
+  b.txt                               A        0  Tue Jun  9 14:38:02 2015
+
+		50396 blocks of size 1048576. 26592 blocks available
+smb: \> rd test                                        -------------------------#删除目录
+smb: \> dir
+  .                                   D        0  Tue Jun  9 16:09:10 2015
+  ..                                 DR        0  Tue Jun  9 09:02:10 2015
+  c.txt                               A        0  Tue Jun  9 16:08:10 2015
+  a                                   A        0  Fri May 29 11:14:49 2015
+  d.txt                               A        0  Tue Jun  9 16:08:11 2015
+  b.txt                               A        0  Tue Jun  9 14:38:02 2015
+
+		50396 blocks of size 1048576. 26591 blocks available
+
+smb: \> renam a a.txt                                   -----------------------#重命名文件
+smb: \> dir
+  .                                   D        0  Tue Jun  9 16:09:22 2015
+  ..                                 DR        0  Tue Jun  9 09:02:10 2015
+  c.txt                               A        0  Tue Jun  9 16:08:10 2015
+  a.txt                               A        0  Fri May 29 11:14:49 2015
+  d.txt                               A        0  Tue Jun  9 16:08:11 2015
+  b.txt                               A        0  Tue Jun  9 14:38:02 2015
+
+		50396 blocks of size 1048576. 26591 blocks available
+smb: \> stat a.txt                                    -------------------------#显示文件属性
+File: \a.txt
+Size: 0           	Blocks: 0	regular file
+Inode: 2228227	Links: 1
+Access: (0757/-rwxr-xrwx)	Uid: 504	Gid: 504
+Access: 2015-05-29 11:14:50 +0800
+Modify: 2015-05-29 11:14:50 +0800
+Change: 2015-06-09 16:09:23 +0800
+smb: \> showconnect                                    -------------------------#显示当前活动的连接
+//192.168.0.203/it
+smb: \> volume                                         -------------------------#显示当前共享卷名
+Volume: |it| serial number 0x503f72f8
+smb: \> listconnect                                    -------------------------#显示当前连接
+0:	server=192.168.0.203, share=it
+
+smb: \> exit
+
+
+
+    3.使用mount命令挂载Samba目录(客户端192.168.0.204)
+
+    例5.6 挂载Samba服务器192.168.0.203上的共享目录/it到客户端目录/mnt/samba下
+
+    -->yum install cifs-utils -y
+
+    -->mkdir /mnt/samba
+
+    -->mount -t cifs //192.168.0.203/it /mnt/samba -o username=zhangsan
+---------------------------------------------------------------------------
+报错：
+mount: block device //192.168.0.203/it is write-protected, mounting read-only
+mount: cannot mount block device //192.168.0.203/it read-only
+
+解决方法：
+
+    -->yum install cifs-utils -y
+-------------------------------------------------------------------------------------
+
+    -->df -h /mnt/samba  #查看Samba共享目录的挂载情况
+
+Filesystem          Size  Used Avail Use% Mounted on
+//192.168.0.203/it   50G   21G   26G  45% /mnt/samba
+
+    -->ls /mnt/samba/    #查看samba文件
+
+      a.txt  b.txt  c.txt  d.txt
+
+
+
+    4.使用smbget命令下载Samba共享资源
+
+    smbget是一个类似wget一样的实用程序，用于通过SMB下载文件
+
+    语法：
+
+    smbget [选项] [smb://Samba服务器/共享文件路径]
+
+                                  smbget命令选项含义
+    ------------------------------------------------------------------------------
+       选项                                          选项含义
+    ------------------------------------------------------------------------------
+      -u<用户>                                 使用的用户名
+    -------------------------------------------------------------------------------
+      -p<密码>                                 使用的密码
+    -------------------------------------------------------------------------------
+      -w<工作组>                               使用的工作组(可选)
+    -------------------------------------------------------------------------------
+      -r                                       自动恢复被终止的文件
+    -------------------------------------------------------------------------------
+      -R                                       递归下载文件
+    -------------------------------------------------------------------------------
+      -q	                               安静模式
+    -------------------------------------------------------------------------------
+      -P                                       在本地文件上设置和远程文件相同的权限
+    --------------------------------------------------------------------------------
+      -v                                       显示详细信息
+    -------------------------------------------------------------------------------
+      -a                                       以用户guest工作
+    -------------------------------------------------------------------------------
+      -n                                       不要询问任何信息(非交互)
+    -------------------------------------------------------------------------------
+      -D                                       显示点作为进度指示
+    --------------------------------------------------------------------------------
+      -b                                       在一个块中下载的字节数默认为64000
+    --------------------------------------------------------------------------------
+      -o                                       正在下载的文件写入到指定的文件，不能同时
+                                               使用-R选项
+    -----------------------------------------------------------------------------------
+      -O                                       正在下载的文件写入到标准输出
+    -----------------------------------------------------------------------------------
+   
+    例：5.7 下载Samba服务器192.168.0.203共享目录/it中的文件a.txt
+
+    -->smbget smb://192.168.0.203/it/a.txt  #下载a.txt文件
+
+Username for it at 192.168.0.203 [guest] zhangsan  #输入用户名:zhangsan 
+Password for it at 192.168.0.203:                  #输入zhangsan密码
+Using workgroup WORKGROUP, user zhangsan  
+smb://192.168.0.203/it/a.txt                                                                                                         
+Downloaded 0b in 5 seconds
+ 
+    -->ls     #查看下载的文件
+
+       a.txt            
+
+
+5.4.2 Windows客户端配置
+
+    1.网络
+
+    运行：\\192.168.0.203  #输入samba服务器IP，即可访问当共享的文件
+
+    如果samba不允许使用匿名用户，则输入用户名密码访问
+
+
+    2.映射网络驱动器
+
+    win7系统：
+
+    -->右键“计算机”-->"映射网络驱动器"-->驱动器：Z：  
+
+                                         文件夹：\\192.168.0.203\it
+   
+				      【勾选】在登录时重新连接
+
+   -->完成
+
+    打开计算机即可看到磁盘“Z"，显示名为"it(\\192.168.0.203)(Z)"
+
+ 
+5.5 Samba服务器高级配置
+
+5.5.1 设置Samba加密口令
+
+    Samba服务器将用户名和密码等信息存放在/etc/samba/smbpasswd文件中，以便
+
+对用户身份进行验证，默认该文件是不存在的。
+
+    1.确保Samba服务器为user安全级别
+
+    设置smb.conf配置文件，确保该文件设置了安全级别为user,启用了加密口令以及指定了
+
+Samba口令文件。
+
+    -->vim /etc/samba/smb.conf
+
+        security = user
+        passdb backend = tdbsam
+        encrypt passwords = yes
+        smb passwd file = /etc/samba/smbpasswd
+   
+   -->touch /etc/samba/smbpasswd
+
+   -->chmod 755 /etc/samba/smbpasswd
+
+   2.重新启动smb服务
+
+   -->service smb restart
+
+      关闭 SMB 服务：                                            [确定]
+      启动 SMB 服务：                                            [确定]
+
+   
+   3.创建Samba账户
+
+   命令语法：smbpasswd [选项][用户]
+
+   -->smbpasswd -a zhangsan
+
+      New SMB password:
+      Retype new SMB password:
+
+   
+   4.查看Samba口令文件
+
+   -->cat /etc/samba/smbpasswd 
+
+5.5.2 映射Samba用户账户
+
+   为了Samba及服务器安全，为Samba账户指定一个对应的映射账户
+
+   1.编辑/etc/samba/smb.conf文件
+
+   2.创建用户账户映射文件
+
+   3.重新启动smb服务
+
+   4.客户端测试
+
+5.6 管理Samba服务器
+
+5.6.1 显示当前Samba连接报告
+
+    语法：smbstatus [选项]
+
+                         smbstatus命令选项含义
+    ---------------------------------------------------------------------------
+      选项                                        选项含义
+    ---------------------------------------------------------------------------
+       -d <级别>                           设置调试级别
+    ---------------------------------------------------------------------------
+       -u <用户名>                         只选择指定用户的信息
+    ---------------------------------------------------------------------------
+       -L                                  只显示锁
+    ---------------------------------------------------------------------------
+       -S                                  只列出共享
+    ---------------------------------------------------------------------------
+       -b                                  显示简短输出信息 
+    ---------------------------------------------------------------------------
+       -p                                  只显示smbd进程列表
+    --------------------------------------------------------------------------- 
+       -v                                  显示详细输出信息
+    ---------------------------------------------------------------------------
+
+    例5.8 以简短输出信息显示当前Samaba连接报告
+
+    -->yum install samba -y
+
+    -->smbstatus -b  #
+
+Samba version 3.6.23-14.el6_6
+PID     Username      Group         Machine                        
+-------------------------------------------------------------------
+3431      zhangsan      zhangsan      192.168.0.204 (192.168.0.204)
+
+    
+    例5.9 详细显示当前Samba连接报告
+
+    -->smbstatus -b
+
+smbstatus
+
+Samba version 3.6.23-14.el6_6
+PID     Username      Group         Machine                        
+-------------------------------------------------------------------
+3431      zhangsan      zhangsan      192.168.0.204 (192.168.0.204)
+
+Service      pid     machine       Connected at
+-------------------------------------------------------
+it           3431   192.168.0.204  Tue Jun  9 16:59:36 2015
+
+No locked files
+
+
+5.6.2 管理Samba用户数据库
+
+   使用pdbedit命令可以管理SAM数据库(Samba用户数据库)中的用户账户。使用pdbedit命令
+
+可以添加用户账户、删除用户账户、修改用户账户、列出用户账户以及导入用户账户。
+
+    命令语法：
+
+    pdbedit[选项]
+
+    -->pdbedit -L  #列出所有存在Samba用户数据库中的用户账户
+
+zhangsan:504:
+lisi:506:
+
+    -->pdbedit -u zhangsan  #指定使用的用户名
+
+zhangsan:504:
+
+    。用户账户控制属性
+
+    N：无需密码　　　　D:禁用账户        H:所需的home目录
+
+    T: 其它账户的临时副本                U:普通用户账户
+
+    M: MNS登录用户账户                   W:工作站信任账户
+
+    S: 服务器信任账户                    L：自动锁定
+
+    X: 密码用不过期                      I:域信任账户
+
+    例：5.10 创建Samba用户账户zhangsan
+
+    -->useradd zhangsan
+
+    -->pdbedit -a -u zhangsan 
+
+new password:
+retype new password:
+Unix username:        zhangsan
+NT username:          
+Account Flags:        [U          ]
+User SID:             S-1-5-21-4102692562-3648193918-3233807189-1000
+Primary Group SID:    S-1-5-21-4102692562-3648193918-3233807189-513
+Full Name:            
+Home Directory:       \\rhel\zhangsan
+HomeDir Drive:        
+Logon Script:         
+Profile Path:         \\rhel\zhangsan\profile
+Domain:               RHEL
+Account desc:         
+Workstations:         
+Munged dial:          
+Logon time:           0
+Logoff time:          三, 06 2月 2036 23:06:39 CST
+Kickoff time:         三, 06 2月 2036 23:06:39 CST
+Password last set:    二, 09 6月 2015 17:27:52 CST
+Password can change:  二, 09 6月 2015 17:27:52 CST
+Password must change: never
+Last bad password   : 0
+Bad password count  : 0
+Logon hours         : FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+
+    例5.11：创建Samba用户账户lisi,并指定用户的主目录完了路径为/home/it，用户全名为：lisi
+
+    -->pdbedit -h /home/lisi -f lisi -a -u lisi
+
+new password:
+retype new password:
+Unix username:        lisi
+NT username:          
+Account Flags:        [U          ]
+User SID:             S-1-5-21-4102692562-3648193918-3233807189-1001
+Primary Group SID:    S-1-5-21-4102692562-3648193918-3233807189-513
+Full Name:            lisi
+Home Directory:       /home/lisi
+HomeDir Drive:        
+Logon Script:         
+Profile Path:         \\rhel\lisi\profile
+Domain:               RHEL
+Account desc:         
+Workstations:         
+Munged dial:          
+Logon time:           0
+Logoff time:          三, 06 2月 2036 23:06:39 CST
+Kickoff time:         三, 06 2月 2036 23:06:39 CST
+Password last set:    二, 09 6月 2015 17:30:40 CST
+Password can change:  二, 09 6月 2015 17:30:40 CST
+Password must change: never
+Last bad password   : 0
+Bad password count  : 0
+Logon hours         : FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+    例5.12 创建Samba用户账户zhangsan，并且指定用户SID为5004
+
+    -->pdbedit -U 5004 -a -u zhangsan
+
+new password:
+retype new password:
+Unix username:        zhangsan
+NT username:          
+Account Flags:        [U          ]
+User SID:             S-1-5-21-4102692562-3648193918-3233807189-5004  #此处已经更改为5004
+Primary Group SID:    S-1-5-21-4102692562-3648193918-3233807189-513
+Full Name:            
+Home Directory:       \\rhel\zhangsan
+HomeDir Drive:        
+Logon Script:         
+Profile Path:         \\rhel\zhangsan\profile
+Domain:               RHEL
+Account desc:         
+Workstations:         
+Munged dial:          
+Logon time:           0
+Logoff time:          三, 06 2月 2036 23:06:39 CST
+Kickoff time:         三, 06 2月 2036 23:06:39 CST
+Password last set:    二, 09 6月 2015 17:33:24 CST
+Password can change:  二, 09 6月 2015 17:33:24 CST
+Password must change: never
+Last bad password   : 0
+Bad password count  : 0
+Logon hours         : FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+
+    例5.13：列出所有存在Samba用户数据库中的用户账户
+
+    -->pdbedit -L
+
+lisi:506:lisi
+zhangsan:504:
+
+    例5.14：以冗长列表格式列出Samba用户账户zhangsan
+
+    -->pdbedit -L -v -u zhangsan
+
+Unix username:        zhangsan
+NT username:          
+Account Flags:        [U          ]
+User SID:             S-1-5-21-4102692562-3648193918-3233807189-5004
+Primary Group SID:    S-1-5-21-4102692562-3648193918-3233807189-513
+Full Name:            
+Home Directory:       \\rhel\zhangsan
+HomeDir Drive:        
+Logon Script:         
+Profile Path:         \\rhel\zhangsan\profile
+Domain:               RHEL
+Account desc:         
+Workstations:         
+Munged dial:          
+Logon time:           0
+Logoff time:          三, 06 2月 2036 23:06:39 CST
+Kickoff time:         三, 06 2月 2036 23:06:39 CST
+Password last set:    二, 09 6月 2015 17:33:24 CST
+Password can change:  二, 09 6月 2015 17:33:24 CST
+Password must change: never
+Last bad password   : 0
+Bad password count  : 0
+Logon hours         : FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+
+    例5.15: 以smbpasswd风格列出所有存在Samba用户数据库中的用户账户
+
+    -->pdbedit -L -w
+
+lisi:506:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:FC0404E2387A24FFC2220730D160A99C:[U          ]:LCT-5576B240:
+zhangsan:504:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:FC0404E2387A24FFC2220730D160A99C:[U          ]:LCT-5576B2E4:
+
+    例5.16:列出Samba用户账户zhangsan
+
+    -->pdbedit -u zhangsan
+
+zhangsan:504:
+
+    例5.17:重置Samba用户账户zhangsan的密码错误计数
+
+    -->pdbedit -z -u zhangsan
+
+Unix username:        zhangsan
+NT username:          
+Account Flags:        [U          ]
+User SID:             S-1-5-21-4102692562-3648193918-3233807189-5004
+Primary Group SID:    S-1-5-21-4102692562-3648193918-3233807189-513
+Full Name:            
+Home Directory:       \\rhel\zhangsan
+HomeDir Drive:        
+Logon Script:         
+Profile Path:         \\rhel\zhangsan\profile
+Domain:               RHEL
+Account desc:         
+Workstations:         
+Munged dial:          
+Logon time:           0
+Logoff time:          三, 06 2月 2036 23:06:39 CST
+Kickoff time:         三, 06 2月 2036 23:06:39 CST
+Password last set:    二, 09 6月 2015 17:33:24 CST
+Password can change:  二, 09 6月 2015 17:33:24 CST
+Password must change: never
+Last bad password   : 0
+Bad password count  : 0
+Logon hours         : FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+    例5.18 从Samba数据库中删除用户账户zhangsan
+
+    -->pdbedit -x -u zhangsan
+
+    -->pdbedit -L -w
+
+    lisi:506:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:FC0404E2387A24FFC2220730D160A99C:[U          ]:LCT-5576B240:
+
+
+5.7 使用SWAT配置Samba服务器
+
+5.7.1 SWAT简介
+
+    SWAT是Linux系统下一款可以通过Web浏览器访问方式配置和管理Samba服务器的工具。通过SWAT可以在Samba允许访问范围
+
+内的客户端计算机上，用Web浏览器对服务器端的Samba进行控制。通过使用SWAT可以实现在线文档的预览、/etc/samba/smb.conf
+
+文件的确认和编辑、密码的更改、服务的重启等。
+
+    在SWAT页面上有8个部分：
+
+    。HOME: Samba相关程序及文件说明
+
+    。GLOBALS:设置Samba的全局参数
+
+    。SHARES:设置Samba的共享参数
+
+    。PRINTERS:设置Samba的打印参数
+
+    。WIZARD：Samba配置向导
+
+    。STATUS: 查看和设置Samba的服务状况
+
+    。VIWS: 查看Samba的文本配置文件,/etc/samba/smb.conf
+
+    。PASSWORD:设置Samba用户，可以修改用户密码、创建用户、删除哟该辩护、启用用户和禁用用户。
+
+
+
+    *  查看samba-swat是否安装
+
+    -->rpm -q samba-swat
+
+       samba-swat-3.6.23-14.el6_6.x86_64
+
+
+    没有安装的话执行：
+    
+    -->yum install samba-swat -y  
+
+5.7.2 /etc/xinetd.d/swat文件详解
+
+    主配置文件为：/etc/xinetd.d/swat
+
+    -->cat /etc/xinetd.d/swat 
+
+# default: off
+# description: SWAT is the Samba Web Admin Tool. Use swat \
+#	       to configure your Samba server. To use SWAT, \
+#	       connect to port 901 with your favorite web browser.
+service swat
+{
+	port		= 901              #默认的端口号901
+	socket_type	= stream           #套接字类型
+	wait 		= no               #系统处理服务请求的方式，no表示服务可以为新的请求通过服务，
+	                                    yes表示只有当服务停止以后，才能为新的请求提供服务。
+	only_from 	= 127.0.0.1        #允许访问swat的主机，默认只允许127.0.0.1，即本机访问。
+	user		= root             #启动swat的用户
+	server		= /usr/sbin/swat   #启动swat的命令
+	log_on_failure	+= USERID          #记录登录失败的信息
+	disable		= yes              #默认值为yes，表示禁用swat，如果更改为no表示启用swat
+}
+
+
+5.7.3 启用SWAT
+
+   1.编辑/etc/xinetd.d/swat文件
+
+   -->vim /etc/xinetd.d/swat
+
+    only_from       = 127.0.0.1 192.168.0.27  192.168.0.204  #空格分割IP，设置允许访问的IP
+    disable         = no
+
+   
+   2.重新启动xinetd服务
+
+   -->service xinetd restart
+
+   停止 xinetd：                                              [确定]
+   正在启动 xinetd：                                          [确定]
+
+   -->netstat -lnp|grep 901
+
+      tcp        0      0 :::901                      :::*                        LISTEN      3522/xinetd  
+
+
+   3.登录SWAT
+
+   http://192.168.0.203:901/
+
+   用户名：root
+
+   密码：******  #系统root密码
+
+
+5.7.4 使用SWAT
+
+    1.主页
+
+    Welcome to SWAT!
+
+    2.全局参数
+
+    -->GLOBALS-->分为：
+
+    Basic Advanced  2项
+
+    3.共享参数：
+
+    -->SHARES-->Choose Share: it   Delete Share  #选择和删除共享
+
+                Create Share:  #创建共享
+
+
+    4.打印机参数
+
+    -->PRINTERS-->Basic   Advanced 
+
+     
+               Choose Printer   printers    Delete Printer  #共享打印机为printers
+
+	       Create Printer   #创建打印机
+
+  
+     5.WIZARD(Samba配置向导)
+
+     通过配置向导来完成Samba服务器的配置工作。
+
+
+he \"Rewrite smb.conf file\" button will clear the smb.conf file of all default values and of comments. The same will happen if you press the commit button.
+
+     
+Server Type:  	        Stand Alone 	Domain Member    	Domain Controller 
+Configure WINS As:  	Not Used 	Server for client use 	Client of another WINS server 
+			                                        Remote WINS Server 
+Expose Home Directories:  	Yes	No	
+The above configuration options will set multiple parameters and will generally assist with rapid Samba deployment. 
+               
+
+     6.STATUS (服务器状态)
+
+Server Status
+
+Refresh Interval:
+
+version:	3.6.23-14.el6_6
+smbd:	running 	
+nmbd:	not running 	
+winbindd:	not running 	
+		
+
+Active Connections
+PID	Client	IP address	Date 	Kill
+3431	192.168.0.204	192.168.0.204	Tue Jun  9 16:59:36 2015 	
+
+Active Shares
+Share	User	Group	PID	Client	Date
+it	zhangsan	zhangsan	3431	192.168.0.204	Tue Jun  9 16:59:36 2015
+
+Open Files
+PID	UID	Sharing	R/W	Oplock	Share	File	Date
+
+    
+
+    7.VIWS(当前配置参数)
+    
+    -->VIWS
+
+Current Config
+
+# Samba config file created using SWAT
+# from UNKNOWN (192.168.0.27)
+# Date: 2015/06/09 18:50:49
+
+[global]
+	netbios name = RHEL
+	server string = Samba Server
+	interfaces = lo, eth0, 192.168.0.203/24
+	smb passwd file = /etc/samba/smbpasswd
+	log file = /var/log/samba/log.%m
+	max log size = 50000
+	printcap name = /etc/printcap
+	idmap config * : backend = tdb
+	hosts allow = 127., 192.168.0.
+	cups options = raw
+
+[it]
+	comment = it
+	path = /it
+	read only = No
+	guest ok = Yes
+
+[printers]
+	comment = HP printer
+	path = /var/spool/samba
+	guest ok = Yes
+	printable = Yes
+	print ok = Yes
+	browseable = No
+
+[tmp]
+	available = No
+
+
+
+    8.PASSWORD(服务器密码管理)
+
+    -->PASSWORD
+
+Server Password Management
+User Name : 	
+New Password : 	
+Re-type New Password : 	
+
+Change Password   Add Nes User    Delete User  Disable User  Enable User
+
+Client/Server Password Management
+User Name : 	
+Old Password : 	
+New Password : 	
+Re-type New Password : 	
+Remote Machine : 
+
+Change Pasword

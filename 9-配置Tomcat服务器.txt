@@ -1,0 +1,1219 @@
+                                                 第9章 配置Tomcat服务器
+
+
+9.1 Tomcat简介
+
+    Tomcat是Apache软件基金会(Apache Software Foundation)的Jakarta项目中的一个核心项目，
+
+由Apache、Sun和其它一些公司及个人共同开发而成。
+
+    Tomcat服务器是一个免费的开放源代码的Web应用服务器，属于轻量级应用服务器，在中小型系统和
+
+并发访问用户不是很多的场合下被普通使用。实际上Tomcat部分是Apache服务器的扩展，但它是独立运行的，
+
+所以当运行Tomcat时，它实际上是作为一个与Apache独立的进程单独运行的。
+
+    当配置正确时，Apache为HTML页面服务，而Tomcat实际上运行JSP页面和Servlet。Tomcat也具有处理HTML
+
+页面的功能。另外，它还是一个Servlet和JSP容器，独立的Servert容器是Tomcat的默认模式。不过Tomcat处理
+
+静态HTML的能力不如Apache服务器。
+
+9.2 Tomcat服务器安装和配置
+
+9.2.1 部署Tomcat动态网站
+
+    1.安装jkd软件包
+
+    -->yum install jdk -y
+
+    或者通过源码安装：
+
+    -->mkdir /usr/local/java
+
+    jdk-7u60-linux-x64.tar.gz
+
+    -->tar -zxf jdk-7u60-linux-x64.tar.gz
+
+    -->mv jdk-7u60-linux-x64/  /usr/local/java/
+
+
+     2.安装tomcat软件
+
+     apache-tomcat-8.0.23.tar.gz 
+
+     -->tar zxf apache-tomcat-8.0.23.tar.gz 
+
+     -->mv apache-tomcat-8.0.23/  /usr/local/tomcat-8.0.23
+
+     -->ls /usr/local/tomcat-8.0.23/
+
+        bin  conf  lib  LICENSE  logs  NOTICE  RELEASE-NOTES  RUNNING.txt  temp  webapps  work
+
+
+     3.编辑/root/.bash_profile文件
+
+     -->vim /etc/profile (书中是配置在/root/.bash_profile)
+
+export JAVA_HOME=/usr/local/jdk1.7.0_60
+export JRE_HOME=$JAVA_HOME/jre
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar:$JRE_HOME/lib/rt.jar
+export PATH=$PATH:$JAVA_HOME/bin:$JRE_HOME/bin
+export BASE_ENV=$HOME/.bashrc
+export TOMCAT_HOME=/usr/local/server/tomcat
+export CATALINA_BASE=$TOMCAT_HOME
+export CATALINA_HOME=$TOMCAT_HOME
+export USERNAME="root"
+
+
+
+    配置完毕执行：
+
+    -->source /etc/profile 使其生效
+
+
+    。查看环境变量
+
+    -->echo $JAVA_HOME
+
+       /usr/local/jdk1.7.0_60
+
+    -->echo $TOMCAT_HOME
+
+       /usr/local/tomcat-8.0.23
+
+
+    4.查看安装的java版本
+
+    -->java -version
+
+java version "1.7.0_60"
+Java(TM) SE Runtime Environment (build 1.7.0_60-b19)
+Java HotSpot(TM) 64-Bit Server VM (build 24.60-b09, mixed mode)
+
+    5.启动Tomcat服务
+
+    -->/usr/local/tomcat-8.0.23/bin/startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+    6.查看进程
+
+    -->ps -ef|grep tomcat
+
+root      3171     1 14 20:06 pts/0    00:00:07 /usr/local/jdk1.7.0_60/jre/bin/java
+-Djava.util.logging.config.file=/usr/local/tomcat-8.0.23/conf/logging.properties
+-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager
+-Djava.endorsed.dirs=/usr/local/tomcat-8.0.23/endorsed 
+-classpath /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+-Dcatalina.base=/usr/local/tomcat-8.0.23 -Dcatalina.home=/usr/local/tomcat-8.0.23 
+-Djava.io.tmpdir=/usr/local/tomcat-8.0.23/temp org.apache.catalina.startup.Bootstrap start
+root      3193  2132  0 20:07 pts/0    00:00:00 grep tomcat
+
+
+    7、查看端口号
+    
+    -->netstat -anlp|grep 8080
+
+       tcp        0      0 :::8080                     :::*                        LISTEN      3171/java           
+
+
+    8.访问tomcat
+
+    -->http://192.168.0.203:8080/  #203为Tomcat服务器IP
+
+
+9.2.2 Tomcat目录
+
+    Tomcat主目录包含配置文件、脚本文件、日志文件、临时文件和Web发布目录
+
+    -->ls /usr/local/tomcat-8.0.23/
+
+       bin  conf  lib  LICENSE  logs  NOTICE  RELEASE-NOTES  RUNNING.txt  temp  webapps  work
+
+
+                        Tomcat目录结构
+    --------------------------------------------------------------------------------------------
+          目录                              描述
+    --------------------------------------------------------------------------------------------
+           bin             存放启动和关闭Tomcat的脚本文件
+    --------------------------------------------------------------------------------------------
+           conf            存放Tomcat服务器的各种全局配置文件，其中主要的是server.xml和web.xml
+    --------------------------------------------------------------------------------------------
+           logs            存放Tomcat日志文件
+    --------------------------------------------------------------------------------------------
+           work            Tomcat启动后保存临时文件
+    --------------------------------------------------------------------------------------------
+           webapps         Tomcat主要Web发布目录，默认情况下把Web网页存储在该目录中
+    --------------------------------------------------------------------------------------------
+           temp            临时文件
+    --------------------------------------------------------------------------------------------
+           lib             存放Tomcat服务器所需的各种JAR(Java Archive ,Java归档)文件
+    --------------------------------------------------------------------------------------------
+
+
+9.2.3 启动和关闭tomcat服务
+
+    1.startup和shutdown脚本
+
+    (1)启动tomcat服务
+
+    -->/usr/local/tomcat-8.0.23/startup.sh
+
+
+    (2)停止tomcat服务
+
+    -->/usr/local/tomcat-8.0.23/shutdown.sh
+
+    2.catalina.sh脚本
+
+    使用/usr/local/tomcat-8.0.23/bin/catalina.sh脚本可以启动和关闭tomcat服务。
+
+    命令语法：
+
+    /usr/local/tomcat/bin/catalina.sh[选项]
+
+                                   catalina.sh脚本选项含义
+    --------------------------------------------------------------------------------------------
+       选项                                          描述
+    --------------------------------------------------------------------------------------------
+        debug                           在调试器中启动Catalina
+    ---------------------------------------------------------------------------------------------
+        debug-security                  使用安全管理调试Catalina
+    ---------------------------------------------------------------------------------------------
+        jpda start                      在JPDA调试器下启动Catalina
+    ---------------------------------------------------------------------------------------------
+        run                             在当前窗口中启动Catalina
+    ----------------------------------------------------------------------------------------------
+        run-security                    在当前窗口中使用安全管理启动
+    ----------------------------------------------------------------------------------------------
+        start                           在单独的窗口中启动Catalina
+    ----------------------------------------------------------------------------------------------
+        start -security                 在一个单独的窗口使用安全管理启动
+    ----------------------------------------------------------------------------------------------
+        stop                            停止Catalina,等待最多5秒结束进程
+    ----------------------------------------------------------------------------------------------
+        stop n                          停止Catalina，等待最多n秒结束进程
+    ----------------------------------------------------------------------------------------------
+        stop -force                     停止Catalina,最多等待5秒，如果仍在运行然后使用kill - KILL
+    ----------------------------------------------------------------------------------------------
+        stop -n -force                  停止Catalina，最多等待n秒，如果仍在运行然后使用kill -KILL
+    ----------------------------------------------------------------------------------------------
+        configtest                      在server.xml上运行一个基本的语法检查，为结果检查退出代码
+    ----------------------------------------------------------------------------------------------
+        version                         查看tomcat运行版本
+    ----------------------------------------------------------------------------------------------
+
+    例9.1 启动tomcat服务
+
+    -->/usr/local/tomcat-8.0.23/startup.sh
+
+    或：
+
+    例9.1 启动tomcat服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin/
+  
+    -->./catalina.sh start
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+    例9.2 停止tomcat服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin/
+  
+    -->./catalina.sh stop
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+
+    例9.3 在一个单独的窗口使用安全管理启动tomcat服务
+
+    -->./catalina.sh start -security
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Using Security Manager
+Tomcat started.
+
+
+9.2.4  /usr/local/tomcat-8.0.23/conf/server.xml文件详解
+
+    -->more /usr/local/tomcat-8.0.23/conf/server.xml
+
+
+<?xml version='1.0' encoding='utf-8'?>
+
+
+<Server port="8005" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <!-- Security listener. Documentation at /docs/config/listeners.html
+  <Listener className="org.apache.catalina.security.SecurityListener" />
+  -->
+  <!--APR library loader. Documentation at /docs/apr.html -->
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <!-- Prevent memory leaks due to use of particular java/javax APIs-->
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+
+
+  <GlobalNamingResources> 
+  //--------------------------------------------------------------也可以使用UserDatabaseRealm编辑用户数据库来验证用户身份
+    <!-- Editable user database that can also be used by
+         UserDatabaseRealm to authenticate users
+    -->
+    <Resource name="UserDatabase" auth="Container"
+              type="org.apache.catalina.UserDatabase"
+              description="User database that can be updated and saved"
+              factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+              pathname="conf/tomcat-users.xml" />
+  </GlobalNamingResources>
+
+  <!-- A "Service" is a collection of one or more "Connectors" that share
+       a single "Container" Note:  A "Service" is not itself a "Container",
+       so you may not define subcomponents such as "Valves" at this level.
+       Documentation at /docs/config/service.html
+   -->
+
+ //--------------------------------------------------------------是一个或多个连接器能够共享Container的集合
+  <Service name="Catalina">                                      连接器可以使用一个共享的executor,可以定义一个或多个命名的线程池。
+
+    <!--
+    <Executor name="tomcatThreadPool" namePrefix="catalina-exec-"
+        maxThreads="150" minSpareThreads="4"/>
+    -->
+
+//---------------------------------------------------------------定义一个非SSL HTTP/1.1的连接（使用端口8080）
+    <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+    <!-- A "Connector" using the shared thread pool-->
+ 
+//---------------------------------------------------------------定义一个SSL HTTP/1.1连接器（使用端口8443）
+    <!--
+    <Connector executor="tomcatThreadPool"
+               port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+    -->
+ 
+    <!--
+    <Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+               maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+               clientAuth="false" sslProtocol="TLS" />
+    -->
+
+//-------------------------------------------------------------------定义一个AJP1.3连接器（使用端口8009）
+    <!-- Define an AJP 1.3 Connector on port 8009 -->
+    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+
+
+
+//----------------------------------------------------------------------定义名称为Catalina的容器
+    <!-- You should set jvmRoute to support load-balancing via AJP ie :
+    <Engine name="Catalina" defaultHost="localhost" jvmRoute="jvm1">
+    -->
+    <Engine name="Catalina" defaultHost="localhost">
+
+      <!--For clustering, please take a look at documentation at:
+          /docs/cluster-howto.html  (simple how to)
+          /docs/config/cluster.html (reference documentation) -->
+      <!--
+      <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"/>
+      -->
+//-----------------------------------------------------------------------使用LockOutRealm以防止尝试通过暴力攻击猜测用户密码
+      <Realm className="org.apache.catalina.realm.LockOutRealm">
+        
+        <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+               resourceName="UserDatabase"/>
+      </Realm>
+
+//------------------------------------------------------------------------定义虚拟主机
+      <Host name="localhost"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+        <!-- SingleSignOn valve, share authentication between web applications
+             Documentation at: /docs/config/valve.html -->
+        <!--
+
+             <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
+        -->
+ 
+      
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+
+      </Host>
+    </Engine>
+  </Service>
+</Server>
+
+
+
+    1.Server部分
+    
+    <Server port="8005" shutdown="SHUTDOWN">
+
+    Server表示整个Catalina Servle容器。在SErver容器中，可以包含一个或多个Service组件。
+
+    。port:"8005"： 指定端口负责监听关闭tomcat的请求
+
+    。指定向端口发送的命令字符串。
+
+    2.Service部分
+
+     <Service name="Catalina"> 
+
+    Service表示存活在Server中的内部组件，它将一个或多个连接器组件绑定到一个单独的引擎(Engine)上。
+
+在Server中，可以包含一个或多个Service组件。
+
+    。name="Catalina":指定service的名称。
+
+    3.Connector部分
+
+    Connector表示连接器，用来处理与客户端的通信，负责接收客户端的请求，以及向客户端回送响应的消息。
+
+在Tomcat中有多个连接器可以使用。
+
+ <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+
+
+
+    。port="8080":Tomcat服务器监听的端口号。
+
+    。protocol="HTTP/1.1": 设置HTTP协议，默认是HTTP/1.1
+
+    。connectionTimeout="20000"：指定连接超时的时间，单位为毫秒。（5.55小时）
+
+    。redirectPort="8443": 指定服务器正在处理HTTP请求时受到了一个SSL传输请求，Catalina容器将会自动冲定向指定的端口号，
+
+让其处理。
+
+    。SSLEnabled="true"：设置是否启用SSL。
+
+    。maxThreads="150":可以创建的最大的处理用户请求的线程数。
+
+    。minThreads="15" :服务器启动时创建的处理用户请求的线程数。
+
+    。scheme="https":设置协议名称，在request.getScheme()时返回，SSL连接器设为https,默认为http。
+
+    。secure="true":在SSL连接器可将其设置为true，默认为false
+
+    。sslProtocol="TLS":指定SSL使用哪一种协议。
+
+    。minProcessors="5":服务器启动时创建的处理请求的进程数。
+
+    。maxProcessors="75":最大可以创建的处理请求的进程数
+
+    。enableLookups="false":如果设置为true表示支持域名解析，那么可以在Web应用中通过调用request.getRemoteHost()进行DNS查询
+
+来得到远程客户端的实际主机名；如果设置为false，则不能进行DNS查询，而是返回其IP地址。
+
+    。acceptCount="100": 指定当所有可以使用的处理请求的线程数都被用光时，可以放到处理队列中的请求数，超过这个数的请求将不予处理，
+
+而返回Connection refused错误。
+
+
+    4.Engine部分
+
+    <Engine name="Catalina" defaultHost="localhost" jvmRoute="jvm1">
+    -->
+    <Engine name="Catalina" defaultHost="localhost">
+
+      <!--For clustering, please take a look at documentation at:
+          /docs/cluster-howto.html  (simple how to)
+          /docs/config/cluster.html (reference documentation) -->
+      <!--
+      <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"/>
+      -->
+
+    。name="Catalina":指定Engine的名称
+
+    。jvmRoute="jvm1":指定在负载均衡中使用的标识符。
+    
+    。className="org.apache.catalina.ha.tcp.SimpleTcpCluster"：指定类名称。
+      
+
+    5.Host部分
+
+      <Host name="localhost"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+    Host表示虚拟主机，为特定的虚拟主机处理所有请求，一个引擎可以包含多个Host
+
+    。name="localhost"：指定主机名
+
+    。appBase="webapps"：应用程序基本目录，即存放应用程序的目录。
+
+    。unpackWARs="true": 设置tomcat是否会自动将WAR文件解压缩，true表示自动解压缩。否则不解压缩，
+    
+直接从WAR文件中运行应用程序。 
+
+    。autoDeploy="true"：设置当Tomcat运行时，如果有新的Web程序加载到appBase指定的目录下，是否为自动部署，默认为true。
+
+    6.Context内容
+
+    Context表示一个Web引用程序，通常为WAR文件，运行在特定的虚拟主机中。一个Host可以包含多个Context，每一个Context都有
+
+唯一的路径。
+   
+    <Context path=""  docBase=""  debug="0"  reloadable="true"  crossContext="true"/>
+
+    。path="/xuni": 表示Web应用程序的URL的前缀，这样请求的URL为http://192.168.0.2:8080/xunni 
+
+    。debug="0": 设置日志等级。
+
+    。reloadable="true"：如果设置为true，则tomcat会自动检测应用程序的/WEB-INF/lib和/WEB-INF/classes目录的变化，自动装载
+
+新的引用程序，可以再不重启tomcat的情况下改变应用程序。
+
+    。crossContext="true":是否允许跨域访问，设置为true时，在程序内调用ServletContext.getContext()方法将返回一个虚拟主机上
+
+其它Web程序的请求调度器。默认值为false，调用getContext()返回为null。
+
+    7.Logger内容
+
+     Logger:表示自定日志、调试和错误信息
+
+    <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+        prefix="localhost_access_log" suffix=".txt"
+        pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+
+    。prefix:指定log文件的前缀
+
+    。suffix:指定log文件的后缀
+
+    。className:指定logger使用的类名，此类必须实现org.apache.catalina.Logger接口。
+
+    。timestamp:如果设置为true,则log文件名中要加入时间，比如：localhost_log.2014-04-04.txt
+
+
+    8.Realm内容
+
+      表示存放用户名、密码和role的数据库
+
+     。className:指定Realm使用的类名，此类必须使用org.apache.catalina.Realm接口。
+
+
+    9.Valve内容
+
+    Value功能和Logger差不多,其prefix和suffix属性解释和Logger中的一样。
+
+    。className="className="org.apache.catalina.valves.AccessLogValve":可以记录应用程序的访问信息。
+
+    。prefix="localhost_access_log":指定日志文件的前缀。
+
+    。suffix=".txt"：指定日志文件的后缀
+
+    。directory="logs": log文件存放的位置。
+
+    。pattern="%h %l %u %t &quot;%r&quot; %s %b" :有两个值，common方式记录远程主机名或IP地址，用户名、日期，
+
+第一行请求的字符，HTTP响应代码，发送的字节数。combined方式比common方式记录的值更多。
+
+
+9.3 Tomcat服务器高级配置
+
+9.3.1 虚拟目录
+
+    默认网站根目录是/usr/local/tomcat/webapps/ROOT，所以可以将网站的网页内容存储在该目录中。存储到其它地方的话
+
+可通过别名方式创建虚拟目录。
+
+                                  虚拟目录和文件物理位置
+    -----------------------------------------------------------------------------------------------
+       物理位置                           别名                        URL
+    ------------------------------------------------------------------------------------------------
+      /usr/local/tomcat/webapps/ROOT      主目录(无)                 http://www.fulong.com:8080
+    ------------------------------------------------------------------------------------------------
+      /var/xuni                           xuni                       http://www.fulong.com:8080/xuni 
+    ------------------------------------------------------------------------------------------------
+
+    1.创建虚拟目录
+
+    -->mkdir /var/xuni
+
+    -->echo This is /var/xuni Directory > /var/xuni/index.html
+
+    2.编辑/usr/local/tomcat/config/server.xml文件
+
+    -->vim /usr/local/tomcat-8.0.23/conf/server.xml 
+
+<Host name="localhost"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+//----------------------------------------------------------------增加如下内容
+           <Context path="/xuni" docBase="/var/xuni" debug="0"
+              reloadable="true" crossContext="true"/>
+
+      </Host>
+
+
+    3.访问虚拟目录
+
+    。启动服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+    -->http://192.168.0.203:8080/xuni/
+
+    输出：This is /var/xuni Directory 
+
+
+9.3.2 限制主机访问Tomcat服务器
+
+    1.编辑/usr/lcoal/tomcat/conf/server.xml文件
+
+    。设置只允许192.168.0.27主机访问Web网站
+
+
+     <Host name="localhost"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+
+        <Value className="org.apache.catalina.values.RemoteAddrValue"  //----------------------#添加此行
+              allow="192.168.0.27" deny=""/>
+
+           <Context path="/xuni" docBase="/var/xuni" debug="0"
+              reloadable="true" crossContext="true"/>
+
+      </Host>
+
+
+    2.重新启动tomcat
+
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+
+    -->./startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+   192.168.0.27和其它IP测试
+
+   （没有成功）
+
+
+    9.3.3 配置每个用户的Web网站
+
+    Web网站文件需要存放在类似/home/zhangsan/public_html 一样的目录下面。当然也可以改变public_html到其它任何子目录下。
+
+    实际上，这个用户目录不一定需要位于用户主目录下面。如果没有一个秘密文件，但又想把一个用户名映射到公共的像/home一样的
+
+子目录里面，则可以使用HomesUserDatabase类。
+
+    按以下步骤为用户zhangsan配置Web网站，使得可以通过网址http://192.168.0.102:8080/~zhangsan的方式访问。
+
+    1.编辑/usr/local/tomcat-8.0.23/conf/server.xml文件
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+
+    -->vim server.xml
+
+      <Host name="localhost"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+       //-------------------------------------------------------------------------#添加如下内容
+        <Listener className="org.apache.catalina.startup.UserConfig"
+               directoryName="public_html" homeBase="/home"
+               userClass="org.apache.catalina.startup.PasswdUserDatabase"/>
+      </Host>
+
+
+    2.重启tomcat服务
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+
+    -->./startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+
+    3.创建用户zhangsan的Web网站
+
+    -->adduser zhangsan
+
+    -->passwd zhagnsan
+
+    -->su - zhangsan
+
+    -->echo "Hello zhangsan" >/home/zhangsan/public_html/index.html
+
+    -->chmod 711 /home/zhangsan/
+
+
+    设置权限为711，这样只有用户所有者zhangsan才能对/home/zhangsan目录拥有读取和写入权限。
+
+    4.访问用户zhangsan的Web网站
+
+    -->http://192.168.0.203:8080/~zhangsan/
+
+    访问成功页面显示：Hello zhangsan 
+
+9.3.4 Tomcat服务器支持CGI
+
+    Tomcat服务器支持CGI(Common Gateway Interface，通用网关接口,CGI,提供一组方法响应浏览器请求时运行
+
+一些扩展程序。CGI之所以被称为通用，是因为它能在大多数程序或脚本中被调用，包括Per、Python、awk 、Shell
+
+脚本和Java。
+
+
+    1.安装perl软件包
+
+    -->rpm -q perl
+
+    perl-5.10.1-136.el6_6.1.x86_64
+
+    -->yum install perl -y
+
+
+    2.编辑web.xml
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+ 
+    -->vim web.xml
+
+取消以下注释：
+
+      <servlet>
+        <servlet-name>cgi</servlet-name>
+        <servlet-class>org.apache.catalina.servlets.CGIServlet</servlet-class>
+        <init-param>
+          <param-name>debug</param-name>
+          <param-value>0</param-value>
+        </init-param>
+        <init-param>
+          <param-name>cgiPathPrefix</param-name>
+          <param-value>WEB-INF/cgi</param-value>   #--------------------------------------指定CGI文件的存储目录，默认是 WEB-INF/cgi
+        </init-param>                                                                     绝对路径为：/usr/local/tomcat-8.0.23/webapps/ROOT/WEB-INF/cgi
+         <load-on-startup>5</load-on-startup>
+    </servlet>
+
+
+取消以下注释，指定HTML链接到CGI文件的访问方式
+
+    <servlet-mapping>
+        <servlet-name>cgi</servlet-name>
+        <url-pattern>/cgi-bin/*</url-pattern>   
+    </servlet-mapping>
+
+//这里从/cgi-bin/* 是访问CGI文件的默认地址为cgi-bin/*，比如http://192.168.0.203:8080/cgi-bin/HelloLinux.cgi
+
+
+    3.编辑context.xml文件
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+
+    -->vim context.xml 
+
+添加privileged参数，修改后内容如下所示：
+
+<Contexti privileged="true"> #------------------------------添加privileged="true"
+    <WatchedResource>WEB-INF/web.xml</WatchedResource>
+    <WatchedResource>${catalina.base}/conf/web.xml</WatchedResource>
+</Context>
+
+
+    4.创建CGI测试文件
+
+    CGI文件默认存放在WEB-FIN/cgi (绝对路径为/usr/local/tomcat/webapps/ROOT/WEB-INF/cgi目录下，
+
+请确定运行tomcat的用户具有执行CGI文件的可执行权限。
+
+    -->mkdir /usr/local/tomcat-8.0.23/webapps/ROOT/WEB-INF/cgi
+
+    -->touch /usr/local/tomcat-8.0.23/webapps/ROOT/WEB-INF/cgi/HelloLinux.cgi
+
+    -->vim  /usr/local/tomcat-8.0.23/webapps/ROOT/WEB-INF/cgi/HelloLinux.cgi
+
+    文件内容为：
+
+#!/usr/bin/perl
+
+print "Content-type:text/plain\n\n";
+print "Hello Linux\n";
+#
+
+
+    5.重启Tomcat服务
+
+    -->/usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+
+    -->./startup.sh 
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+
+    6.访问CGI
+
+    -->http://192.168.0.203:8080/cgi-bin/HelloLinux.cgi
+
+    Hello Linux
+
+
+
+9.3.4 配置Tomcat默认主页
+
+    Tomcat服务器默认的主页名称之恩给你是index.html、index.htm或index.jsp，入股网站的默认主页不是这几个名称，
+
+比如文件名称是:sh.html，那么就需要修改/usr/loca/tomcat/conf/web.xml和/usr/lcoal/tomcat/webapps/ROOT/WEB-INF/web.xml
+
+文件来修改默认主页。
+
+    1.编辑web.xml文件
+
+    -->cd /usr/local/tomcat-8.0.23/conf/
+
+    -->vim web.xml
+
+头部添加：
+
+    <welcome-file-list>
+        <welcome-file>sh.html</welcome-file>   --------------------------#添加sh.html
+        <welcome-file>index.html</welcome-file>
+        <welcome-file>index.htm</welcome-file>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+
+
+    2.编辑/usr/local/tomcat-8.0.23/webapps/ROOT/WEB-INF/web.xml文件，修改后的内容：
+
+    -->cd /usr/local/tomcat-8.0.23/webapps/ROOT/WEB-INF
+
+    -->vim web.xml
+
+</description>
+//------------------------------------------------下面添加如下内容:
+  <welcome-file-list>
+     <welcome-file>sh.html</welcome-file>
+  </welcome-file-list>
+           
+</web-app>
+
+
+    3.创建/usr/local/tomcat-8.0.23/webapps/ROOT/sh.html文件
+
+    -->vim /usr/local/tomcat-8.0.23/webapps/ROOT/sh.html,内容为：
+
+    Hello sh.html
+
+    4.重新启动tomcat服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+    -->./startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+
+    5.访问Web网站
+
+    -->http://192.168.0.203:8080/
+
+    Hello sh.html 
+
+9.3.6 配置HTTPS网站
+
+    HTTPS协议用于对数据加密和解密操作，用于保障在Internet上数据传输的安全，可以确保数据在网络传输过程中不会被窃取和窃听。
+
+HTTPS实际上应用了SSL作为HTTP应用层的子层。HTTPS使用端口443，而不像HTTP那样使用端口80来和TCP/IP进行通信。HTTPS和SSL支持使用
+
+S.509数字认证，如果需要的话用户可以确认发送者是谁。
+
+    HTTPS的主要作用可以分为两种：
+
+    第一种：建立一个信息安全通道，来保证数据传输的安全；
+
+    第二种：确认网站的真实性，凡是使用了HTTPS的网站，都可以通过点击浏览器地址栏的锁头标志来查看网站认证之后的真实信息，也
+
+可以通过CA机构颁发的安全签章来查询。
+
+   1.生成服务器端证书文件
+
+   -->keytool -genkey -alias tomcat -keyalg RSA -keystore /etc/tomcat.keystore -validity 36500
+
+输入密钥库口令:        #密码为：conf/server中的: keystorePass="www.fulong.com"   
+再次输入新口令: 
+您的名字与姓氏是什么?
+  [Unknown]:  rhel
+您的组织单位名称是什么?
+  [Unknown]:  it
+您的组织名称是什么?
+  [Unknown]:  fulong
+您所在的城市或区域名称是什么?
+  [Unknown]:  beijing
+您所在的省/市/自治区名称是什么?
+  [Unknown]:  beijing
+该单位的双字母国家/地区代码是什么?
+  [Unknown]:  CN
+CN=rhel, OU=it, O=fulong, L=beijing, ST=beijing, C=CN是否正确?
+  [否]:  y
+
+输入 <tomcat> 的密钥口令                  #如果此处直接回车，表示<tomcat>的密钥口令和密钥库口令相同。
+	(如果和密钥库口令相同, 按回车):  
+
+
+
+     参数：
+
+     。keystoreFile="/etc/tomcat.keystore": 指定证书文件名称
+
+     。keystorePass="www.fulong.com": 指定密钥库的口令
+
+
+    2.配置/usr/local/tomcat-8.0.23/conf/server.xml
+
+     -->vim /usr/local/tomcat-8.0.23/conf/server.xml
+
+     去掉下面的注释，并修改为如下内容：
+
+         <Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+               maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+               clientAuth="false" sslProtocol="TLS" keystoreFile="/etc/tomcat.keystore"
+               keystorePass="www.fulong.com" />
+
+
+     这里修改为：
+        <Connector port="8009" enableLookups="false"  protocol="AJP/1.3" redirectPort="8443" />
+
+
+    3.编辑web.xml
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+
+    -->vim web.xml
+
+    在</web-app>行的上面添加：
+
+
+    <security-constraint>
+       <web-resource-collection>
+         <web-resource-name>SSL</web-resource-name>
+         <url-pattern>/*</url-pattern>
+       </web-resource-collection>  
+       <user-data-constraint>
+         <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+       </user-data-constraint>
+    </security-constraint>
+</web-ap          --------------------------#在上面添加
+
+
+    4.重启tomcat服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+    -->./startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+     5.查看端口号
+
+     -->netstat -antu|grep 8443
+
+        tcp        0      0 :::8443                     :::*                        LISTEN      
+
+     6.访问HTTPS网站
+
+     http://192.168.0.203:8443
+
+     或：
+
+     http://192.168.0.203:8080/  #会自动跳转到https://192.168.0.203:8443
+
+     输出：Hello sh.html 
+
+
+9.4 通过网页管理tomcat服务器
+
+9.4.1 tomcat-users.xml文件详解
+
+    tomcat-users.xml文件是用力配置tomcat的管理用户（通过Web来管理和查看Server Status、
+
+Manager App和Host Manager等)，该问文件用来定义角色以及角色中包含的用户和密码。
+
+    。查看tomcat-users.xml文件内容：
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+
+    -->cat tomcat-users.xml
+
+    
+<?xml version='1.0' encoding='utf-8'?>
+
+<tomcat-users xmlns="http://tomcat.apache.org/xml"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+              version="1.0">
+<!--
+  <role rolename="tomcat"/>
+  <role rolename="role1"/>
+  <user username="tomcat" password="tomcat" roles="tomcat"/>
+  <user username="both" password="tomcat" roles="tomcat,role1"/>
+  <user username="role1" password="tomcat" roles="role1"/>
+-->
+</tomcat-users>
+
+
+    role节点所示的角色具有不同的访问权限。
+
+                       角色
+    -------------------------------------------------------------
+         角色                          描述
+    -------------------------------------------------------------
+    manager-gui         允许访问HTML界面和服务器状态页面
+    -------------------------------------------------------------
+    manager-script      允许访问文本界面和服务器状态页面
+    -------------------------------------------------------------
+    manager-jmx         允许访问JMX代理界面和服务器状态界面
+    -------------------------------------------------------------
+    manager-status      允许访问服务器状态页面
+    -------------------------------------------------------------
+    admin-gui           允许访问HTML界面
+    -------------------------------------------------------------
+    admin-script        允许访问文本界面
+    -------------------------------------------------------------
+
+9.4.2 访问Managere App和Server Status
+
+
+    注意要做这一步，最好重新解压个tomcat（因为之前有很多改动）
+
+    通过访问Manager App，可以管理Tomcat Web应用(虚拟目录)。通过访问Server Status，可以查看
+
+Tomcat服务器运行状态的信息。
+
+    1.编辑tomcat-users.xml文件
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+
+    -->vim tomcat-users.xml
+
+
+    修改后的内容如下：
+
+<?xml version='1.0' encoding='utf-8'?>
+<tomcat-users xmlns="http://tomcat.apache.org/xml"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+              version="1.0">
+
+  <role rolename="manager-gui"/>                                   
+  <user username="peter" password="peter" roles="manager-gui"/>  #添加用户peter，密码peter，属于角色manager-gui
+</tomcat-users>
+
+
+    2.重启tomcat服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+    -->./startup.sh
+    
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+
+    3.访问Manager App
+
+    -->http://192.168.0.203:8080/
+
+    在页面右上角点击："Manager App"
+
+    用户名：peter
+
+    密码：peter
+
+    -->确定
+
+    -->点击右上角"Server Status"  查看tomcat服务器状态信息
+
+
+9.4.3 访问Host Manager
+
+    通过Host Manager，可以管理Tomcat虚拟注意，比如添加或删除虚拟主机。
+
+    1.编辑web.xml
+
+    -->cd /usr/local/tomcat-8.0.23/webapps/manager/WEB-INF
+
+    -->vim web.xml
+
+    在</web-app>行的上面添加：
+
+  <security-role>
+     <description>
+         The role that is required to access to the Host Manager pages
+     </description>
+     <role-name>admin-gui</role-name>
+  </security-role>
+</web-app>
+
+
+    2.编辑tomcat-users.xml文件
+
+    -->cd /usr/local/tomcat-8.0.23/conf
+
+    -->vim tomcat-users.xml
+
+   修改后的内容如下：
+
+<?xml version='1.0' encoding='utf-8'?>
+<tomcat-users xmlns="http://tomcat.apache.org/xml"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+                                          version="1.0">
+
+  <role rolename="admin-gui"/>                                   #修改为admin-gui
+   <user username="peter" password="peter" roles="admin-gui"/>   #修改为admin-gui
+ </tomcat-users>
+
+
+    3.重启tomcat服务
+
+    -->cd /usr/local/tomcat-8.0.23/bin
+
+    -->./shutdown.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+
+    -->./startup.sh 
+
+Using CATALINA_BASE:   /usr/local/tomcat-8.0.23
+Using CATALINA_HOME:   /usr/local/tomcat-8.0.23
+Using CATALINA_TMPDIR: /usr/local/tomcat-8.0.23/temp
+Using JRE_HOME:        /usr/local/jdk1.7.0_60/jre
+Using CLASSPATH:       /usr/local/tomcat-8.0.23/bin/bootstrap.jar:/usr/local/tomcat-8.0.23/bin/tomcat-juli.jar
+Tomcat started.
+
+
+    4.访问Host Manager
+
+    -->http://192.168.0.203:8080/
+
+    -->点击"HOst Manager"
+
+    用户名：peter
+
+    密码：peter
+
+    在该页面可以添加和删除虚拟主机。

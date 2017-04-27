@@ -1,0 +1,1141 @@
+                               第4章  配置NFS服务器
+
+
+4.1 NFS简介
+
+    通过配置NFS服务器可以让客户端计算机挂载NFS服务器上的共享目录，文件就如同位于客户机的本地
+
+硬盘上一样。
+
+4.1.1 什么是NFS
+
+    NFS(Network File System，网络文件系统）是由SAN公司发张，并于1984年推出的技术。
+
+    NFS是一个文件系统，NFS使用RPC协议，而RPC是负责信息的传递。这样NFS服务器端与NFS客户端才能由
+
+RPC协议来进行端口的对应。NFS主要管理分享出来的目录，而至于文件的传递，就直接将它交给RPC协议来运作。
+
+
+4.1.2 NFS协议
+
+    NFS是一个使用SunRPC构造的客户端/服务器应用程序，其客户端通过向一台NFS服务器发送RPC请求来访问其中
+
+的文件。
+
+
+4.2.1 NFS服务器安装和配置
+
+    -->rpm -qa|grep nfs
+
+    -->yum -y install nfs-utils  nfs-utils-lib
+
+4.2.2 /etc/nfsmount.conf文件详解
+
+    -->cat /etc/nfsmount.conf 
+#
+# /etc/nfsmount.conf - see nfsmount.conf(5) for details
+#
+# This is an NFS mount configuration file. This file can be broken
+# up into three different sections: Mount, Server and Global
+# 
+# [ MountPoint "Mount_point" ] 
+# This section defines all the mount options that
+# should be used on a particular mount point. The '<Mount_Point>'
+# string need to be an exact match of the path in the mount 
+# command. Example:
+#     [ MountPoint "/export/home" ]
+#       background=True
+# Would cause all mount to /export/home would be done in
+# the background
+#
+# [ Server "Server_Name" ]
+# This section defines all the mount options that
+# should be used on mounts to a particular NFS server. 
+# Example:
+#     [ Server "nfsserver.foo.com" ]
+#       rsize=32k
+#       wsize=32k
+# All reads and writes to the 'nfsserver.foo.com' server 
+# will be done with 32k (32768 bytes) block sizes.
+#
+[ NFSMount_Global_Options ]
+# This statically named section defines global mount 
+# options that can be applied on all NFS mount.
+#
+# Protocol Version [2,3,4]
+# This defines the default protocol version which will
+# be used to start the negotiation with the server.
+# Defaultvers=4
+#
+# Setting this option makes it mandatory the server supports the
+# given version. The mount will fail if the given version is 
+# not support by the server. 
+# Nfsvers=4
+#
+# Network Protocol [udp,tcp,rdma] (Note: values are case sensitive)
+# This defines the default network protocol which will
+# be used to start the negotiation with the server.
+# Defaultproto=tcp
+#
+# Setting this option makes it mandatory the server supports the
+# given network protocol. The mount will fail if the given network
+# protocol is not supported by the server.
+# Proto=tcp
+#
+# The number of times a request will be retired before 
+# generating a timeout 
+# Retrans=2
+#
+# The number of minutes that will retry mount
+# Retry=2
+#
+# The minimum time (in seconds) file attributes are cached
+# acregmin=30
+#
+# The Maximum time (in seconds) file attributes are cached
+# acregmin=60
+#
+# The minimum time (in seconds) directory attributes are cached
+# acregmin=30
+#
+# The Maximum time (in seconds) directory attributes are cached
+# acregmin=60
+#
+# Enable Access  Control  Lists
+# Acl=False
+#
+# Enable Attribute Caching
+# Ac=True
+#
+# Do mounts in background (i.e. asynchronously)
+# Background=False
+#
+# Close-To-Open cache coherence
+# Cto=True
+#
+# Do mounts in foreground (i.e. synchronously)
+# Foreground=True
+#
+# How to handle times out from servers (Hard is STRONGLY suggested)
+# Hard=True
+# Soft=False
+#
+# Enable File Locking
+# Lock=True
+#
+# Enable READDIRPLUS on NFS version 3 mounts
+# Rdirplus=True
+#
+# Maximum Read Size (in Bytes)
+# Rsize=8k
+#
+# Maximum Write Size (in Bytes)
+# Wsize=8k
+#
+# Maximum Server Block Size (in Bytes)
+# Bsize=8k
+#
+# Ignore unknown mount options
+# Sloppy=False
+#
+# Share Data and Attribute Caches
+# Sharecache=True
+#
+# The amount of time, in tenths of a seconds, the client
+# will wait for a response from the server before retransmitting
+# the request.
+# Timeo=600
+#
+# Sets all attributes times to the same time (in seconds)
+# actimeo=30
+#
+# Server Mountd port mountport
+# mountport=4001
+#
+# Server Mountd Protocol
+# mountproto=tcp
+#
+# Server Mountd Version
+# mounvers=3
+#
+# Server Mountd Host
+# mounthost=hostname
+#
+# Server Port
+# Port=2049
+#
+# RPCGSS security flavors 
+# [none, sys, krb5, krb5i, krb5p ]
+# Sec=sys
+
+
+    主要参数：
+
+    。Defaultvers=4:  定义默认用于启动协商与服务器的协议版本。协议版本可以是2、3或4.
+
+    。Nfsvers=4： 服务器支持的版本，如果指定的版本不被服务器支持，则挂载将失败。
+
+    。Defaultproto=tcp :定义默认用于启动协商与服务器的网络协议。网络协议可以是udp、tcp或rdma
+
+    。Proto=tcp :设置服务器支持指定的网络协议。如果指定的网络协议不被服务器支持，则挂载将失败。
+
+    。Retrans=2: 产生超时前要求隐退的次数
+
+    。Retry=2: 重试挂载的分钟数。
+
+    。Acl=False: 是否启用访问控制列表
+
+    。Background=False: 是否在后台挂载。
+
+    。Lock=True :启用文件锁。
+
+    。Rsize=8K: 最大读取尺寸，单位为字节。
+
+    。Wsize=8k: 最大写入尺寸，单位为字节。
+
+    。Bsize=8k: 服务器的最大块大小，单位为字节。
+
+    。Timeo=600: 客户端等待来自服务器的响应之前重传请求的时间量。
+
+    。actimeo=30: 设置所有的属性时间为相同时间，单位为秒。
+
+    。mountport=4001: 服务器挂载端口。
+
+    。mountproto=tcp: 服务器挂载协议。
+
+    。mounvers=3: 服务器挂载版本
+
+    。mounthost=hostname :服务器挂载主机
+
+    。Port=2049: NFS服务器的端口号
+
+
+
+4.2.3 /etc/exports文件详解
+
+    该文件控制着NFS服务器要导出的共享目录以及访问控制。该文件默认是空白的，没有任何内容。
+
+    格式：
+
+    共享目录      客户端  （导出选项）
+
+    1.共享目录
+
+    -->mkdir /export
+
+    -->touch /export/a  #创建空文件
+
+    2.客户端
+
+    客户端是指可以访问NFS服务器共享目录的计算机。
+
+                                          NFS客户端指定方式
+    ---------------------------------------------------------------------------------------
+       客户端指定方式                             举例
+    ---------------------------------------------------------------------------------------
+     使用IP地址指定客户端                      192.168.1.5
+    ---------------------------------------------------------------------------------------
+     使用IP地址指定网段                        192.168.1.0/24、192.168.1.0/255.255.255.0
+    ---------------------------------------------------------------------------------------
+     使用IP地址指定网段                        192.168.0.*
+    ---------------------------------------------------------------------------------------
+     使用域名指定客户端                        *.sh.com
+    ---------------------------------------------------------------------------------------
+     使用通配符指定所有客户端                  *
+    ---------------------------------------------------------------------------------------
+
+    3.导出选项
+
+    在/etc/exports文件中可以使用众多的选项来设置客户端访问NFS服务器共享目录的权限。
+
+                                                   /etc/exports文件导出选项
+    --------------------------------------------------------------------------------------------
+      导出选项                                     描述
+    --------------------------------------------------------------------------------------------
+      rw              共享目录具有读取和写入的权限
+    --------------------------------------------------------------------------------------------
+      ro              共享目录具有只读的权限
+    --------------------------------------------------------------------------------------------
+     root_squash      root用户的所有请求映射成如anonymous(匿名）用户一样的权限
+    --------------------------------------------------------------------------------------------
+     no_root_squash   关闭root_squash  
+    --------------------------------------------------------------------------------------------
+     all_squash       映射所有的UID和GID匿名用户
+    --------------------------------------------------------------------------------------------
+     no_all_squash    保留共享文件的UID和GID（默认）
+    --------------------------------------------------------------------------------------------
+     anonuid          指定NFS服务器/etc/passwd文件中匿名用户的UID
+    --------------------------------------------------------------------------------------------
+     anongid          指定NFS服务器/etc/passwd文件中匿名用户的GID
+    --------------------------------------------------------------------------------------------
+     sync             所有数据在请求时写入共享，在请求所做的改变被写入磁盘之前就不会处理其它请求。
+                      适合大量写请求的情况下。
+    --------------------------------------------------------------------------------------------
+     async            NFS在写入数据前可以响应请求，写入和读取可同时进行，由NFS保证其一致性。适合
+                      少量写请求并且对数据一致性要求不高的情况下。
+    --------------------------------------------------------------------------------------------
+     secure           NFS通过1024以下的安全TCP/IP端口发送
+    --------------------------------------------------------------------------------------------
+     insecure         NFS通过1024以上的端口发送
+    --------------------------------------------------------------------------------------------
+     wdelay           如果多个用户要写入NFS目录，则归组写入（默认）
+    --------------------------------------------------------------------------------------------
+     no_wdelay        如果多个用户要写入NFS目录，则立即写入，当使用async时，不需要设置
+    --------------------------------------------------------------------------------------------
+     hide             在NFS共享目录中不共享其子目录
+    --------------------------------------------------------------------------------------------
+     nohide           共享NFS目录的子目录
+    --------------------------------------------------------------------------------------------
+     mp               如果它已经成功挂载，那么使得它只导出一个目录
+    --------------------------------------------------------------------------------------------
+     fsid             NFS需要能够识别每个它导出的文件系统。通常情况下它会为文件系统使用一个UUID，
+
+                      或者该设备保持文件系统的设备号。
+    --------------------------------------------------------------------------------------------
+
+     
+4.2.4 NFS服务器配置实例
+
+    1.允许某一IP地址的客户端以只读权限来挂载NFS共享目录。
+
+    允许来自主机192.168.1.5的用户以默认的只读权限来挂载/export目录
+
+     /export               192.168.1.5(ro,sync)
+
+
+    2.允许某一IP地址的客户端以读写权限来挂载NFS共享目录
+
+    允许来自主机192.168.1.5的用户以读写权限来挂载/export目录
+
+    /export                192.168.1.15(rw,sync)
+
+
+    3.允许所有的客户端以只读权限来挂载NFS共享目录
+
+    /export                *(ro,all_squash,anonuid=65534,anongid=65534)
+
+  
+    4.允许某一域的客户端以只读权限来挂载NFS共享目录
+
+    允许sh.com域内的客户端的用户以只读权限来挂载/export目录。
+
+    /export                 *.sh.com(ro)
+
+
+    5.允许某一完全合格域名的客户端以只读权限来挂载NFS共享目录 
+     
+    允许来自主机linux.sh.com的用户以只读权限来挂载/export目录。
+
+     /export                  linux.sh.com(ro)
+
+
+    6.允许某一网段的客户端以只读权限来挂载NFS共享目录
+
+    /export                    192.168.0.0/24(ro) 192.168.1.0/24(ro)
+
+
+    7.允许某一网段的客户端以只读权限来挂载NFS共享目录
+
+    /export                     192.168.0.*(ro,root_squash)
+
+
+    8.允许某一域的指定客户端以读写权限来挂载NFS共享目录
+
+    /export                     proj*.sh.com(rw)
+
+
+    9.允许某一域的指定客户端以读写权限来挂载NFS共享目录
+
+    允许sh.com域内主机名以cl0~cl9开头的客户端的用户以读写权限来挂载/export目录
+
+    /export                     c1[0-9].sh.com(rw)
+
+
+读写方式挂载：
+cat /etc/exports 
+/usr/local/server/tomcat/webapps/hbs   10.171.125.124(rw,sync,no_root_squash)
+/usr/local/server/tomcat/webapps/hbs   10.170.246.240(rw,sync,no_root_squash)
+/usr/local/server/tomcat/webapps/hbs   10.51.82.111(rw,sync,no_root_squash)
+/usr/local/server/tomcat/webapps/hbs   10.44.169.158(rw,sync,no_root_squash)
+/usr/local/server/tomcat/webapps/hbs   10.51.59.213(rw,sync,no_root_squash)
+
+
+
+4.2.5 控制nfs服务
+
+    1.启动nfs服务
+
+    -->service nfs start 
+
+启动 NFS 服务：                                            [确定]
+关掉 NFS 配额：                                            [确定]
+启动 NFS mountd：                                          [确定]
+正在启动 RPC idmapd：                                      [确定]
+正在启动 RPC idmapd：                                      [确定]
+启动 NFS 守护进程：                                        [确定
+
+    2.查看nfs服务运行状态
+
+    -->service nfs status 
+
+rpc.svcgssd 已停
+rpc.mountd (pid 2557) 正在运行...
+nfsd (pid 2622 2621 2620 2619 2618 2617 2616 2615) 正在运行...
+rpc.rquotad (pid 2553) 正在运行...
+
+    3.停止nfs服务
+
+    -->service nfs stop 
+
+关闭 NFS 守护进程：                                        [确定]
+关闭 NFS mountd：                                          [确定]
+关闭 NFS quotas：                                          [确定]
+关闭 NFS 服务：                                            [确定]
+
+
+    4.重新启动nfs服务
+
+    -->service nfs restart
+
+关闭 NFS 守护进程：                                        [确定]
+关闭 NFS mountd：                                          [确定]
+关闭 NFS quotas：                                          [确定]
+关闭 NFS 服务：                                            [确定]
+启动 NFS 服务：                                            [确定]
+关掉 NFS 配额：                                            [确定]
+启动 NFS mountd：                                          [确定]
+正在启动 RPC idmapd：                                      [确定]
+正在启动 RPC idmapd：                                      [确定]
+启动 NFS 守护进程：                                        [确定]
+
+
+    5.开机自动启动nfs服务
+
+    -->chkconfig nfs on
+
+    -->chkconfig --list nfs 
+
+nfs            	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+4.3 管理NFS共享目录
+
+    通过使用exportfs和showmount命令，查看/var/lib/nfs/etab文件，在NFS服务器上可以查看和管理
+
+共享目录。
+
+
+4.3.1 维护NFS共享目录
+
+    命令语法：
+
+    exportfs [选项] [目录]
+
+                                  exportfs命令选项含义
+    -----------------------------------------------------------------------------------------
+       选项                                                选项含义
+    -----------------------------------------------------------------------------------------
+        -a                           导出或不导出所有的目录
+    -----------------------------------------------------------------------------------------
+        -v                           显示导出列表的同时，也显示导出选项的列表
+    -----------------------------------------------------------------------------------------
+        -u                           不导出指定的目录。当和-a选项一起时，不导出所有的目录
+    -----------------------------------------------------------------------------------------
+        -i                           忽略/etc/exports文件，只使用默认选项和命令行上给出的选项
+    -----------------------------------------------------------------------------------------
+        -f                           指定一个新的导出文件，而不是/etc/exports文件
+    -----------------------------------------------------------------------------------------
+        -r                            重新导出所有的目录
+    ----------------------------------------------------------------------------------------- 
+        -o<选项>                      指定导出选项列表 
+    -----------------------------------------------------------------------------------------
+
+
+    例4.1：显示NFS服务器上的共享目录以及导出选项信息
+
+    -->exportfs -v 
+ 
+/export       	<world>(rw,async,wdelay,no_root_squash,no_subtree_check)
+
+
+
+    例4.2：重新导出NFS服务器上所有的共享目录
+
+    -->exportfs -rv 
+
+exporting *:/export
+
+  
+    例4.3：不导出NFS服务器上所有的共享目录
+
+    -->exportfs -au 
+
+    -->exportfs -v
+
+    无输出
+
+
+    例4.4：不导出NFS服务器上指定的共享目录/export
+
+    -->exportfs -u 192.168.5:/export
+
+
+    例4.5：将/export目录导出共享给192.168.1.5主机，允许其匿名写入。
+
+    -->exportfs -o async,rw 192.168.1.5:/export
+   
+    -->exportfs -v 
+
+/export       	192.168.1.10(rw,async,wdelay,root_squash,no_subtree_check)
+
+
+    
+
+4.3.2 查看NFS共享目录信息
+
+    使用showmount命令可以显示NFS服务器的挂载信息。
+
+
+    命令语法：
+
+    showmount [选项] [NFS服务器]
+
+                                             showmount命令选项含义
+
+    ------------------------------------------------------------------------------------
+         选项                                          选项含义
+    ------------------------------------------------------------------------------------
+          -a                        同时显示客户端的主机名或IP地址以及所挂载的目录    
+    ------------------------------------------------------------------------------------
+          -e                        显示NFS服务器的导出列表
+    ------------------------------------------------------------------------------------
+          -d                        只显示已经被挂载的NFS共享目录信息
+    ------------------------------------------------------------------------------------
+
+
+    例4.6：查看NFS服务器192.168.1.10上共享目录的信息
+
+    -->showmount -e 192.168.1.10
+
+
+4.3.3 查看/var/lib/nfs/etab文件  (服务器端)
+
+    查看/var/lib/nfs/etab文件，获取NFS服务器共享目录和参数设置的详细信息
+
+    -->cat /var/lib/nfs/etab
+
+/export	192.168.1.10(rw,async,wdelay,hide,nocrossmnt,secure,root_squash,no_all_squash,no_subtree_check,secure_locks,acl,anonuid=65534,anongid=65534)
+
+
+4.4 挂载和卸载NFS共享目录
+
+    要挂载NFS服务器上的共享目录，可以通过使用mount命令和修改/etc/fstab文件这两种方法实现。
+
+其区别在于修改/etc/fstab文件后在Linux系统启动时会自动挂载NFS共享目录。
+
+
+4.4.1 挂载和卸载NFS文件系统
+
+    在客户端计算机上使用mount命令可以挂载NFS共享目录，使用umount命令卸载NFS共享目录。
+
+    1.安装nfs-utils软件包
+
+    -->rpm -q nfs-util
+
+package nfs-util is not installed
+
+    -->yum install nfs-utils -y
+
+
+    2.查看NFS服务器上的共享目录
+
+    在客户端机上上使用showmount -e命令可以查看NFS服务器上的输出共享目录。
+
+    -->showmount -e 192.168.1.5
+
+Export list for 192.168.1.5:
+/export 192.168.1.10
+
+    可以看到/export可以被192.168.1.10客户端挂载
+
+
+    3.挂载和卸载NFS文件系统
+
+    （1）挂载NFS文件系统
+
+     在客户端计算机上使用mount命令可以挂载NFS服务器上的共享目录。
+
+    格式： mount -t nfs [NFS服务器IP地址或者主机名:NFS共享目录] [本地挂载目录]
+
+    -->mkdir /mnt/export 
+
+    -->mount -t nfs 192.168.1.5:/export /mnt/export 
+
+    -->ls -l /mnt/export
+
+-rw-r--r-- 1 root root    0 10月 26 01:50 a
+drwxr-xr-x 2 root root 4096 10月 25 22:53 A_ESXi_P
+drwxr-xr-x 2 root root 4096 10月 25 22:53 A_sec
+drwxr-xr-x 2 root root 4096 10月 25 22:53 A_XS_P
+drwxr-xr-x 2 root root 4096 10月 25 22:53 B_KVM_P  
+
+
+    除了使用mount命令挂载NFS文件系统之外，还可以使用mount.nfs和mount.nfs4命令挂载。
+
+mount.nfs4是mount.nfs的符号链接文件。
+
+    -->ls -l /sbin/mount.nfs4
+
+lrwxrwxrwx. 1 root root 9 10月 24 23:33 /sbin/mount.nfs4 -> mount.nfs
+
+    -->mount.nfs 192.168.1.5:/export /mnt/export
+
+    -->df -h
+
+文件系统	      容量  已用  可用 已用%% 挂载点
+/dev/sda3              95G  2.4G   88G   3% /
+tmpfs                 495M     0  495M   0% /dev/shm
+/dev/sda1             194M   28M  157M  15% /boot
+/dev/sr0              4.0G  4.0G     0 100% /media
+192.168.1.5:/export    95G  2.2G   88G   3% /mnt/export
+
+    另一种方法：
+
+    -->mount.nfs4 192.168.1.5:/export /mnt/export
+
+    -->df -h
+
+文件系统	      容量  已用  可用 已用%% 挂载点
+/dev/sda3              95G  2.4G   88G   3% /
+tmpfs                 495M     0  495M   0% /dev/shm
+/dev/sda1             194M   28M  157M  15% /boot
+/dev/sr0              4.0G  4.0G     0 100% /media
+192.168.1.5:/export    95G  2.2G   88G   3% /mnt/export
+
+   
+    （2）卸载NFS文件系统
+
+     -->umount /mnt/export
+
+     -->ls -l /mnt/export
+
+     -->ls -l /mnt/export/
+
+总用量 0
+
+
+     或：
+
+     -->umount 192.168.1.5:/export
+
+     -->umount.nfs /mnt/export 
+
+     -->umount.nfs4 /mnt/export
+
+
+    4.使用TCP传输NFS共享目录
+
+    NFS默认传输协议是UDP，Linux内核也提供了对TCP的NFS的支持。要通过TCP来使用NFS，在客户端计算机上挂载
+
+NFS导出的文件系统时，需要包括指定-o tcp选项。如果没有指定该选项，NFS导出的文件系统就会通过UDP协议进入
+
+NFS共享。
+
+    使用TCP协议挂载NFS共享目录具有以下优越性。
+
+    。提高了NFS连接的持久性，因此获得的NFS stale file handles消息就会较少。
+
+    。负载较大的网络性能会有所提高。TCP确认每个分组，而UDP只有在完成时才确认。
+
+    。TCP的拥塞控制技术比UDP要好。
+
+    。当TCP连接中断时（由于服务器停止运行），客户就会停止发送数据而开始重新连接。
+
+
+    -->mount -o tcp 192.168.1.5:/export /mnt/export
+
+
+
+
+    -->df -h
+
+文件系统	      容量  已用  可用 已用%% 挂载点
+/dev/sda3              95G  2.4G   88G   3% /
+tmpfs                 495M     0  495M   0% /dev/shm
+/dev/sda1             194M   28M  157M  15% /boot
+/dev/sr0              4.0G  4.0G     0 100% /media
+192.168.1.5:/export    95G  2.2G   88G   3% /mnt/export
+ 
+
+4.4.2 开机自动挂载NFS文件系统
+
+    在客户端计算机的/etc/fstab中添加：
+
+    -->vim /etc/fstab
+
+192.168.1.5:/export     /mnt/export   rsize=8192,timeo-14,intr,tcp
+
+    -->mount /mnt/export 
+
+    -->df -/mnt/export
+
+文件系统	      容量  已用  可用 已用%% 挂载点
+/dev/sda3              95G  2.4G   88G   3% /
+tmpfs                 495M     0  495M   0% /dev/shm
+/dev/sda1             194M   28M  157M  15% /boot
+/dev/sr0              4.0G  4.0G     0 100% /media
+192.168.1.5:/export    95G  2.2G   88G   3% /mnt/exp
+
+
+
+4.5 NFS文件系统自动挂载
+
+    在NFS客户端计算机上按以下步骤实现NFS文件系统自动挂载，将其挂载到本地主机的/mnt/export
+
+目录。
+
+    1.安装autofs软件包
+
+    -->rpm -q autofs 
+
+autofs-5.0.5-54.el6.x86_64
+
+    -->yum install autofs -y 
+
+
+    2.创建目录/mnt/export 
+
+    -->mkdir /mnt/export 
+
+
+    3.编辑/etc/auto.master文件
+
+/misc   /etc/auto.misc
+/net    -hosts
++auto.master
+
+在文件最后添加：
+
+/mnt    /etc/auto.nfs     
+
+
+    4.创建/etc/auto.mastor文件
+
+    -->touch /etc/auto.nfs
+
+    -->vim /etc/auto.nfs
+
+export          -fstype=nfs         192.168.1.5:/export
+
+
+    5.启动autofs服务
+
+    -->service autofs restart
+
+停止 automount：                                           [确定]
+正在启动 automount：                                       [确定]
+
+    -->ps -ef|grep automount
+
+root      3662     1  0 04:53 ?        00:00:00 automount --pid-file /var/run/autofs.pid
+root      3684  2588  0 04:54 pts/0    00:00:00 grep automount
+
+
+
+    6.查看autofs服务运行状态
+
+    -->service autofs status
+
+automount (pid  3662) 正在运行...
+
+
+
+    7.开机自动启动autofs服务
+
+    -->chkconfig autofs on
+
+    -->chkconfig --list autofs
+
+autofs         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+    8.NFS自动挂载测试
+
+    -->ls /mnt/export
+
+    -->df 
+
+文件系统	      容量  已用  可用 已用%% 挂载点
+/dev/sda3              95G  2.4G   88G   3% /
+tmpfs                 495M     0  495M   0% /dev/shm
+/dev/sda1             194M   28M  157M  15% /boot
+/dev/sr0              4.0G  4.0G     0 100% /media
+192.168.1.5:/export    95G  2.2G   88G   3% /mnt/export
+
+
+4.5.2 /etc/sysconfig/nfs文件详解
+
+    NFS服务器端操作：
+
+    NFS的脚本在启动的时候，会检查/etc/sysconfig/;nfs文件，因此也可以通过修改该文件，添加相应
+
+的参数，便可以强制NFS使用固定的端口。
+
+    -->cat /etc/sysconfig/nfs 
+
+#
+# Define which protocol versions mountd 
+# will advertise. The values are "no" or "yes"
+# with yes being the default
+#MOUNTD_NFS_V2="no"
+#MOUNTD_NFS_V3="no"
+#
+#
+# Path to remote quota server. See rquotad(8)
+#RQUOTAD="/usr/sbin/rpc.rquotad"
+# Port rquotad should listen on.
+#RQUOTAD_PORT=875
+# Optinal options passed to rquotad
+#RPCRQUOTADOPTS=""
+#
+#
+# Optional arguments passed to in-kernel lockd
+#LOCKDARG=
+# TCP port rpc.lockd should listen on.
+#LOCKD_TCPPORT=32803
+# UDP port rpc.lockd should listen on.
+#LOCKD_UDPPORT=32769
+#
+#
+# Optional arguments passed to rpc.nfsd. See rpc.nfsd(8)
+# Turn off v2 and v3 protocol support
+#RPCNFSDARGS="-N 2 -N 3"
+# Turn off v4 protocol support
+#RPCNFSDARGS="-N 4"
+# Number of nfs server processes to be started.
+# The default is 8. 
+#RPCNFSDCOUNT=8
+# Stop the nfsd module from being pre-loaded
+#NFSD_MODULE="noload"
+# Set V4 grace period in seconds
+#NFSD_V4_GRACE=90
+#
+#
+#
+# Optional arguments passed to rpc.mountd. See rpc.mountd(8)
+#RPCMOUNTDOPTS=""
+# Port rpc.mountd should listen on.
+#MOUNTD_PORT=892
+#
+#
+# Optional arguments passed to rpc.statd. See rpc.statd(8)
+#STATDARG=""
+# Port rpc.statd should listen on.
+#STATD_PORT=662
+# Outgoing port statd should used. The default is port
+# is random
+#STATD_OUTGOING_PORT=2020
+# Specify callout program 
+#STATD_HA_CALLOUT="/usr/local/bin/foo"
+#
+#
+# Optional arguments passed to rpc.idmapd. See rpc.idmapd(8)
+#RPCIDMAPDARGS=""
+#
+# Set to turn on Secure NFS mounts. 
+#SECURE_NFS="yes"
+# Optional arguments passed to rpc.gssd. See rpc.gssd(8)
+#RPCGSSDARGS=""
+# Optional arguments passed to rpc.svcgssd. See rpc.svcgssd(8)
+#RPCSVCGSSDARGS=""
+#
+# To enable RDMA support on the server by setting this to
+# the port the server should listen on
+#RDMA_PORT=20049 
+
+
+    主要参数：
+
+    。RQUOTAD_PORT=875: 设置rpc.rquotad监听的端口。
+  
+    。LOCKD_TCPPORT=32803：设置rpc.lockd监听的TCP端口
+
+    。LOCKD_UDPPORT=32769：设置rpc.lockd监听的UDP端口
+
+    。RPCNFSDARGS="-N 2 -N 3": 关闭NFS v2和NFS v3协议支持。
+
+    。RPCNFSDARGS="-N 4"： 关闭NFS v4协议支持
+
+    。RPCNFSDCOUNT=8 ：要启动NFS服务器进程的数量，默认值为8
+ 
+    。NFSD_V4_GRACE=90： 设置NFS v4宽限期限，单位为秒
+
+    。MOUNTD_PORT=892：设置rpc.mountd监听端口
+
+    。STATD_PORT=662 :设置rpc.statd监听端口
+  
+    。SECURE_NFS="yes": 设置打开安全NFS挂载
+
+
+4.5.3 NFS使用固定端口
+
+    1.编辑/etc/sysconfig/nfs文件
+
+    -->vim /etc/sysconfig/nfs，修改如下：
+
+MOUNTD_PORT=6221
+STATD_PORT=6222
+LOCKD_TCPPORT=6223
+LOCKD_UDPPORT=622
+RQUOTAD_PORT=6224
+
+
+    2.重新启动NFS服务
+
+    -->service nfs restart
+
+关闭 NFS 守护进程：                                        [确定]
+关闭 NFS mountd：                                          [确定]
+关闭 NFS quotas：                                          [确定]
+关闭 NFS 服务：                                            [确定]
+启动 NFS 服务：                                            [确定]
+关掉 NFS 配额：                                            [确定]
+启动 NFS mountd：                                          [确定]
+正在启动 RPC idmapd：                                      [确定]
+正在启动 RPC idmapd：                                      [确定]
+启动 NFS 守护进程：                                        [确定]
+
+
+    3.查看NFS使用端口
+
+    -->rpcinfo -p|grep 622*
+
+    100011    1   udp   6224  rquotad
+    100011    2   udp   6224  rquotad
+    100011    1   tcp   6224  rquotad
+    100011    2   tcp   6224  rquotad
+    100005    1   udp   6221  mountd
+    100005    1   tcp   6221  mountd
+    100005    2   udp   6221  mountd
+    100005    2   tcp   6221  mountd
+    100005    3   udp   6221  mountd
+    100005    3   tcp   6221  mountd
+    100021    1   udp   6223  nlockmgr
+    100021    3   udp   6223  nlockmgr
+    100021    4   udp   6223  nlockmgr
+    100021    1   tcp   6223  nlockmgr
+    100021    3   tcp   6223  nlockmgr
+    100021    4   tcp   6223  nlockmgr
+
+4.6 管理NFS统计信息
+
+4.6.1 显示NFS活动统计信息
+
+    语法：
+
+    nfsstat [选项]
+
+                                   nfsstat命令选项含义
+    ---------------------------------------------------------------------------------
+        选项                               选项含义
+    ---------------------------------------------------------------------------------
+         -m                显示挂载NFS文件系统的统计数据
+    ---------------------------------------------------------------------------------
+         -c                显示NFS客户端的统计数据
+    ---------------------------------------------------------------------------------
+         -s                显示NFS服务器的统计数据
+    ---------------------------------------------------------------------------------
+         -v                显示详细信息，相当于-o all选项
+    ---------------------------------------------------------------------------------
+         -r                显示RPC统计数据
+    ---------------------------------------------------------------------------------
+         -l                打印统计列表格式
+    ---------------------------------------------------------------------------------
+         -n                显示NFS统计
+    ---------------------------------------------------------------------------------
+                           在特定设备上侠士统计数据。设备可以指定以下类型
+                           nfs: NFS协议信息
+         -o <设备>         rpc: 一般RPC信息
+                           net: 网络层统计
+                           fh:  在服务器上的文件句柄缓存使用信息
+                           rc:  对服务器的请求答复缓存使用信息
+                           all: 选择所有上述的信息
+    ---------------------------------------------------------------------------------
+
+    例4.7 显示有关NFS客户端活动的统计信息
+
+     -->nfsstat
+
+Server rpc stats:
+calls      badcalls   badauth    badclnt    xdrcall
+164        0          0          0          0       
+
+Server nfs v2:
+null         getattr      setattr      root         lookup       readlink     
+1       100% 0         0% 0         0% 0         0% 0         0% 0         0% 
+read         wrcache      write        create       remove       rename       
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+link         symlink      mkdir        rmdir        readdir      fsstat       
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+
+Server nfs v3:
+null         getattr      setattr      lookup       access       readlink     
+2       100% 0         0% 0         0% 0         0% 0         0% 0         0% 
+read         write        create       mkdir        symlink      mknod        
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+remove       rmdir        rename       link         readdir      readdirplus  
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+fsstat       fsinfo       pathconf     commit       
+0         0% 0         0% 0         0% 0         0% 
+
+Server nfs v4:
+null         compound     
+8         4% 153      95% 
+
+Server nfs v4 operations:
+op0-unused   op1-unused   op2-future   access       close        commit       
+0         0% 0         0% 0         0% 11        3% 0         0% 0         0% 
+create       delegpurge   delegreturn  getattr      getfh        link         
+0         0% 0         0% 0         0% 150      42% 24        6% 0         0% 
+lock         lockt        locku        lookup       lookup_root  nverify      
+0         0% 0         0% 0         0% 16        4% 0         0% 0         0% 
+open         openattr     open_conf    open_dgrd    putfh        putpubfh     
+0         0% 0         0% 0         0% 0         0% 145      40% 0         0% 
+putrootfh    read         readdir      readlink     remove       rename       
+8         2% 0         0% 3         0% 0         0% 0         0% 0         0% 
+renew        restorefh    savefh       secinfo      setattr      setcltid     
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+setcltidconf verify       write        rellockowner bc_ctl       bind_conn    
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+exchange_id  create_ses   destroy_ses  free_stateid getdirdeleg  getdevinfo   
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+getdevlist   layoutcommit layoutget    layoutreturn secinfononam sequence     
+0         0% 0         0% 0         0% 0         0% 0         0% 0         0% 
+set_ssv      test_stateid want_deleg   destroy_clid reclaim_comp 
+0         0% 0         0% 0         0% 0         0% 0         0% 
+
+
+    例4.8 以统计列表格式显示有关NFS客户端活动的统计信息
+
+    -->nfsstat -l
+
+nfs v2 server        total:        1 
+------------- ------------- --------
+nfs v2 server         null:        1 
+
+nfs v3 server        total:        2 
+------------- ------------- --------
+nfs v3 server         null:        2 
+
+nfs v4 server        total:      161 
+------------- ------------- --------
+nfs v4 server         null:        8 
+nfs v4 server     compound:      153 
+
+nfs v4 servop        total:      357 
+------------- ------------- --------
+nfs v4 servop       access:       11 
+nfs v4 servop      getattr:      150 
+nfs v4 servop        getfh:       24 
+nfs v4 servop       lookup:       16 
+nfs v4 servop        putfh:      145 
+nfs v4 servop    putrootfh:        8 
+nfs v4 servop      readdir:        3 
+
+
+
+4.6.2 显示NFS客户机挂载统计信息
+
+    命令语法：
+
+    nfsiostat [时间间隔] [次数] [选项] [挂载点]
+
+                                          nfsiostat命令选项含义
+    ---------------------------------------------------------------------------------------
+           选项                                             选项含义
+    ---------------------------------------------------------------------------------------
+            -a                              显示有关属性缓存的统计信息
+    ---------------------------------------------------------------------------------------
+            -d                              显示有关目录操作的统计信息
+    ---------------------------------------------------------------------------------------
+            -p                              显示有关页面缓存的统计信息
+    ---------------------------------------------------------------------------------------
+            -s                              按次/秒排序NFS挂载点
+    ---------------------------------------------------------------------------------------
+
+    例4.9 显示NFS客户机每次挂载的统计信息
+
+    -->nfsiostat                           
+
+
+---------------------------------------------------------------------------------------------------
+报错1：
+
+FS错误Starting NFS quotas: Cannot register service: RPC: Unable to receive; errno=Connection refused
+
+
+解决方法：
+
+启动rpcbind&rpcidmap rpcbind是6.0版本后默认的RPC服务，所以要先于nfs启动。如果不启动rpcidmap则会造成用户权限的映射错误，用户的权限看起来是一串数字。
+
+
+[root@bjs0- ~]# /etc/init.d/rpcbind start
+Starting rpcbind:                                          [  OK  ]
+[root@bjs0- ~]# /etc/init.d/rpcidmapd start
+Starting RPC idmapd:                                       [  OK  ]
+[root@bjs0- ~]# /etc/init.d/nfs start
+Starting NFS services:                                     [  OK  ]
+Starting NFS quotas:                                       [  OK  ]
+Starting NFS mountd:                                       [  OK  ]
+Starting NFS daemon:                                       [  OK  ]
+
+
+
+
+
+报错2：
+
+service nfs start如果出现以下问题，可以不用理会：
+
+
+/etc/init.d/nfs start
+Starting NFS services:                                     [  OK  ]
+Starting NFS quotas:                                       [  OK  ]
+Starting NFS mountd: rpc.mountd: svc_tli_create: could not open connection for udp6
+rpc.mountd: svc_tli_create: could not open connection for tcp6
+rpc.mountd: svc_tli_create: could not open connection for udp6
+rpc.mountd: svc_tli_create: could not open connection for tcp6
+rpc.mountd: svc_tli_create: could not open connection for udp6
+rpc.mountd: svc_tli_create: could not open connection for tcp6
+                                                           [  OK  ]
+Starting NFS daemon: rpc.nfsd: address family inet6 not supported by protocol TCP
+                                                           [  OK  ]
+[root@iZ256p1zldhZ ~]#                                     [  OK  ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

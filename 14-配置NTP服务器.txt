@@ -1,0 +1,1060 @@
+                                             第14章 配置NTP服务器
+
+
+chrony（同NTP原理）
+
+
+14.1 NTP简介
+
+14.1.1 什么是NTP
+
+    NTP(Network Time Protocol,网络时间协议)是一种用来使计算机时间同步的协议，它可以使计算机对其服务器
+
+或时钟源做同步化，可以提供高精准度的时间教养，而且可以介由加密确认的方式来防止恶毒的协议攻击。
+
+    NTP要提供准确时间，首先要有准确的时间来源，这一时间应该是国际标准时间UTC。NTP获得UTC的时间来源可以
+
+是原子钟、天文台、卫星，也可以从Internet上获得。
+
+    时间是按NTP服务器的等级来进行传播，按照离外部UTC源的远近将所有服务器归入不同的层中。顶层有外部UTC接入，
+
+而第二层则从顶层获取时间，第三层从第二层获取时间，以此类推，但层的总数不得超过15.所有这些服务器在逻辑上形成
+
+阶梯式的架构相互连接，而顶层的时间服务器是整个系统的基础。
+
+
+14.1.2 NTP服务器工作模式
+
+    NTP服务器具有3种工作模式，分别是广播/多播方式、对称方式和客户端/服务器方式。
+
+    1.广播/多播方式
+
+    这种方式主要适用于局域网，NTP服务器周期性地以广播/多播的方式将事件信息传送给其它网络中的NTP服务器，其时间
+
+仅会有少许的延迟。特点是配置简单，但是该方式的精确度并不高，对时间精确度要求不是很高的情况下采用。
+
+    2.对称方式
+
+    这种方式主要适用于配置冗余的NTP服务器，该NTP服务器可以提供时间给其它NTP服务器，也可以从其他NTP服务器获得时间。
+
+    3.客户端/服务器方式
+
+    与对称方式比较相似，只是不提供给其它NTP服务器时间信息，适用于一台NTP服务器接收上层的NTP服务器时间信息，并提供
+
+信息给下层的用户。
+
+14.2 NTP服务器安装和配置
+
+14.2.1 安装NTP服务器软件包
+
+    -->rpm -q ntp
+
+       ntp-4.2.6p5-3.el6.centos.x86_64
+
+    -->yum install ntp -y
+
+
+    。查看NTP版本：
+
+    -->ntpq -c version
+
+ntpq 4.2.6p5@1.2349-o Fri Oct 23 16:45:07 UTC 2015 (1)
+
+
+14.2.2 /etc/ntp.conf文件详解
+
+   NTP服务器的主配置文件是/etc/ntp.conf，在改文件中主要指定上层NTP服务器，允许访问NTP服务器的网络以及NT广播方式。
+
+   -->more /etc/ntp.conf
+
+
+
+driftfile /var/lib/ntp/drift
+
+//----------------------------------------------------禁止其他计算机修改或查询本机的NTP服务
+restrict default kod nomodify notrap nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+
+//----------------------------------------------------#下面2行允许本地回环地址访问NTP服务器
+restrict 127.0.0.1 
+restrict -6 ::1
+
+//-----------------------------------------------------#设置允许访问NTP服务器的网络。
+# Hosts on local network are less restricted.
+#restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap
+
+
+//-----------------------------------------------------#设置上层NTP服务器
+server 0.centos.pool.ntp.org iburst
+server 1.centos.pool.ntp.org iburst
+server 2.centos.pool.ntp.org iburst
+server 3.centos.pool.ntp.org iburst
+
+
+//------------------------------------------------------------#设置NTP广播方式
+#broadcast 192.168.1.255 autokey	# broadcast server
+#broadcastclient			# broadcast client
+#broadcast 224.0.1.1 autokey		# multicast server
+#multicastclient 224.0.1.1		# multicast client
+#manycastserver 239.255.254.254		# manycast server
+#manycastclient 239.255.254.254 autokey # manycast client
+
+
+下面2行为手动添加
+#server 127.127.1.0
+#fudge 127.127.1.0 stratum 10  -------------------------------#在没有上层NTP服务器的情况下，使用本地时钟作为NTP时间源提供时间同步服务。
+
+
+# Enable public key cryptography.
+#crypto
+
+includefile /etc/ntp/crypto/pw
+
+# Key file containing the keys and key identifiers used when operating
+# with symmetric key cryptography. 
+keys /etc/ntp/keys
+
+#trustedkey 4 8 42
+#requestkey 8
+#controlkey 8
+
+# Enable writing of statistics records.
+#statistics clockstats cryptostats loopstats peerstats
+
+    1.参数设置
+
+    。driftfile /var/lib/ntp/drift: 和上层NTP服务器的频率误差记录文件
+
+    。restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap：指定可以进行NTP通信的IP地址或网段
+
+    。server 0.centos.pool.ntp.org iburst：指定时间校对的NTP服务器，优先级从上到下
+
+    。logfile /var/log/ntp:指定NTP服务日志文件
+
+    。logconfig all:设置NTP级别，可以选择info、event或all三种日志级别
+
+    。broadcastclient key 4:表示接收NTP广播消息
+
+    。broadcast 192.168.1.255 autokey :使用广播模式，指定广播地址。
+
+    。manycastserver 239.255.254.254： 使用多播模式，指定多播地址
+
+    。manycastclient 239.255.254.254 autokey：表示接收NTP多播消息
+
+    。crypto：启用公钥加密
+
+    。keys /etc/ntp/keys：当使用对称密钥加密操作时，密钥文件包含所用的密钥和密钥标识符。
+
+    。trustedkey 4 8 42： 指定哪些是可信任的密钥标识符
+
+    。requestkey 8 指定使用ntpdc实用工具的密钥标识符
+
+    。controlkey 8：指定使用ntpq实用工具的密钥标识符
+
+    。statistics clockstats cryptostats loopstats peerstats： 启用统计记录的写入。
+
+
+    2.restrict内容
+
+      restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap
+
+      表示指定可以进行NPT通信的IP地址或网段
+
+      restrict内容的格式：
+
+      restrict [目标IP地址|主机名] mask [子网掩码][参数]
+
+                            参数
+      --------------------------------------------------------------------------------
+          参数                                  描述 
+      --------------------------------------------------------------------------------
+          kod       阻止Kiss of Death包(KOD是一种DOS攻击方法)对服务器的破坏
+      -------------- ------------------------------------------------------------------
+          ignore    拒绝各种数据包，包括使用ntpq和ntpdc查询
+      ---------------------------------------------------------------------------------
+          nomodify  拒绝使用ntpq和ntpdc进行查询并试图修改NTP服务器状态
+      ---------------------------------------------------------------------------------
+          noquery   拒绝使用ntpq和ntpdc进行查询NTP服务器，相当于不提供NTP网络对时。
+      ---------------------------------------------------------------------------------
+          notrap    不提供trap这个远程事件登录的功能
+      ----------------------------------------------------------------------------------
+          notrust   拒绝数据包，除非数据包是加密身份验证
+      -----------------------------------------------------------------------------------
+          nopeer    不与其他同一层的NTP服务器进行时间同步
+      -----------------------------------------------------------------------------------
+         noserve    拒绝除ntpq和ntpdc查询的所有包
+      -----------------------------------------------------------------------------------
+         ntpport    这个标志实际上更像一个对匹配算法的修改，而不是一个限制标志。这个选项只会
+	            对源端口为标准NTP端口(123)的数据包进行响应。可以用ntpport和non-ntpport这
+                    两个标志，表达的意思都是一样的。通常都使用ntpport，因为它不容易造成混淆。
+      ----------------------------------------------------------------------------------------
+         limited     拒绝服务，如果数据包超过了diacard设置的速率，对ntpq和ntpdc不起作用
+      -----------------------------------------------------------------------------------------
+         lowpriotrap 降低匹配主机的traps优先级。
+      ------------------------------------------------------------------------------------------
+         version      拒绝不匹配当前NTP版本的包
+      ------------------------------------------------------------------------------------------
+         rithm         通过允许低优先级traps拒绝普通优先级traps后来的请求。
+      -------------------------------------------------------------------------------------------
+
+    3.server内容
+   
+      在/etc/ntp.conf文件中，如果设置以下这样的内容，表示指定上层NTP服务器。
+
+      server 235.137.123.45 mimpoll 3 maxpoll 4
+
+      server内容的格式：
+
+      server [IP地址|主机名] [minpoll n] [maxpoll n] [prefer]
+
+      server内容的参数
+
+      。minpoll n :为NTP信息最小轮询间隔，单位为秒，后面的n表示2的n次方，最小轮询间隔默认
+
+        为6(64次)，下限为3(8秒)
+
+       。maxpol n:为NTP信息指定最大轮询间隔，单位为秒，后面的n表示2的n次方，最大轮询间隔默认
+
+        为10(1024次)，上限为17（36.4小时）
+
+       。prefer: 表示NTP服务器主要以该主机时间进行校准。
+
+    4.fudge内容
+
+    在/etc/ntp.conf文件中，默认有以下这样的内容，表示设置本机的层级数：
+
+    fudge 127.127.1.0 stratum 10 
+
+
+    格式：fudge [IP地址] [statun n]
+
+    stratum设置一个0~15的层数，这个值越小，表示离时间源更近、更准确，statum设置为16时表示没有进行同步。
+
+14.2.3 NTP服务器配置实例
+
+    在公司内部配置一台NTP服务器，为公司网络内的客户端计算机提供时间同步服务，具体参数如下：
+
+    。可以进行NTP通信的网段：192.168.0.0/24
+
+    。和上层NTP服务器的频率误差记录文件:/var/lib/ntp/drift
+
+    。NTP服务日志文件：/var/log/ntp
+
+    。NTP日志级别：all
+
+    。进行时间校对的上层NTP服务器：123.125.114.102   (为：http://open.baidu.com/special/time/，或公司路由器DNS)
+
+    1.编辑/etc/ntp.conf文件
+
+    -->vim /etc/ntp.conf
+
+
+driftfile /var/lib/ntp/drift
+
+restrict default kod nomodify notrap nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+restrict 192.168.0.0 mask 255.255.255.0 nomodify notrap
+restrict 123.125.114.102 mask 255.255.255.0 nomodify notrap noquery
+
+restrict 127.0.0.1
+restrict -6 ::1
+
+server 0.centos.pool.ntp.org iburst
+server 1.centos.pool.ntp.org iburst
+server 2.centos.pool.ntp.org iburst
+server 123.125.114.102 minpoll 3 maxpoll 4
+
+server 127.127.1.0
+fudge 127.127.1.0 stratum 10
+
+#broadcast 192.168.1.255 autokey        # broadcast server
+#broadcastclient                        # broadcast client
+#broadcast 224.0.1.1 autokey            # multicast server
+#multicastclient 224.0.1.1              # multicast client
+#manycastserver 239.255.254.254         # manycast server
+#manycastclient 239.255.254.254 autokey # manycast client
+
+# Enable public key cryptography.
+#crypto
+
+includefile /etc/ntp/crypto/pw
+keys /etc/ntp/keys
+logfile /var/log/ntp    
+logconfig all  #------不要添加不然启动会服务停止
+statistics clockstats cryptostats loopstats peerstats
+
+
+    。创建相关目录及文件
+
+    -->touch /var/lib/ntp/drift
+
+    -->chmod 755 /var/lib/ntp/drift 
+
+    -->touch /var/log/ntp
+
+    -->chmod 755 /var/log/ntp
+
+
+
+14.2.4 控制ntpd服务
+
+    1.启动ntpd服务
+
+    -->service ntpd start
+
+       正在启动 ntpd：                                            [确定]
+
+    2.查看ntpd服务运行状态
+
+    -->service ntpd status 
+
+    3.停止ntpd服务
+
+    -->service ntpd stop
+
+    4.重启ntpd服务
+
+    -->service ntpd restart
+
+      关闭 ntpd：                                                [失败]
+      正在启动 ntpd：                                            [确定]
+
+    
+    5.开机自动启动ntpd服务
+
+    -->chkconfig ntpd on
+
+    -->chkconfig --list ntpd
+
+       ntpd           	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+14.3 配置NTP客户端
+ 
+    NTP服务器支持Linux客户端和非linux客户端(Windows)
+
+14.3.1 Linux客户端（192.168.0.204）
+
+   在linux系统中可以通过ntpdate命令、修改客户端配置文件，图形界面下的日期和时间工具
+
+这三种方式来同步时间和日期。
+
+    1.使用ntpdate命令、
+    
+    -->rpm -q ntpdate
+
+       ntpdate-4.2.6p5-3.el6.centos.x86_64
+
+    -->yum install ntpdate -y
+
+   ntpdate命令默认只运行一次就结束了(只同步一次)，所以要ntpdate同步时间时将该命令写入cron
+
+   任务计划中。
+
+   命令语法：ntpdate [选项][NTP服务器]
+
+                         ntpdate命令选项含义 
+    -------------------------------------------------------------------------------------------
+       选项                                    选项含义
+    -------------------------------------------------------------------------------------------
+       -e<延迟时间>            指定延迟认证处理的时间秒数。常规值范围是0.0001到0.003
+    --------------------------------------------------------------------------------------------
+       -t<超时时间>            指定等待服务器响应的超时值
+    --------------------------------------------------------------------------------------------
+       -v                      显示详细内容
+    --------------------------------------------------------------------------------------------
+       -q                      只查询、不设置时钟
+    --------------------------------------------------------------------------------------------
+       -d                      启用调试模式，其中的ntpdate将经理所有步骤，但不调整本地时钟
+    --------------------------------------------------------------------------------------------
+       -k <密钥文件>           指定认证密钥文件作为字符串的密钥文件的路径。默认的是/etc/ntp/keys
+    --------------------------------------------------------------------------------------------
+       -u                      指定ntpdate使用传出数据包的无特权的端口
+    --------------------------------------------------------------------------------------------
+
+    例：14.1 通过NTP服务器192.168.0.203设置日期和时间
+
+    -->ntpdate 192.168.0.203   #在204机器上操作
+
+       17 Jun 12:51:10 ntpdate[2743]: adjust time server 192.168.0.203 offset -0.072878 sec
+
+
+    2.编辑客户端配置文件(192.168.0.204)
+
+    首先指定NTP服务器，然后重新启动ntpd服务
+
+    (1)编辑/etc/ntp.conf文件
+
+    -->vim /etc/ntp.conf， 在文件末尾添加
+
+    server 192.168.0.203  #203为NTP服务器IP
+
+    (2)编辑/etc/ntp/step-tickers文件
+
+    当ntpd服务启动时会自动和/etc/ntp/step-tickers文件记录的NTP服务器进行事件校对。
+
+    -->vim /etc/ntp/step-tickers 
+
+        192.168.0.203   #添加
+~                 
+
+    (3)重新启动ntpd服务
+
+    -->service ntpd restart
+
+      关闭 ntpd：                                                [失败]
+      正在启动 ntpd：                                            [确定]
+
+    注意：在NTP客户端上重新启动ntpd服务，大概过15分钟以后开始起作用
+
+
+
+    3.使用日期和时间工具
+
+    在Linux图形界面：
+
+    -->系统-->管理-->日期和时间
+
+    -->勾选"在网络上同步日期和时间"复选框
+
+    -->单击“添加”-->输入：192.168.0.203  #NTP服务器的IP地址
+
+    -->确定，这时将检测是否能连接到NTP服务器
+
+
+    。测试
+
+    可以分别在NTP服务器和客户端上输入：
+
+    date测试，查看时间同步问题
+
+14.3.2 Windows客户端设置
+
+    以Windows7为例：
+
+    -->开始-->控制面板-->日期和时间-->INternet时间
+
+    -->更改设置-->勾选"与Internet时间服务器同步"
+
+                  服务器：192.168.0.203  
+		  
+    -->单击：立即更新
+
+
+14.3.3 手动设置系统时间和硬件时间  
+
+    Linux系统中有两个时间：系统时间和硬件时间。如果通过手动方式修改系统时间，可以使用
+
+date命令修改系统时间，修改系统时间之后还需要使用hwclock命令修改硬件时间，保持系统时间
+
+和硬件时间一致。
+
+    1.设置系统时间
+
+    超级用户可以使用:date设置日期和时间
+
+    普通用户可以使用date显示日期和时间
+
+    例14.2：显示当前计算机系统上的日期和时间
+
+    -->date
+
+       2015年 06月 17日 星期三 13:12:32 CST
+
+    例14.3：设置计算机日期和时间为2014年1月19日01点25分
+
+
+    格式：月日 时 分 年
+
+    -->date 0119012514
+
+      2014年 01月 19日 星期日 01:25:00 CST
+
+
+    2.设置硬件时间
+
+    使用hwclock命令可以查看和设置硬件时间，可以显示现在时间，调整硬件时间，将系统时间
+
+    设置成与硬件时间一致，或是把系统时间回存到硬件时间。
+
+    例14.4 查看硬件时间
+
+    -->hwclock
+
+       2015年06月17日 星期三 13时19分11秒  -0.173712 seconds
+
+    例14.5 以系统时间更新硬件时间
+
+    -->date 
+    
+       2015年 06月 17日 星期三 13:19:49 CST
+
+    -->hwclock -w
+
+    -->hwclock
+
+       2015年06月17日 星期三 13时20分55秒  -0.594265 seconds
+
+    再次查看硬件时间，已经和系统时间一致了。
+
+ 
+14.4 测试网络时间服务
+
+14.4.1 显示网络时间同步状态
+
+    使用ntpstat命令可以报告本地主机上运行NTP守护进程的同步状态。如果本地系统被发现要同步
+
+到参考时间源，ntpstat将报告大致的时间精度。
+
+   命令语法：
+
+   ntpstat
+
+   例：14.6 查看本机网络时间同步状态 (客户端192.168.0.204)
+
+   -->service ntpd start
+
+       正在启动 ntpd：                                            [确定]
+
+   -->ntpstat 
+
+       unsynchronised
+       time server re-starting
+       polling server every 8 s
+
+       表示每隔8秒自动校正时间
+
+14.4.2 查看NTP服务同步状态
+
+   使用ntpq命令可以监视NTP守护进程ntpd的操作和确定性能。可以在交互模式或使用命令行
+
+参数控制运行。
+
+   命令语法：
+
+   ntpq [选项][主机]
+
+                            ntpq命令选项含义
+    -----------------------------------------------------------------------------------------------
+       选项                                    选项含义
+    -----------------------------------------------------------------------------------------------
+      -4                                  强制IPv4的DNS名称解析
+    -----------------------------------------------------------------------------------------------
+      -6                                  强制IPv6的DNS名称解析
+    -----------------------------------------------------------------------------------------------
+      -c                                  运行一个命令并退出
+    -----------------------------------------------------------------------------------------------
+      -n                                  以点分十进制格式显示所有的主机地址，而不是规范的主机名称
+    -----------------------------------------------------------------------------------------------
+      -p                                  显示服务器同级设备的列表，并显示一个它们状态的总结。
+    -----------------------------------------------------------------------------------------------
+      -i                                  强制ntpq在交互模式下运行
+    -----------------------------------------------------------------------------------------------
+
+    例14.7：查看NTP服务的同步状态
+
+    -->ntpq -p
+
+     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+xdns1.synet.edu. 202.118.1.46     2 u  633   64    0  497.384  235.885  34.528
+*202.118.1.130   202.118.1.46     2 u   16   64  377   36.518    2.393  38.951
++gus.buptnet.edu 202.112.10.60    3 u   17   64  377   90.312   30.468  38.227
++Master1         202.112.31.197   3 u   22   64  377    0.168   45.541   7.996
+
+
+                              ntpq -p命令输出信息描述
+    -----------------------------------------------------------------------------------------------
+      输出信息                                    信息描述
+    -----------------------------------------------------------------------------------------------
+       remote      响应请求的NTP服务器的域名或者是IP地址，“*”表示该NTP服务器和本机时间同步
+    -----------------------------------------------------------------------------------------------
+       refid       NTP服务器使用的上一级NTP服务器
+    -----------------------------------------------------------------------------------------------
+       st          NTP服务器所在的层次
+    -----------------------------------------------------------------------------------------------
+       t           时间源(NTP服务器)的类型
+    -----------------------------------------------------------------------------------------------
+       when        上次校正时间与现在时间的时间差，单位为秒
+    -----------------------------------------------------------------------------------------------
+       poll        NTP客户端和NTP服务器多长时间进行一次同步，单位为秒
+    -----------------------------------------------------------------------------------------------
+       reach       已经向上层NTP服务器要求更新的次数
+    ------------------------------------------------------------------------------------------------
+       delay       NTP客户端发送同步要求到NTP服务器的往返时间，单位为毫秒
+    ------------------------------------------------------------------------------------------------
+       offset      NTP客户端通过NTP服务器同步与所同步时间源的时间偏移量，单位为毫秒。offset的值越接近
+                   于0，NTP客户端和NTP服务器的时间越接近。
+    -------------------------------------------------------------------------------------------------
+       jitter      统计了在特定个连续的连接数例offset的分布情况。简单地说这个数值的绝对值越小，主机的
+                   时间就越精确。
+    ------------------------------------------------------------------------------------------------
+		 
+    
+    例14.8 在交互模式下使用ntpq
+
+    -->ntpq -i
+
+ntpq> ?                                     -----------------------#输入?，显示所有的ntpq子命令
+ntpq commands:
+:config          delay            mreadvar         readlist         
+addvars          exit             mrl              readvar          
+associations     help             mrv              rl               
+authenticate     host             ntpversion       rmvars           
+cl               hostnames        opeers           rv               
+clearvars        keyid            passociations    saveconfig       
+clocklist        keytype          passwd           showvars         
+clockvar         lassociations    peers            timeout          
+config-from-file lopeers          poll             version          
+cooked           lpassociations   pstatus          writelist        
+cv               lpeers           quit             writevar         
+debug            mreadlist        raw              
+ntpq> 
+
+
+14.4.3 读取内核时间变量
+
+    使用ntptime命令可以读取内核时间变量
+
+    命令语法：
+
+    ntptime [选项]
+                   
+		               ntptime命令选项
+    ------------------------------------------------------------------------------
+        选项                                 选项含义
+    ------------------------------------------------------------------------------
+        -f<频率>                  指定频率偏移
+    ------------------------------------------------------------------------------
+        -N                        切换到纳秒模式
+    ------------------------------------------------------------------------------
+        -M                        切换到微妙模式
+    ------------------------------------------------------------------------------
+        -e<估计错误>              指定估计错误，单位为微秒
+    ------------------------------------------------------------------------------
+        -m<最大可能误差>          指定最大可能误差
+    ------------------------------------------------------------------------------
+        -c                        显示ntptime本身的执行时间
+    ------------------------------------------------------------------------------
+        -s <状态>                 指定时钟状态 
+    ------------------------------------------------------------------------------
+        -o <时钟偏移>             指定时钟偏移，单位为微秒
+    ------------------------------------------------------------------------------
+        -t <时间常量>             指定时间常量，在该范围内的整数是0~10
+    ------------------------------------------------------------------------------
+        -r                        以原始格式显示UNIX和NTP时间
+    ------------------------------------------------------------------------------
+
+    例14.9 读取内核时间变量
+
+    -->ntptime
+
+ntp_gettime() returns code 0 (OK)
+  time d92b8aea.e8c8ff60  Wed, Jun 17 2015 13:58:02.909, (.909317579),
+  maximum error 171921 us, estimated error 6904 us, TAI offset 0
+ntp_adjtime() returns code 0 (OK)
+  modes 0x0 (),
+  offset -796.463 us, frequency 15.962 ppm, interval 1 s,
+  maximum error 171921 us, estimated error 6904 us,
+  status 0x2001 (PLL,NANO),
+  time constant 6, precision 0.001 us, tolerance 500 ppm,
+
+
+    -->ntptime -c
+
+[ us 820437611: 1695 663 649 629 629 629 628 629 629 628 629 628 629 628 629 628 629 629 628 ]
+ntp_gettime() returns code 0 (OK)
+  time d92b8b11.d20decdc  Wed, Jun 17 2015 13:58:41.820, (.820525428),
+  maximum error 191421 us, estimated error 6904 us, TAI offset 0
+ntp_adjtime() returns code 0 (OK)
+  modes 0x0 (),
+  offset -683.713 us, frequency 15.962 ppm, interval 1 s,
+  maximum error 191421 us, estimated error 6904 us,
+  status 0x2001 (PLL,NANO),
+  time constant 6, precision 0.001 us, tolerance 500 ppm,
+
+
+14.4.4 查询和更改当前ntpd守护进程的状态
+
+    使用ntpdc命令可以查询和更改当前ntpd守护进程的状态，可以在交互模式或使用命令行参数控制运行。
+
+    命令语法：
+
+    ntpdc [选项][主机]
+
+                                      ntpdc命令选项含义
+    -----------------------------------------------------------------------------------------------------
+      选项                                               选项含义
+    -----------------------------------------------------------------------------------------------------
+      -4                                      强制IPv4 DNS名称解析  
+    -----------------------------------------------------------------------------------------------------
+      -6                                      强制IPv6 DNS名称解析
+    -----------------------------------------------------------------------------------------------------
+      -c<命令>                                运行一个命令并退出
+    -----------------------------------------------------------------------------------------------------
+      -i                                      强制ntpdc在交互模式下运行
+    -----------------------------------------------------------------------------------------------------
+      -c                                      运行一个命令并退出
+    -----------------------------------------------------------------------------------------------------
+      -l                                      获取服务器已知的对等服务器列表
+    ------------------------------------------------------------------------------------------------------
+      -s                                      显示此服务器已知的对等服务器的列表和状态摘要，打印格式与-p
+                                              选项不同，这相当于-c dmpeers选项
+    -------------------------------------------------------------------------------------------------------
+      -d                                      开启调试模式
+     ------------------------------------------------------------------------------------------------------
+      -n                                      输出点分四组数字格式的所有主机地址，而不是转换为规范的主机名称
+     ---------------------------------------------------------------------------------------------------------
+      -p                                      显示此服务器已知的对等服务器的列表和状态摘要，相当于-c peers选项
+     ---------------------------------------------------------------------------------------------------------
+ 
+
+     例14.10 获取已知的对等服务器的列表
+
+
+     -->ntpdc -l
+
+        client    gus.buptnet.edu.cn
+        client    Master1
+        client    202.118.1.130
+        client    dns1.synet.edu.c
+
+ 
+
+      例14.11 显示已知的对等服务器的列表和状态摘要
+
+      -->ntpdc -s
+
+     remote           local      st poll reach  delay   offset    disp
+=======================================================================
+.gus.buptnet.edu 192.168.0.204    3  128  377 0.06349 -0.007687 0.05296
+.Master1         192.168.0.204    3  128  377 0.00014  0.005754 0.07172
+*202.118.1.130   192.168.0.204    2  128  373 0.03648 -0.024266 0.07700
+ dns1.synet.edu. 192.168.0.204    2   64   30 0.45490  0.146238 0.96898
+
+
+     例14.12 显示已知的对等服务器的列表和状态摘要
+
+      -->ntpdc -p
+
+     remote           local      st poll reach  delay   offset    disp
+=======================================================================
+=gus.buptnet.edu 192.168.0.204    3  128  377 0.06349 -0.007687 0.06743
+=Master1         192.168.0.204    3  128  377 0.00014  0.005754 0.07172
+*202.118.1.130   192.168.0.204    2  128  373 0.03648 -0.024266 0.07700
+=dns1.synet.edu. 192.168.0.204    2   64   30 0.45490  0.146238 0.96898
+
+     例14.13：在交互模式下使用ntpdc
+
+     -->ntpdc 192.168.0.203
+
+ntpdc> sysinfo   -------------------------------#打印各种系统状态变量，即与本地服务器相关的状态
+system peer:          dns2.synet.edu.cn
+system peer mode:     client
+leap indicator:       00
+stratum:              3
+precision:            -22
+root distance:        0.08942 s
+root dispersion:      0.07782 s
+reference ID:         [202.112.31.197]
+reference time:       d92b8c32.bdaeef17  Wed, Jun 17 2015 14:03:30.740
+system flags:         auth monitor ntp kernel stats 
+jitter:               0.006531 s
+stability:            0.000 ppm
+broadcastdelay:       0.000000 s
+authdelay:            0.000000 s
+ntpdc> 
+
+
+    例14.14 显示各种系统状态变量，即与本地服务器相关的状态
+
+    -->ntpdc -c sysinfo 192.168.0.203
+
+system peer:          dns2.synet.edu.cn
+system peer mode:     client
+leap indicator:       00
+stratum:              3
+precision:            -22
+root distance:        0.08942 s
+root dispersion:      0.07990 s
+reference ID:         [202.112.31.197]
+reference time:       d92b8c32.bdaeef17  Wed, Jun 17 2015 14:03:30.740
+system flags:         auth monitor ntp kernel stats 
+jitter:               0.030563 s
+stability:            0.000 ppm
+broadcastdelay:       0.000000 s
+authdelay:            0.000000 s
+
+
+14.5 NTP服务器广播方式
+
+14.5.1 生成NTP主机密钥
+
+    使用ntp-keygen命令可以生成NTP主机密钥（公钥和私钥)
+
+    命令语法：ntp-keygen [选项]
+
+                                ntp-keygen命令选项含义
+    ------------------------------------------------------------------------------------
+        选项                              选项含义
+    ------------------------------------------------------------------------------------
+        -M                               生成MD5密钥
+    ------------------------------------------------------------------------------------
+        -H                               生成RSA主机密钥
+    ------------------------------------------------------------------------------------
+        -S <签名密钥>                    生成指定类型的前面密钥，类型可以是RSA和DSA
+    ------------------------------------------------------------------------------------
+        -i<发行人名称>                   设置发型人名册
+    ------------------------------------------------------------------------------------
+        -s<主题名称>                     设置主题名称
+    ------------------------------------------------------------------------------------
+        -P                               生成计算机私有证书
+    ---------------------------------------------------------------------------------------
+        -p <密码>                        加密生成一个包含有密码和DES-CBC算法的私有数据文件
+    ---------------------------------------------------------------------------------------
+        -q <密码>                        为读取文件的密码设置密码
+    ------------------------------------------------------------------------------------
+        -m <模块尺寸>                    设置初期模块尺寸(256~2048位)。默认大小为512
+    ------------------------------------------------------------------------------------
+        -e                               写入身份密钥
+    ------------------------------------------------------------------------------------
+        -T                               生成一个受信任的证书
+    ------------------------------------------------------------------------------------
+        -d                               启用调试
+    -----------------------------------------------------------------------------------------------------
+        -G                               为GQ识别方案生成参数和密钥，来覆盖已经存在的
+    -----------------------------------------------------------------------------------------------------
+        -g                               使用现有GQ参数为GQ识别方案生成密钥。如果GQ参数还不存在先创建它们
+    -----------------------------------------------------------------------------------------------------
+        -I                               生成用于IFF识别方案的参数，来覆盖已经存在的
+    -----------------------------------------------------------------------------------------------------
+        -V<数字>                         为MV识别方案生成参数和密钥
+    -----------------------------------------------------------------------------------------------------
+        -c<方案>                         选择证书信息摘要/前面加密方案，可以是RSA-MD2、RSA-MD5、RSA-SH等
+    -----------------------------------------------------------------------------------------------------
+
+    例14.15 加密生成一个包含有密码和DES-CBC算法的私有数据文件
+
+    -->ntp-keygen -p redhat
+
+Using OpenSSL version OpenSSL 1.0.1e-fips 11 Feb 2013
+Using host Master2 group Master2
+Generating RSA keys (512 bits)...
+RSA 0 5 12      1 11 24 			3 1 2
+Generating new host file and link
+ntpkey_host_Master2->ntpkey_RSAhost_Master2.3643512889
+Using host key as sign key
+Generating new certificate Master2 RSA-MD5
+X509v3 Basic Constraints: critical,CA:TRUE
+X509v3 Key Usage: digitalSignature,keyCertSign
+Generating new cert file and link
+ntpkey_cert_Master2->ntpkey_RSA-MD5cert_Master2.3643512889
+
+
+    例14.16 生成RSA类型的NTP主机密钥
+
+    -->ntp-keygen -S RSA
+
+Using OpenSSL version OpenSSL 1.0.1e-fips 11 Feb 2013
+Using host Master2 group Master2
+Corrupt file ntpkey_host_Master2 or wrong key Master2
+error:06065064:digital envelope routines:EVP_DecryptFinal_ex:bad decrypt  (报错)
+
+    例14.17 生成受信任的证书
+
+    -->ntp-keygen -T
+
+Using OpenSSL version OpenSSL 1.0.1e-fips 11 Feb 2013
+Using host Master1 group Master1
+Corrupt file ntpkey_host_Master1 or wrong key Master1
+error:06065064:digital envelope routines:EVP_DecryptFinal_ex:bad decrypt
+
+    例14.18 生成RSA类型的NTP主机密钥
+
+    -->ntp-keygen 
+
+Using OpenSSL version OpenSSL 1.0.1e-fips 11 Feb 2013
+Using host Master1 group Master1
+Corrupt file ntpkey_host_Master1 or wrong key Master1
+error:06065064:digital envelope routines:EVP_DecryptFinal_ex:bad decrypt
+
+
+14.5.2 配置广播方式NTP服务器实例
+
+    在公司内部配置一台NTP服务器，以广播方式为公司网络内的客户端计算机提供时间同步
+
+服务，具体参数如下：
+
+    。NTP服务器IP地址：192.168.0.203
+
+    。NTP客户端IP地址：192.168.0.204
+
+    。创建MD5类型的密钥文件
+
+    。广播地址：192.168.0.255
+
+    。可以进行NTP通信的网段：192.168.0.0/24
+
+    。NTP服务日志文件：/var/log/ntp
+
+    。NTP日志级别:all
+
+    1.创建密钥文件
+
+    -->ntp-keygen -M
+
+Using OpenSSL version OpenSSL 1.0.1e-fips 11 Feb 2013
+Using host Master1 group Master1
+Generating new md5 file and link
+ntpkey_md5_Master1->ntpkey_MD5key_Master1.3643514549 
+
+
+    。查看密钥文件
+
+    -->cat /root/ntpkey_MD5key_Master1.3643514549 
+
+# ntpkey_MD5key_Master1.3643514549
+# Wed Jun 17 15:22:29 2015
+
+ 1 MD5 Zc1[CVE{G+z2:H<zsm\)  # MD5 key
+ 2 MD5 8+<Y?:?2frnw\Wy(\k~h  # MD5 key
+ 3 MD5 UeBf+t3;g}}UUuy923_C  # MD5 key
+ 4 MD5 Lk[}vq2U6cW7:]v];5sw  # MD5 key
+ 5 MD5 xN_Ok[PirISp!F&r!3@o  # MD5 key
+ 6 MD5 9Ns|2en68x.k(+\qt1aK  # MD5 key
+ 7 MD5 "7>0cm=jQVV=Ev>;)YO/  # MD5 key
+ 8 MD5 C(aF((.+bVp_W5Ns)H]A  # MD5 key
+ 9 MD5 vj-(Ne]+nUO;'ZJC29p1  # MD5 key
+10 MD5 d^5.!CS<O}<x7c^LM2l[  # MD5 key
+11 SHA1 bd0aa8d8b763670d38a3f00e46979da07e8495ac  # SHA1 key
+12 SHA1 1d5042252b82c11c0bb673bdcb053b7b2c639203  # SHA1 key
+13 SHA1 1784474f8df1f1aae3a8cc17fc09d0e0478f8f8a  # SHA1 key
+14 SHA1 efd5c229a7010f4dca243685afd11bb79ae64026  # SHA1 key
+15 SHA1 de9fa94681dec7fa6cd7c195c899abed454a19c4  # SHA1 key
+16 SHA1 8073c18b24cb0ae2fba9f4c8ae01aea3c610d314  # SHA1 key
+17 SHA1 1c7c84c8d9818df0b53d98f4b59ca8b63b2470b8  # SHA1 key
+18 SHA1 261e66bc5b327769784cbad537b1d93b062b7195  # SHA1 key
+19 SHA1 5a030aa4982723bdbbe01f9aed00cc3c90f0cc5a  # SHA1 key
+20 SHA1 698019a8d7bcd959b50410db9af2d096b11b17ab  # SHA1 key
+
+
+    可以看到里面有20个密钥
+
+
+    2.复制密钥文件
+
+    -->cp /root/ntpkey_MD5key_Master1.3643514549 /etc/ntp/keys 
+       cp：是否覆盖"/etc/ntp/keys"？ y
+
+
+    。将密钥文件复制到客户端192.168.0.204的/etc/ntp/keys中
+
+    -->scp /etc/ntp/keys root@192.168.0.204:/etc/ntp/keys 
+
+       root@192.168.0.204's password: 
+       keys                                 100% 1063     1.0KB/s   00:00    
+
+   
+    3. NTP服务器配置
+
+    (1)编辑/etc/ntp.conf文件
+
+    -->vim /etc/ntp.conf，内容如下
+
+driftfile /var/lib/ntp/drift
+
+restrict default kod nomodify notrap nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+restrict 192.168.0.0   mask 255.255.255.0
+
+restrict 127.0.0.1
+restrict -6 ::1
+
+server 0.centos.pool.ntp.org iburst
+server 1.centos.pool.ntp.org iburst
+server 2.centos.pool.ntp.org iburst
+server 3.centos.pool.ntp.org iburst
+
+broadcast 192.168.0.255 minpoll3 maxpoll 4 key 4
+broadcastdelay 0.008
+
+
+server 127.127.1.0
+fudge 127.127.1.0 stratum 10
+
+includefile /etc/ntp/crypto/pw
+keys /etc/ntp/keys
+trustedkey 4 8 42
+requestkey 8
+controlkey 8
+logfile /var/log/ntp
+#logconfig all           #此处打开注释会报错,设置日志级别
+statistics clockstats cryptostats loopstats peerstats
+               
+
+
+    (2)重新启动ntpd服务
+
+    -->service ntpd restart
+
+       关闭 ntpd：                                                [确定]
+       正在启动 ntpd：                                            [确定]
+
+    4.编辑/etc/ntp.conf文件(192.168.0.204)
+
+    (1)编辑/etc/ntp.conf文件
+
+    在NTP客户端生修改/etc/ntp.conf文件，该文件修改后的内容如下：
+
+    -->vim /etc/ntp.conf
+
+driftfile /var/lib/ntp/drift
+
+restrict default kod nomodify notrap nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+restrict 192.168.0.0 mask 255.255.255.0
+
+
+restrict 127.0.0.1 
+restrict -6 ::1
+
+broadcastclient key 4
+broadcastdelay 0.00800
+
+
+includefile /etc/ntp/crypto/pw
+keys /etc/ntp/keys
+trustedkey 4 8 42
+requestkey 8
+controlkey 8
+logfile /var/log/ntp
+#logconfig all            #此处打开注释会报错,设置日志级别
+statistics clockstats cryptostats loopstats peerstats
+
+															        
+    。创建相关文件
+    
+    -->touch /var/log/ntp
+
+    -->chmod 755 /var/log/ntp
+
+
+    (2)重新启动ntpd服务
+
+    -->service ntpd restart
+
+       关闭 ntpd：                                                [确定]
+       正在启动 ntpd：                                            [确定]
+
+
+    -->service ntpd status
+
+       ntpd (pid  4132) 正在运行...
+
+
+    5.查看日期和时间
+
+    经过一段时间以后，在NTP客户端上使用以下命令查看日期和时间，和NTP服务器是一样的
+
+    -->date
+

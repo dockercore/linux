@@ -1,0 +1,481 @@
+                                                第3章 配置VNC服务器
+
+
+3.1 VNC简介
+
+3.1.1 什么是VNC
+
+    VNC(Virtual Network Computing,虚拟网络计算机）是一款由AT&T的欧洲研究实验室开发的远程控制软件，
+
+允许用户在网络的任何地方使用简单的程序来和一个特定的计算机进行交互。
+
+    Windows上的Terminal Server和PCAnywhere都是属于这种原理的软件，同时这些软件又在VNC的原理基础上做了
+
+各自相应改进，提高了易用性、连通性和可穿透内网。
+
+    VNC软件由两个部分组成：服务器端的VNC Server和客户端的VNC viewer。
+
+
+3.1.2 VNC工作流程
+
+    VNC的工作流程需要经过以下几个阶段：
+
+    。VNC服务器端启动服务
+
+    。VNC客户端连接到VNC服务器
+
+    。VNC服务器传送对话窗口至客户端，要求输入连接密码，以及存取的VNC服务器虚拟桌面。
+
+    。在客户端输入连接密码后，VNC服务器验证客户端是否具有存取权限。
+
+    。如果客户单通过VNC服务器的验证，客户端即要求VNC服务器显示桌面环境。
+
+    。被控端将画面显示控制权交由VNC服务器负责。
+
+    。VNC服务器将把被控端的桌面环境利用VNC通信协议送至客户端，并且运行客户端控制VNC服务器的桌面环境和输入装置。
+
+3.1.3 TigervNC简介
+
+3.2 VNC服务器安装和配置
+
+3.2.1 VNC服务器配置实例
+
+    1.安装tigervnc-server软件包
+
+    环境：CentOS 6.5
+
+    -->rpm -q tigervnc-server 
+
+    tigervnc-server-1.1.0-16.el6.centos.x86_64
+
+    -->yum install tigervnc-server -y
+
+
+    2.启动VNC服务器
+
+    -->vncserver 
+
+You will require a password to access your desktops.
+
+Password: //------------------------------------------------#设置保护密码，2次密码
+Verify:
+
+New 'Master1:1 (root)' desktop is Master1:1
+
+Creating default startup script /root/.vnc/xstartup
+Starting applications specified in /root/.vnc/xstartup
+Log file is /root/.vnc/Master1:1.log
+
+
+    3.查看进程
+
+    -->ps -ef|grep Xvnc
+
+root      3344     1  0 10:35 pts/1    00:00:00 /usr/bin/Xvnc :1 -desktop Master1:1 (root) -auth /root/.Xauthority -geometry 1024x768 
+-rfbwait 30000 -rfbauth /root/.vnc/passwd -rfbport 5901 -fp catalogue:/etc/X11/fontpath.d -pn
+root      3753  3230  0 11:03 pts/1    00:00:00 grep Xvnc
+
+    //显示进程号为3344，使用的端口号是5901，虚拟桌面号是1
+
+    
+    4.查看端口号
+
+    -->netstat -antu|grep 5901
+
+       tcp        0      0 0.0.0.0:5901                0.0.0.0:*                   LISTEN      
+
+
+3.2.2 /root/.vnc目录简介
+
+    VNC服务器配置和启动好之后，会自动创建/root/.vnc目录，并且在该目录中生成记录密码、日志、PID和启动脚本的文件。
+
+    -->ls /root/.vnc/
+
+       Master1:1.log  Master1:1.pid  passwd  xstartup
+
+
+                                           /root/.vnc目录中的文件描述
+    ----------------------------------------------------------------------------------------------
+       文件                                               描述
+    ----------------------------------------------------------------------------------------------
+       passwd                                    访问密码文件
+    ----------------------------------------------------------------------------------------------
+       Master1:1.log                             访问日志文件 (Master1为主机名)
+    ----------------------------------------------------------------------------------------------
+       Master1:1.pid                             第一个虚拟桌面的PID文件，该文件保存一个进程号码
+    ----------------------------------------------------------------------------------------------
+       xstartup                                  启动脚本文件
+    ----------------------------------------------------------------------------------------------
+
+
+3.2.3 创建或更改VNC登录密码
+
+   使用vncpasswd命令可以创建或更改一个VNC的登录密码，这将同时在用户的主目录下创建一个隐藏的目录“.vnc"，
+
+该目录内有一个文件passwd保存着VNC登录密码。
+
+   命令语法：
+
+   vncpasswd[密码文件]
+
+   vncpasswd[选项]
+
+                                          vncpasswd命令选项含义
+    ----------------------------------------------------------------------------------------
+               选项                                     选项含义
+    ----------------------------------------------------------------------------------------
+                -f                                        过滤模式
+    ----------------------------------------------------------------------------------------
+
+    例3.1 创建或更改VNC登录密码
+
+    -->vncpasswd
+
+3.2.4 管理VNC服务器
+
+    使用vncserver命令可以管理VNC服务器，比如启动和停止VNC服务器
+
+    命令语法：
+
+    vncserver[:虚拟桌面号码][选项][Xvnc选项]
+
+                                           vncserver命令选项含义
+    -------------------------------------------------------------------------------------------
+       选项                                   选项含义
+    -------------------------------------------------------------------------------------------
+      --name<桌面名称>            每个VNC桌面具有可以由viewer显示的名称
+    -------------------------------------------------------------------------------------------
+      --kill:<虚拟桌面号码>       杀死一个之前使用vncserver启动的VNC桌面
+    --------------------------------------------------------------------------------------------
+      --autokill                  当xstartup脚本退出时自动杀死Xvnc
+    --------------------------------------------------------------------------------------------
+      --geometry宽*高             指定VNC桌面要创建的尺寸，默认为1024*768
+    --------------------------------------------------------------------------------------------
+      --depth<深度>               指定VNC桌面要创建的像素深度（位）。默认值是24
+    --------------------------------------------------------------------------------------------
+      -pixelformat <格式>        指定Xvnc使用的像素格式(BGRnnn或RGBnnn)。默认深度8是BGR233，默认
+                                 深度16是RGB565，默认深度24是RGB888
+    --------------------------------------------------------------------------------------------
+      -fg                        以前台进程运行Xvnc
+    --------------------------------------------------------------------------------------------
+      -list                      列出VNC虚拟桌面
+    --------------------------------------------------------------------------------------------
+
+    例3.2 列出当前用户的VNC虚拟桌面
+
+    -->vncserver -list
+
+TigerVNC server sessions:
+
+X DISPLAY #	PROCESS ID
+:2		3788
+:1		3344
+
+    //第一个虚拟桌面使用的进程号为3344，第二个为3788，
+
+    例3.3 杀死号码为1的VNC虚拟桌面
+
+    -->vncserver -kill :1
+
+       Killing Xvnc process ID 3344
+
+    -->vncserver -list
+
+       TigerVNC server sessions:
+
+      X DISPLAY #	PROCESS ID
+      :2		3788
+
+    例3.4 启动号码为2的VNC虚拟桌面
+
+    -->vncserver :2
+
+New 'Master1:2 (root)' desktop is Master1:2
+
+Starting applications specified in /root/.vnc/xstartup
+Log file is /root/.vnc/Master1:2.log
+
+----------------------------------------------------------------------------
+
+修改VNC配置文件
+
+   1>修改：/etc/sysconfig/vncservers
+
+    -->vim /etc/sysconfig/vncservers
+
+    修改末尾为：
+
+    VNCSERVERS="1:root 2:yhq"
+
+    VNCSERVERARGS[1]="-geometry 1024x768"
+    VNCSERVERARGS[2]="-geometry 1024x768"
+
+    2>修改桌面环境
+
+    -->cd /root
+
+    -->cd .vnc
+
+    -->touch xstartup
+
+    -->vim xstartup  #centos没有这个文件 ,自己创建
+
+    注释：#twm   &
+    
+    添加：gnome-session
+
+    -->chmod -R 755 /root/.vnc/xstartup
+
+    -->su - yhq 
+
+    -->mkdir .vnc
+
+    -->cd .vnc
+
+    -->touch xstartup
+
+    -->vim xstartup
+
+     注释：#twm   
+    
+    添加：gnome-session
+
+    -->chmod -R 755 /home/yhq/.vnc/xstartup
+
+    -->su - yhq
+
+    -->vncpsswd
+
+vncpasswd 
+Password:
+Verify:
+
+
+4、启动服务
+
+    -->chkconfig --level 345 vncserever on
+
+    -->chkconfig --list vncserver 
+
+       vncserver      	0:关闭	1:关闭	2:关闭	3:启用	4:启用	5:启用	6:关闭
+
+
+    -->service vncserver start
+------------------------------------------------------------------------------
+    例3.5 启动尺寸为1024*768的VNC虚拟桌面
+
+    -->vncserver -geometry 1024x768
+
+New 'Master1:4 (root)' desktop is Master1:4
+
+Starting applications specified in /root/.vnc/xstartup
+Log file is /root/.vnc/Master1:4.log
+
+   注意：上面的乘号可以使用x代理，用*的话会报错。
+
+
+3.3 连接VNC服务器  
+
+3.3.1 Linux客户端连接（192.168.0.204）
+
+    1.安装 tigervnc软件包
+
+    -->rpm -q tigervnc 
+
+       tigervnc-1.1.0-16.el6.centos.x86_64
+
+    -->yum install tigervnc -y
+
+
+    2.连接VNC服务器
+
+    -->应用程序-->Internet-->TigerVNC Viewer-->输入VNC服务器的IP:192.168.0.203-->Passwoed:******
+
+
+    3.使用vncviewer命令连接VNC服务器
+
+    使用vncviewer命令语法：
+
+    vncviewer [选项] [主机] [:虚拟桌面号码]
+
+    vncviewer [选项] [主机] [:端口]
+
+    vncviewer [选项]
+
+
+                                 vncviewer命令选项含义
+    -----------------------------------------------------------------------------------
+     选项                                   选项含义
+    ------------------------------------------------------------------------------------
+     -display <X显示>              指定在其上的VNC viewer窗口应该出现X显示
+    ------------------------------------------------------------------------------------
+     -geometry <几何>              标准的X位置和尺寸规格
+    ------------------------------------------------------------------------------------
+     -passwd <密码文件>            指定访问服务器所使用的密码文件
+    -------------------------------------------------------------------------------------
+     -passwdInput true,false       强制标准的VNC对话框来获取密码，并从标准输入中读取密码
+    -------------------------------------------------------------------------------------
+     -Shared                       当连接到VNC服务器时，所有其它现有的连接正常关闭
+    -------------------------------------------------------------------------------------
+     -ViewOnly                     指定没有键盘或鼠标事件应该被发送到服务器
+    -------------------------------------------------------------------------------------
+     -FullScreen                   在全屏模式下启动
+    -------------------------------------------------------------------------------------
+     -listen<端口>                 来自VNC服务器的反向连接，默认端口号为5500
+    -------------------------------------------------------------------------------------
+
+    。图形界面中输入命令连接
+
+    -->vncviewer 192.168.0.203:1-->password:******
+
+    -->vncviewer 192.168.0.203:5901-->password:******  #连接到1号虚拟桌面
+
+3.3.2 Windows客户端连接
+
+
+    Windows 7中的"VNC-Viewer"进行连接
+
+    打开"VNC-Viewer"-->VNC Server:192.168.0.203:1 ------->Connect-->password:******
+
+                       Encryption: Let VNC Server choose 
+
+
+    或使用:192.168.0.203:5901连接
+
+
+3.4 VNC服务器高级配置
+
+3.4.1 /etc/sysconfig/vncservers文件详解
+
+    该文件中可以指定用户使用固定的虚拟桌面，以及桌面分辨率大小。
+
+    -->more /etc/sysconfig/vncservers 
+
+# The VNCSERVERS variable is a list of display:user pairs.
+#
+# Uncomment the lines below to start a VNC server on display :2
+# as my 'myusername' (adjust this to your own).  You will also
+# need to set a VNC password; run 'man vncpasswd' to see how
+# to do that.  
+#
+# DO NOT RUN THIS SERVICE if your local area network is
+# untrusted!  For a secure way of using VNC, see this URL:
+# https://access.redhat.com/knowledge/solutions/7027
+
+# Use "-nolisten tcp" to prevent X connections to your VNC server via TCP.
+
+# Use "-localhost" to prevent remote VNC clients connecting except when
+# doing so through a secure tunnel.  See the "-via" option in the
+# `man vncviewer' manual page.
+
+VNCSERVERS="1:root 2:yhq"
+VNCSERVERARGS[1]="-geometry 1024x768"
+VNCSERVERARGS[2]="-geometry 1024x768"
+
+
+    文件中可以添加和修改的主要参数：
+
+    。VNCSERVERS="2:myusername" :设置用户使用哪一个虚拟桌面，如虚拟桌面1的用户是root，那么设置VNCSERVERS="1:root"
+
+    。VNCSERVERARGS[2]="-geometry 800x600 -nolisten tcp -localhost"
+
+      设置VNC虚拟桌面分辨率大小。
+
+3.4.2 配置用户使用固定虚拟桌面
+
+    如果希望用户yhq使用虚拟桌面号码为2，那么需要修改/etc/sysconfig/vncservers文件
+
+    1.编辑/etc/sysconfig/vncservers文件
+
+    -->vim /etc/sysconfig/vncservers
+
+VNCSERVERS="1:root 2:yhq"
+VNCSERVERARGS[1]="-geometry 1024x768"
+VNCSERVERARGS[2]="-geometry 1024x768"
+
+    2.设置VNC登录密码
+
+    -->su - yhq
+
+    -->vncpasswd-->输入2次密码
+
+
+    3.启动vncserver服务
+
+    -->service vncserver start #root
+
+
+    4.查看进程
+
+    -->ps -ef|grep Xvnc
+
+root      3828     1  0 11:25 pts/1    00:00:00 /usr/bin/Xvnc :2 -desktop Master1:2 (root) -auth /root/.Xauthority -geometry 1024x768 -rfbwait 30000 -rfbauth /root/.vnc/passwd -rfbport 5902 -fp catalogue:/etc/X11/fontpath.d -pn
+root      5342     1  0 14:02 pts/0    00:00:00 /usr/bin/Xvnc :3 -desktop Master1:3 (root) -auth /var/run/gdm/auth-for-root-r63LCY/database -geometry 1024x768 -rfbwait 30000 -rfbauth /root/.vnc/passwd -rfbport 5903 -fp catalogue:/etc/X11/fontpath.d -pn
+root      5725     1  0 14:02 pts/1    00:00:00 /usr/bin/Xvnc :4 -desktop Master1:4 (root) -auth /root/.Xauthority -geometry 1024x768 -rfbwait 30000 -rfbauth /root/.vnc/passwd -rfbport 5904 -fp catalogue:/etc/X11/fontpath.d -pn
+root      6244     1  0 15:29 pts/2    00:00:01 /usr/bin/Xvnc :1 -desktop Master1:1 (root) -auth /root/.Xauthority -geometry 1024x768 -rfbwait 30000 -rfbauth /root/.vnc/passwd -rfbport 5901 -fp catalogue:/etc/X11/fontpath.d -pn
+root      6818  6182  0 16:17 pts/2    00:00:00 grep Xvnc
+
+    5.连接VNC服务器
+
+    客户端图形界面：
+
+    -->应用程序-->Internet -->TigerVNC Viewer-->输入VNC服务器IP:192.168.0.203:2-->password
+
+    -->OK
+
+3.4.3 控制vncserver服务
+
+    注意：只有在/etc/sysconfig/vncservers文件中配置了用户使用固定虚拟桌面，才能使用service和chkconfig命令
+
+控制vncserver服务的状态。
+
+    1.启动vncserver服务
+
+    -->service vncserver start
+
+    2.查看vncserver服务状态
+
+    -->ervice vncserver start
+
+正在启动 VNC 服务器：1:root 
+New 'Master1:1 (root)' desktop is Master1:1
+
+Starting applications specified in /root/.vnc/xstartup
+Log file is /root/.vnc/Master1:1.log
+
+2:yhq A VNC server is already running as :2
+                                                           [确定]
+
+    3.停止vncserver服务
+
+    -->service vncserver stop
+
+       关闭 VNC 服务器：1:root 2:yhq                              [确定]
+
+    4.重新启动vncserver服务
+
+    -->service vncserver restart
+
+关闭 VNC 服务器：1:root 2:yhq                              [确定]
+正在启动 VNC 服务器：1:root 
+New 'Master1:1 (root)' desktop is Master1:1
+
+Starting applications specified in /root/.vnc/xstartup
+Log file is /root/.vnc/Master1:1.log
+
+2:yhq A VNC server is already running as :2
+                                                           [确定]
+
+    5.开机自动启动vncserver服务
+
+    -->chkconfig vncserver on
+
+    -->chkconfig --list vncserver
+
+       vncserver      	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+
+
+

@@ -1,0 +1,471 @@
+                                      附录2-配置Telnet服务器
+
+2.1 Telnet简介
+
+    Telnet是一种远程访问协议，使用该协议可以登录到远程计算机、网络设备或者是专用TCP/IP网络。
+
+通过Linux系统的Telnet服务服务，Telent客户端用户可以连接到运行telnet服务的计算机上，并且能够
+
+在这台计算机上使用命令行。
+
+    Telnet远程登录服务经过以下4个过程
+
+    。本地主机与远程主机建立一个TCP连接，用户必须知道远程主机的IP地址或域名。
+
+    。将本地终端上输入的用户名和口令以及以后输入的命令或字符以NVT格式传送到远程主机。该过程
+
+ 实际上是从本地主机向远程主机发送一个IP数据包。
+
+    。将远程主机输出的NVT格式的数据转化为本地所接受的格式送回本地终端，包括输入命令回显和命令
+
+执行结果。
+
+    。最后本地终端对远程主机进行撤销TCP连接。
+
+ 
+2.2 Telnet服务器安装和配置
+
+2.2.1 安装Telent服务器软件包
+
+    -->rpm -q xinetd
+
+       xinetd-2.3.14-39.el6_4.x86_64
+
+    -->rpm -q telnet-server
+
+       package telnet-server is not installed
+
+    -->yum install xinetd telnet-server -y
+
+
+2.2.2 /etc/xinetd.d/telnet详解
+
+    配置文件为：
+
+    -->more /etc/xinetd.d/telnet 
+
+# default: on
+# description: The telnet server serves telnet sessions; it uses \
+#	unencrypted username/password pairs for authentication.
+service telnet
+{
+	flags		= REUSE
+	socket_type	= stream        
+	wait		= no
+	user		= root
+	server		= /usr/sbin/in.telnetd
+	log_on_failure	+= USERID
+	disable		= yes
+}
+
+
+    参数：
+
+    。user = root :设置启动telent的用户
+
+    。disable = yes :设置是否启用telnet，yes表示禁用，no表示启用
+
+    。instances = 5 :设置实例数量
+
+    。bind = 192.168.0.203 :设置Telnet服务器绑定使用的IP地址
+
+    。only_from = 192.168.0.0/24 :设置允许访问telent的客户端
+
+    。no_access = 192.168.0.{204,188) :设置拒绝访问telnet的客户端
+
+    。access_times = 9:00-12:00 13:00-18:00 设置允许访问telnet时间
+
+
+2.2.3 Telnet服务器配置实例
+
+    配置Telnet服务器有两种方法：修改/etx/xinetd.d/telnet文件，或使用ntsysv命令
+
+启用telnet。
+
+    1.编辑/etx/xinetd.d/telnet文件
+
+    -->vim /etc/xinetd.d/telnet
+
+      disable         = no  #修改为no
+
+
+    2.使用ntsysv命令
+
+    -->ntsysv-->选择telent，按空格键选择-->OK
+
+
+2.2.4 控制xinetd服务
+
+    1.启动xinetd服务
+
+    -->service xinetd start
+
+       Starting xinetd:                                           [  OK  ]
+
+   
+    2.查看xinetd服务运行状态
+
+    -->service xinetd status
+
+       xinetd (pid  8310) is running...
+   
+
+     3.停止xinetd服务
+
+    -->service xinetd stop
+   
+       Stopping xinetd:                                           [  OK  ]
+
+
+     4.重新启动xinetd服务
+
+     -->service xinetd restart
+
+        Stopping xinetd:                                           [  OK  ]
+        Starting xinetd:                                           [  OK  ]
+
+   
+     5.重新加载xinetd服务
+
+     -->service xinetd reload
+
+        Reloading configuration:                                   [  OK  ]
+
+     
+     6.开机自动启动xinetd服务
+
+     -->chkconfig xinetd on
+
+     -->chkconfig --list xinetd
+
+        xinetd         	0:off	1:off	2:on	3:on	4:on	5:on	6:off
+
+
+2.3 配置Telnet客户端
+
+2.3.1 Linux客户端
+
+    1.安装telnet软件包
+
+    -->rpm -q telnet
+
+       telnet-0.17-48.el6.x86_64
+
+    -->yum install telnet -y
+
+
+    2.连接Telnet服务器
+
+    使用telnet命令可以通过telnet协议和远程主机进行通信。如果telnet没有指定主机，则进入命令模式，
+
+以提示符"telnet>"表示。在这种模式下，它接受并执行命令。
+
+    命令语法：
+
+    telnet[选项][主机][端口]
+
+
+                                    telnet命令选项含义
+    -------------------------------------------------------------------------------------------
+       选项                                选项含义
+    -------------------------------------------------------------------------------------------
+        -d                       打开调试方式
+    -------------------------------------------------------------------------------------------
+        -r                       指定类似rlogin的用户界面
+    -------------------------------------------------------------------------------------------
+        -x                       打开数据流加密。当此选项开启时，如果认证不能协商或加密不能打开
+	                         telnet将报错并退出
+    -------------------------------------------------------------------------------------------
+        -a                       尝试自动登录
+    -------------------------------------------------------------------------------------------
+        -K                       指定不自动登录到远程系统
+    -------------------------------------------------------------------------------------------
+        -n <跟踪文件>            将网络跟踪信息记录到指定文件中
+    -------------------------------------------------------------------------------------------
+
+
+                                   telnet子命令
+
+    -------------------------------------------------------------------------------------------
+           子命令                             功能
+    -------------------------------------------------------------------------------------------
+            send                      传输特殊字符
+    -------------------------------------------------------------------------------------------
+            status                    显示状态信息
+    -------------------------------------------------------------------------------------------
+            close                     关闭当前连接
+    -------------------------------------------------------------------------------------------
+            logout                    强行注销远程用户并关闭连接
+    -------------------------------------------------------------------------------------------
+            quit                      退出telnet
+    -------------------------------------------------------------------------------------------
+            display                   显示操作参数
+    -------------------------------------------------------------------------------------------
+            mode                      尝试输入行或字符模式
+    -------------------------------------------------------------------------------------------
+            open                      连接到一个站点
+    -------------------------------------------------------------------------------------------
+            set                       设置操作参数
+    -------------------------------------------------------------------------------------------
+            toggle                    切换操作参数
+    -------------------------------------------------------------------------------------------
+            unset                     不设置操作参数
+    --------------------------------------------------------------------------------------------
+            slc                       更改特殊字数的状态
+    --------------------------------------------------------------------------------------------
+            auth                      打开(关闭)认证
+    --------------------------------------------------------------------------------------------
+            encrypt                   打开(关闭)凭据转发
+    --------------------------------------------------------------------------------------------
+            forward                   打开(关闭)凭据转发
+    --------------------------------------------------------------------------------------------
+            z                         挂起telnet
+   --------------------------------------------------------------------------------------------
+            !                         调用一个子shell
+    -------------------------------------------------------------------------------------------
+            environ                   更改环境变量               
+    -------------------------------------------------------------------------------------------
+            ?                         显示帮助信息
+    -------------------------------------------------------------------------------------------
+
+     
+     默认是不允许root用户连接到telnet服务器，所以在这里使用linux系统上的普通用户zhangsan连接。
+
+
+     192.168.0.204客户端连接telnet服务器192.168.0.203
+
+     --> telnet 192.168.0.203
+
+Trying 192.168.0.203...
+Connected to 192.168.0.203.
+Escape character is '^]'.
+CentOS release 6.5 (Final)
+Kernel 2.6.32-431.23.3.el6.x86_64 on an x86_64
+login: zhangsan     ----------------------------------#用户名zhangsan
+Password: 
+Last login: Wed Jun 24 19:11:41 from sql
+[zhangsan@sql ~]$ 
+
+[zhangsan@sql ~]$ pwd  -------------------------------#查看当前目录
+/home/zhangsan
+
+[zhangsan@sql ~]$ exitConnection closed by foreign host.  #输入exit退出
+[root@Master2 ~]# 
+
+    3.查看进程
+
+    在客户端连接并登录Telnet服务器之后，在Telnet服务器上使用以下命令查看telnet进程
+
+    -->ps -ef|grep telnet
+
+root      8997  8349  0 19:13 ?        00:00:00 in.telnetd: 192.168.0.204  ----------#显示到204机器连接上了
+root      9032  8910  0 19:15 pts/3    00:00:00 grep telnet
+
+
+2.3.2 Windows客户端
+
+    在Windows系统连接Telnet服务器有多种方法，比如使用telnet命令、Puppy、Xshell4等方式。
+
+    1.telnet命令
+
+    -->C:\> telnet 192.168.0.203
+
+CentOS release 6.5 (Final)
+Kernel 2.6.32-431.23.3.el6.x86_64 on an x86_64
+login: zhangsan   #------------------------------------#输入用户名：zhangsan
+Password:
+Last login: Wed Jun 24 19:14:04 from 192.168.0.204
+[zhangsan@sql ~]$
+
+
+[zhangsan@sql ~]$ pwd  #-------------------------------#查看当前目录
+/home/zhangsan
+
+[zhangsan@sql ~]$ exit #-------------------------------#退出
+
+遗失对主机的连接。
+
+C:\>
+
+
+    2.Putty
+
+    打开PuTTY-->主机名称：192.168.0.203   端口：23
+
+                连接类型：Telnet
+
+    -->打开
+
+CentOS release 6.5 (Final)
+Kernel 2.6.32-431.23.3.el6.x86_64 on an x86_64
+login: zhangsan   ---------------------------------------#输入用户名：zhangsan
+Password:
+Last login: Wed Jun 24 19:16:54 from 192.168.0.27
+[zhangsan@sql ~]$
+
+
+
+    3. Xshell 5
+
+    -->文件-->新建-->名称:192.168.0.203-telnet
+
+                     协议：TELNET
+
+		     主机：192.168.0.203
+
+		     端口号：23
+
+    -->确定-->连接
+
+Connecting to 192.168.0.203:23...
+Connection established.
+To escape to local shell, press 'Ctrl+Alt+]'.
+CentOS release 6.5 (Final)
+Kernel 2.6.32-431.23.3.el6.x86_64 on an x86_64
+login: zhangsan
+Password: 
+Last login: Wed Jun 24 19:20:16 from 192.168.0.27
+[zhangsan@sql ~]$ 
+
+
+
+2.4 Telnet服务器高级配置
+
+2.4.1 运行root登录Telnet服务器
+
+    1.重命名/etc/securetty文件
+
+    -->service xinetd stop
+
+        Stopping xinetd:                                           [  OK  ]
+
+
+    -->mv /etc/securetty /etc/securetty.bak
+
+    
+    2.客户端telnet登录
+
+    -->service xinetd start
+
+       Starting xinetd:                                           [  OK  ]
+
+    -->telnet 192.168.0.203
+
+Trying 192.168.0.203...
+Connected to 192.168.0.203.
+Escape character is '^]'.
+CentOS release 6.5 (Final)
+Kernel 2.6.32-431.23.3.el6.x86_64 on an x86_64
+login: root           --------------------------------------#输入用户root
+Password: 
+Last login: Wed Jun 24 19:11:01 from 192.168.0.27
+[root@sql ~]# 
+
+
+2.4.2 配置高安全性Telnet服务器
+
+    在公司内部配置台高安全性的Telnet服务器，为公司网络内的客户端计算机提供远程登录服务，
+
+具体参数如下：
+
+    。绑定的IP地址：192.168.0.203
+
+     。只允许登录Telnet服务器的主机:192.168.0.0/24网段和fulong.com域的主机
+
+     。不允许登录Telnet服务器的主机192.168.0.27
+
+     。能登录Telnet服务器的时间段：9:00~12:00和13:00~18:00 (实际为9:00~12:00 13~22)
+
+     1.编辑/etc/xinetd.d/telnet文件
+
+     -->vim /etc/xinetd.d/telnet
+
+service telnet
+{
+        flags           = REUSE
+        socket_type     = stream
+        wait            = no
+        user            = root
+        server          = /usr/sbin/in.telnetd
+        log_on_failure  += USERID
+        disable         = no -----------------------#修改为no,并添加以下信息
+            bind=192.168.0.203
+            only_from =192.168.0.0/24
+            only_from=.fulong.com
+            no_access=192.168.0.(27)
+            access_times=9:00-12:00  13:00-22:00
+
+}
+
+
+    2.重新启动xinetd服务
+
+    -->service xinetd restart
+
+Stopping xinetd:                                           [  OK  ]
+Starting xinetd:                                           [  OK  ]
+
+
+    3.客户端测试：
+
+    192.168.0.204
+
+    192.168.0.27：
+
+    -->C:>telnet 192.168.0.203
+
+    正在连接192.168.0.203...无法打开到主机的连接。 在端口 23: 连接失败
+
+
+24.3 更改telnet服务器端口号
+
+    1.配置Telnet服务器
+
+    。注释上面的配置：
+
+      -->vim /etc/xinetd.d/telnet
+
+            #only_from =192.168.0.0/24
+            #only_from=.fulong.com
+            #no_access=192.168.0.(27)
+            #access_times=9:00-12:00  13:00-22:00
+
+    1>编辑/etc/services文件
+
+    -->vim /etc/services 
+
+    将端口号修改为23333,TCP和UDP都更改
+
+telnet          23333/tcp
+telnet          23333/udp
+
+
+    2>重新启动xinetd服务
+
+    -->service xinetd restart
+
+Stopping xinetd:                                           [  OK  ]
+Starting xinetd:                                           [  OK  ]
+
+
+    3>查看端口号
+
+    -->netstat -antu|grep 23333
+
+tcp        0      0 :::23333                    :::*                        LISTEN      9997/xinetd         
+[root@sql ~]# 
+
+
+    2.客户端telnet登录
+
+    -->telnet 192.168.0.203 2333
+
+Trying 192.168.0.203...
+Connected to 192.168.0.203.
+Escape character is '^]'.
+CentOS release 6.5 (Final)
+Kernel 2.6.32-431.23.3.el6.x86_64 on an x86_64
+login: zhangsan            #--------------------------输入用户zhangsan
+Password: 
+Last login: Wed Jun 24 19:22:49 from 192.168.0.27
+[zhangsan@sql ~]$ 

@@ -1,0 +1,155 @@
+                                            26-VPN服务器安装
+
+
+环境：VMware Workstation 
+
+      CentOS 6.3
+
+
+
+1、配置网卡
+
+   添加2块网卡：2块网卡模式都为：Host-only(仅主机模式)
+
+
+   。配置网卡IP
+   
+   -->cd /etc/sysconfig/network-scripts
+
+   -->vim ifcfg-eth0
+
+   eth0:
+
+DEVICE=eth0
+BOOTPROTO=static
+HWADDR=00:0c:29:20:a5:a0
+NM_CONTROLLED=yes
+ONBOOT=yes
+TYPE=Ethernet
+IPADDR=192.168.1.1
+NETMASK=255.255.255.0
+NETWORK=192.168.1.0
+IPV6INIT=no
+PEERDNS=yes
+
+
+   eth3:
+
+   -->cd /etc/sysconfig/network-scripts
+
+   -->vim ifcfg-eth3
+
+   eth3:
+
+DEVICE=eth3
+BOOTPROTO=static
+HWADDR=00:0c:29:20:a5:aa
+NM_CONTROLLED=yes
+ONBOOT=yes
+TYPE=Ethernet
+IPADDR=192.168.2.1
+NETMASK=255.255.255.0
+NETWORK=192.168.2.0
+IPV6INIT=no
+PEERDNS=yes
+
+
+   。重启网络查看
+
+   -->service network restart
+
+   -->ifconfig
+
+eth0      Link encap:Ethernet  HWaddr 00:0C:29:20:A5:A0  
+          inet addr:192.168.1.1  Bcast:192.168.1.255  Mask:255.255.255.0
+          inet6 addr: fe80::20c:29ff:fe20:a5a0/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:440 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:462 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:42966 (41.9 KiB)  TX bytes:51309 (50.1 KiB)
+
+
+eth3      Link encap:Ethernet  HWaddr 00:0C:29:20:A5:AA  
+          inet addr:192.168.2.1  Bcast:192.168.2.255  Mask:255.255.255.0
+          inet6 addr: fe80::20c:29ff:fe20:a5aa/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1362 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:63 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:83552 (81.5 KiB)  TX bytes:9412 (9.1 KiB)
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:68 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:68 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:5470 (5.3 KiB)  TX bytes:5470 (5.3 KiB)
+
+
+2、安装OpenVPN安装包
+
+   终端工具连接：192.168.0.1
+
+   -->yum install ppp -y
+
+   -->yum install pptpd -y
+
+
+3、打开路由转发功能
+
+   -->vim /etc/sysctl.conf
+
+   net.ipv4.ip_forward = 1
+
+   -->sysctl -p
+   
+
+4、配置/etc/pptpd.conf文件
+
+   -->vim /etc/pptpd.conf
+
+ppp /usr/sbin/pppd
+option /etc/ppp/options.pptpd
+
+logwtmp
+connections 100
+
+localip  192.168.2.1
+remoteip 192.168.2.60-160
+
+5、编辑/etc/ppp/options.pptpd文件
+
+name  pptpd
+refuse-pap
+refuse-chap
+refuse-mschap
+require-mschap-v4
+require-mppe-128
+ms-dns 202.96.209.5
+ms-dns 202.96.209.6
+proxyarp
+lock
+novjccomp
+nologfd
+
+
+6、添加VPN连接用户
+
+   -->vim /etc/ppp/chap-secrets
+
+                      (密码)
+
+zhangsan     pptpd  redhatlinux    192.168.2.105
+lisi         pptpd  redhatlinux    *
+
+   表示：给用户zhangsan进行VPN连接时分配隧道IP地址为：192.168.2.106
+
+         给用户lis分配的IP，则由/etc/pptpd.conf文件决定。
+
+
+7、配置NAT服务器
+
+    

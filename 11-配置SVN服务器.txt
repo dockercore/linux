@@ -1,0 +1,686 @@
+                                   第11章配置SVN服务器
+
+
+11.1 SVN概述
+
+11.1.1 什么是版本控制
+
+    版本控制是一种软件工程技巧，在软件开发的过程中，确保由不同人员编辑的同一文件都能得到更新。
+
+版本控制通过文档控制记录程序各个模块的改动，并为每此改动设置序号。
+
+    目前常用的版本控制软件有CVS、Git、BitKeeper、Subversion、Microsoft Visual SourceSafe、RCS、
+  
+Serena Dimention、Monotone和Mercurial等。
+
+    版本控制系统具有以下好处：
+
+    。支持多位软件开发人员在可控的方式下为相同的代码工作。
+
+    。版本控制系统保存了文件在过去的各个改动，便于查找哪位用户、在何时、因为什么原因修改了文档。
+
+    。支持在文件的主线上同时有多个版本
+
+    。支持查询在某个时点上项目各个文件的状态，可用于研究生产效率等，也可用于对以前的软件发行版的再发型。
+
+ 
+ 11.1.2 Subversion简介
+
+     Subversion(简称SVN)是一个自由、开源的此采用了分支管理系统的版本控制系统，用来取代早期的版本控制系统CVS。
+
+在Subversion下，任何一次提交都会对所有文件增加一个新版本号，版本号相同的文件构成软件的一个版本。
+
+     Subversion将文件存储在中心版本库里，这个版本库很像一个普通文件服务器，不同的是，它可以记录每一次文件和目录
+
+的修改情况。
+
+     Subversion的版本库可以通过网络访问，从而使用户可以在不同的主机上进行操作。允许用户在各自的空间里修改和管理
+
+同一组数据，可以促进团队协作。因为修改不再是单线进行，开发进度会进展迅速。此外，由于所有的工作都已版本化，就不必
+
+担心由于错误的更改而影响软件质量。如果出现不正确的更改，只要撤销那一次更改操作即可。
+
+    Subversion存储版本数据有【BDB】和【FSFS】两种。因为BDB方式在服务器中断时，有可能锁住数据，所以还是FSFS方式更安全一些。
+
+    Subversion服务器有两种运行方式：【独立服务器】和【借助Apache运行】。各有利弊，用户可自行选择。
+
+11.1.3 Subversion特性
+
+    1.版本化的目录
+
+    2.真实的版本历史
+
+    3.原子提交
+
+    4.可选的网络层
+
+    5.一致的数据操作
+
+    6.高效的分支和标签操作
+
+    7.可修改行
+
+
+11.1.4 SVN相关术语
+
+    1.版本库
+
+      是一个存储和共享数据的集中式系统。版本库以一组树和分支的形式存储信息。
+
+ 任何数量的客户端都可以连接到版本库中，并对这些文件进行读取和写入。
+
+    2.签入
+     
+     将本地副本提交到服务器的版本库。
+
+    3.签出
+
+     从版本库中将文件的最新修订版本复制到工作空间成为本地副本。
+
+    4.锁定
+
+     锁定是指一种机制，在此机制下，用户请求获得修改工作副本文件的更改的专有权限。
+
+    5.提交
+
+     对本地副本所做的更改更新到版本库中。
+
+    6.冲突
+
+    开发对同一文件的工作副本进行更改，并将这些更改提交到版本库中，他们的工作可能会发生冲突。这种情况下
+
+Subversion将检测冲突，并要求某个人先解决该冲突，然后再提交他们的更改。
+
+    7.合并
+
+     对相同文件的不同副本进行的多个更改合并到源版本库中。
+    
+
+    8.解决
+
+     必须有人朱行检查冲突文件，以接收一组更改并删除另一组更改。除非冲突解决，否则存在冲突的文件无法成功提交到源版本库中。
+
+    9.修订版本
+
+     对各个文件进行具体更新的编号草案。每次编辑文件并将它提交回版本库时，该文件的修订版本号将会增加。
+
+    10.版本
+
+     用于标识文件集的编号方案，可以在某个时间点标记并命名这些文件集。
+
+    11.分支
+
+     分支是指目录和文件的现有原始树的副本。
+
+    12.APR
+
+     Subversion置于成为APR(Apache可移植运行库）的可移植层上。这意味着Subversion应该在任何运行Apache httpd的操作系统上工作：
+
+     Windows、Linux、BSD的所有flavors、Mac OS X、Netware以及其他操作系统。
+
+    13.标签
+
+
+     为版本加一个名字，便于签出。
+
+    14.Hook
+
+     Hook是被版本库事件触发的程序，比如创建新版本或修噶无版本属性。
+
+    15.工作空间(工作副本)
+
+     要在本地货用户账户上编辑的文件副本。在工作空间中编辑文件时，这些文件将不再与版本库同步，需要将更改返回版本库，以便，以便
+
+     其他人可以看到这些更改。
+
+11.2 SVN服务器安装和配置
+
+11.2.1 安装SVN服务器软件包
+
+    查看subversion和subversion-javahl软件包是否已经安装
+
+    -->rpm -qa|grep subversion
+
+    -->rpm -qa|grep subversion-javahl
+
+    如果没有安装,挂载光盘安装：
+
+    -->rpm -ivh subversion-1.6.11-10.el6_5.X86_64.rpm
+
+    -->rpm -ivh subversion-javahl-1.6.11-9.el6_4.X86_64.rpm
+
+
+11.2.2 管理SVN版本库
+
+    SVN版本库是一个存储和共享数据的集中式系统。版本库以一组树和分支的形式（即目录和文件的层次结构）存储信息。
+
+    使用svnadmin命令可以管理Subversion版本。比如创建、升级、检验、修复、产生即时副本等
+
+    命令语法：svnadmin [命令][版本库目录][参数|选项]
+
+     
+                      svnadmin部分命令描述
+     ---------------------------------------------------------------------------------------
+       命令                                           功能
+     ---------------------------------------------------------------------------------------
+     crashtest               打开位于版本库目录的版本库，然后终止，从而模拟一个持有版本库句柄
+                             进程的奔溃
+     ---------------------------------------------------------------------------------------
+     create                  在版本库目录中创建一个新的空版本库
+     ---------------------------------------------------------------------------------------
+     deltify                 在指定的版本范围内，对其中变动的路径增量计算。
+     ---------------------------------------------------------------------------------------
+     dump                    将文件系统的内容，以可移植"转存"格式输出到标准输出，并将反馈输出
+                             到标准错误
+     ----------------------------------------------------------------------------------------
+     help(?,h)               显示svnadmin命令或其子命令的用法
+     ----------------------------------------------------------------------------------------
+     hotcopy                 产生版本库的即时副本
+     ----------------------------------------------------------------------------------------
+     list-dblogs             列出所有的BDB日志文件
+     ----------------------------------------------------------------------------------------
+     list-unused-dblogs      列出无用的BDB日志文件
+     ----------------------------------------------------------------------------------------
+     load                    从标准输入读取“转存”格式的流，将新的版本提交至版本库的文件系统中。
+                             如果版本库原先是空的，默认会将其UUID以流中的数值代替
+     ----------------------------------------------------------------------------------------
+     lslocks                 显示所有锁的描述
+     ----------------------------------------------------------------------------------------
+     lstxns                  显示所有未提交事物的名称
+     ----------------------------------------------------------------------------------------
+     pack                    使用更有效的存储模型压缩版本库
+     ----------------------------------------------------------------------------------------
+     recover                 对版本库运行修复程序
+     ----------------------------------------------------------------------------------------
+     rmlocks                 无条件地删除锁
+     ----------------------------------------------------------------------------------------
+     setlog                  将指定版本的日志信息设为指定文件的内容
+     ----------------------------------------------------------------------------------------
+     setrevprop              将指定版本的属性NAME设为文件的内容
+     ---------------------------------------------------------------------------------------
+     setuuid                 重置版本库UUID
+     ---------------------------------------------------------------------------------------
+     upgrade                 升级位于版本库目录处的版本库到支持的最新方案版本
+     ---------------------------------------------------------------------------------------
+     verify                  校验版本库中的数据
+     ---------------------------------------------------------------------------------------
+
+     例:11.1 创建版本库，指定版本库目录为/etc/subversion
+
+     -->svnadmin create /etc/subversion
+
+     -->ls /etc/subversion
+
+        conf db format  hooks  locks  README.txt
+
+
+     例:11.2 将文件系统的内容，以可移植"转存"格式输出到标准输出
+
+     -->svnadmin dump /etc/subversion/
+
+        SVN-fs-dump-format-version: 2
+
+        UUID: 2dae3830-da12-414d-a83e-1489bffe465c
+
+        Revision-number: 0
+        Prop-content-length: 56
+        Content-length: 56
+
+        K 8
+        svn:date
+        V 27
+        2014-12-31T19:46:00.193122Z
+        PROPS-END
+
+        * 已转存版本 0。
+
+
+     例:11.3:产生SVN版本库的即时副本，副本存储路径为/etc/subversion2
+
+     -->svnadmin hostcopy /etc/subversion/ /etc/subversion2   #用法有误
+
+     例:11.4:对SVN版本库运行修复程序
+
+     -->svnadmin recover /etc/subversion
+
+       已取得版本库锁定。
+       请稍候；修复版本库可能需要一段时间...
+
+       完成修复。
+       最新的版本库版本是 0。
+ 
+     例:11.5:校验SVN版本库中的数据
+
+     -->svnadmin verify /etc/subversion/
+
+       * 已校验版本 0。
+
+
+11.2.3 /etc/subversion/conf/svnserve.conf文件详解
+
+    SVN服务器的主配置文件是/etc/subversion/conf/svnserve.conf文件
+
+    该文件控制了在每个版本库基础上svnserver守护进程的行为。
+
+    -->vim /etc/subversion/conf/svnserve.conf
+
+    [general]
+
+    # anon-access = read   #决定了未经验证用户的访问级别，read表示允许所有操作
+    # auth-access = write  #确定用于身份验证用户的访问级别，默认是write
+    # password-db = passwd #指定密码数据库的位置
+    # authz-db = authz     #指定访问控制授权规则的位置
+    # realm = My First Repository  #设置SVN版本库的认证领域
+
+    [sasl]
+
+    # use-sasl = true      #指定是否使用Cyrus SASL库进行身份验证，默认值是false
+    # min-encryption = 0   #指定SASL提供的安全层所需的最小强度。0表示不加密，1表示完整性检查，
+                            值大于1表示使用有效秘钥长度来进行加密
+    # max-encryption = 256 #指定SASL提供的安全层所需的最大强度。0表示不加密，1表示仅完整性检查，
+                            值大于1表示使用有效密钥长度来进行加密（比如256表示为256位加密）
+
+
+
+11.2.4 /etc/subversion/conf/passwd文件详解
+
+    /etc/subversion/conf/passwd文件用来配置允许访问SVN的用户，其中[users]是必须的，然后下面列出
+
+    要访问SVN的用户，每个用户一行内容，指定用户名和访问密码。
+
+    vim  /etc/subversion/conf/passwd
+
+    [users]
+    # harry = harryssecret
+    # sally = sallyssecret
+
+    格式：用户=访问SVN的密码
+
+11.2.5 /etc/subversion/conf/authz文件详解
+
+    /etc/subversion/conf/authz文件用来配置用户访问SVN的访问权限，该文件由【项目和目录】、【权限主体】、
+    
+    【权限】3部分组成。该文件可以对一个普通用户、一个组或所有的用户进行权限配置。其中组通过在[group]
+
+    部分定义。在设置用户权限的时候，定义在某组的用户则用 “@组名”表示
+
+    -->vim /etc/subversion/conf/authz
+
+   [aliases]
+   # joe = /C=XZ/ST=Dessert/L=Snake City/O=Snake Oil, Ltd./OU=Research Institute/CN=Joe Average
+
+   [groups]
+   # harry_and_sally = harry,sally
+   # harry_sally_and_joe = harry,sally,&joe
+
+   # [/foo/bar]
+   # harry = rw
+   # &joe = r
+   # * =
+
+   # [repository:/baz/fuz]
+   # @harry_and_sally = rw
+   # * = r
+
+   配置用户访问SVN的访问权限的格式：
+
+   [项目和目录]
+      权限主机=权限
+
+   1.项目和目录
+
+   项目和目录部分可以有已下多种写法
+
+   。 [/]:表示版本库根目录以下内容。
+
+      指定为/etc/subversion:zheyang ,“/”就是表示对全部版本库设置权限
+
+   。 [/kkk]:表示对版本库根目录下的子目录kkk设置权限
+
+   。[repos1:/]:表示对版本库repos1设置权限
+
+   。[repos2:/cde]:表示对版本库repos2中的cde项目设置权限
+
+   。[repos2:/abc/abcd]:表示对版本库repos2中的abc项目中的abcd目录设置权限
+
+   2.设置主体
+
+   可以设置以下权限主体
+
+   。组： 组需要在前面加@，一个组可以包含一个或多个用户，用户之间以逗号分隔
+
+   。用户
+
+   。*：表示全部用户
+
+
+   3.权限
+
+   可以设置以下权限：
+
+   。w:写入
+
+   。r:读取
+
+   。空白：表示没有任何权限
+
+   /etc/subversion/confauthz文件的内容示例：
+
+
+   [groups]
+   admin=zhangsan,lisi
+
+   [/]
+   @admin=rw
+   [repos]:/abc/abcd]
+   zhangsan = rw
+   [repos2:/cde]
+   zhangsan=
+
+11.2.6 启动svn服务
+
+    命令语法: svnserve[选项]
+
+                               svnserve命令选项含义
+    --------------------------------------------------------------------------
+            选项                                     选项含义 
+    --------------------------------------------------------------------------
+            -d                                   以后台模式执行
+    --------------------------------------------------------------------------
+            -r<根目录>                           指定服务的根目录 
+    --------------------------------------------------------------------------
+            -i                                   以inetd模式执行
+    --------------------------------------------------------------------------
+            -t                                   以隧道模式执行
+    --------------------------------------------------------------------------
+            -X                                   监听一次方式，用于调试
+    --------------------------------------------------------------------------
+            --listen-port=<端口>                 指定监听端口
+    --------------------------------------------------------------------------
+            --listen-hos=<主机>                  监听主机名称或IP地址
+    --------------------------------------------------------------------------
+            --pid-file=<文件>                    写入进程PID到指定文件
+    --------------------------------------------------------------------------
+            --R                                  强制只读，覆盖版本库配置文件
+    --------------------------------------------------------------------------
+            --config-file<文件>                  从指定文件读取配置
+    --------------------------------------------------------------------------、
+            -T                                   使用线程代替进程
+    --------------------------------------------------------------------------   
+            -foreground                          在前台运行，用于调试
+    --------------------------------------------------------------------------   
+
+    例:11.6 查看svnserv版本
+
+    --> svnserve --version
+
+    svnserve，版本 1.6.11 (r934486)
+    编译于 Jun 23 2012，00:44:03
+
+    版权所有 (C) 2000-2009 CollabNet。
+    Subversion 是开放源代码软件，请参阅 http://subversion.tigris.org/ 站点。
+    此产品包含由 CollabNet(http://www.Collab.Net/) 开发的软件。
+
+    下列版本库后端(FS) 模块可用:
+
+    * fs_base : 模块只能操作BDB版本库。
+    * fs_fs : 模块与文本文件(FSFS)版本库一起工作。
+
+    Cyrus SASL 认证可用。
+
+    例:11.7  以后太模式启动svn服务，服务的根目录为/etc/subversion
+
+    -->svnserve -d -r  /etc/subversion
+
+
+11.2.7 SVN服务器配置实例
+
+    配置一台SVN服务器，为公司网络客户端计算机提供版本控制服务
+
+    。版本库目录：/etc/subversion
+
+    。密码文件：/etc/subversion/conf/passwd
+
+    。访问控制文件：/etc/subversion/conf/authz
+
+    。使非授权用户无法访问
+
+    。用户zhangsan的访问权限是读取和写入
+
+    。用户lisi的访问权限是读取
+
+    。SVN版本库的认证领域：My First Repository
+
+    1.创建访问版本库的用户
+
+    -->useradd zhangsan
+
+    -->passwd zhangsan -->zhangsan123-->zhangsan123
+
+    -->useradd lisi
+
+    -->passwd lisi-->lisi845541-->lisi845541
+
+    2.创建版本库
+
+    -->svnadmin create /etc/subversion/
+       svnadmin: “/etc/subversion” 是当前根为 “/etc/subversion” 的版本库的子目录
+
+    -->ls /etc/subversion/
+       conf  db  format  hooks  locks  README.txt
+
+    3.编辑/etc/subversion/conf/svnserve.conf文件
+
+    -->vim /etc/subversion/conf/svnserve.conf
+
+      [general]
+      anon-access = read
+      auth-access = write
+      password-db = /etc/subversion/conf/passwd
+      authz-db = /etc/subversion/conf/authz
+      realm = My First Repository
+
+      [sasl]
+      use-sasl = true
+      min-encryption = 0
+      max-encryption = 256
+
+     4.编辑 /etc/subversion/conf/passwd文件
+
+     -->vim /etc/subversion/conf/passwd
+
+        [users]
+        zhangsan = zhangsan123
+        lisi     = lisi845541
+ 
+     5.编辑/etc/subversion/conf/authz文件
+
+     -->vim /etc/subversion/conf/authz
+
+        [/]
+        zhangsan = rw     #读取和写入权限
+        lisi = r          #读取权限
+  
+     6.启动svn服务
+
+     -->svnserve -d -r /etc/subversion
+
+     7.查看进程
+
+     -->ps -ef|grep svnserver
+
+        root     15697 15637  0 08:47 pts/2    00:00:00 grep svnserver
+
+     8.查看端口：
+
+     --> netstat -ntlp|grep 3690
+
+         tcp        0      0 0.0.0.0:3690                0.0.0.0:*                   LIST                     EN      15470/svnserve
+
+11.2.8 控制svnserve服务
+
+    使用service和chkconfig命令可以控制svnserve服务的状态，以及当SVN服务器启动时自动启动服务。
+
+    1.编辑/etc/init.d/svnserve文件
+
+    -->vim /etc/init.d/svnserve  #修改为：
+
+    args="-d --pid-file=${pidfile} -r /etc/subversion $OPTIONS"
+       
+   
+    2.启动svnserve服务
+
+    -->ps -aux |grep svnserve
+
+    错误: svnserve: 不能绑定服务器套接字: 地址已经被使用 
+
+    解决方法：ps -aux|grep subserve
+
+              kill -9 PID
+
+    3.查看svnserve服务运行状态
+
+    -->service svnserve status
+
+       svnserve (pid  15817) 正在运行...
+
+    4.停止svnserve服务
+
+    -->service svnserve stop
+
+    5.重新启动svnserve服务
+
+    -->service svnserve restart
+
+    6.重新加载svnserve服务配置
+
+    -->service svnserve reload
+
+    7.开机自动启动svnserve服务
+
+    -->chkconfig svnserve on
+
+
+11.2.9 通过HTTP协议访问SVN版本库
+
+    1.Apache服务器配置
+
+      (1)创建认证口令文件
+
+      在已经运行的apache服务器上使用以下命令创建认证口令文件/etc/subversion/passwd
+
+      并添加用户zhangsan
+
+       -->service httpd start
+
+       -->htpasswd -c /etc/subversion/passwd zahngsan
+
+         New password:
+         Re-type new password:
+         Adding password for user zahngsan
+  
+       (2)编辑/etc/httpd/conf/httpd.conf文件
+
+        -->vim /etc/httpd/conf/httpd.conf
+
+        <Location /svn>
+            DAV svn
+            SVNPath /etc/subversion
+            AuthType Basic
+            AuthName "Your repository name"
+            AuthUserFile /etc/subversion/passwd
+         <LimitExcept GET PROPFIND OPTIONS REPORT>
+            Require valid-user
+         </LimitExcept>
+        </Location>
+
+	(3)重启httpd服务
+
+	-->service httpd restart
+
+
+    2.客户端测试
+
+        -->svn checkout http://ip/svn   #ip为SVN服务器IP
+
+	-->ls -a /root/svn
+
+11.3 配置SVN客户端
+
+    
+    
+
+=========================================================================
+】Unknown DAV provider: svn解决办法
+1 安装 APR
+apr 和 apr-util一般会在httpd的安装包内，subversion安装会使用到apr和par-util，如果当前系统没有，最好安装一下
+2 安装 apache 源码安装
+注意：安装附加参数 dav
+./configure --prefix=/usr/local/apache2 --with-apr=/usr/local/apr/bin/apr-1-config --with-apr-util=/usr/local/apr/bin/apu-1-config --enable-modules=so --enable-dav --enable-maintainer-mode --enable-rewrite
+3 安装 Subversion 源码安装
+注意：安装附加参数 
+./configure --prefix=/usr/local/svn --with-apxs=/usr/local/apache2/bin/apxs --with-apr=/usr/local/apr/bin/apr-1-config --with-apr-util=/usr/local/apr/bin/apu-1-config --with-ssl --with-zlib --enable-maintainer-mode
+4 配置 apache 与 Subversion 集成
+vi /usr/local/apache/conf/httpd.conf 
+在末尾添加
+<Location /svn> 
+DAV svn 
+SVNParentPath /svn/project
+AuthType Basic
+AuthName "Hello welcome to here"  
+AuthUserFile /svn/passwd
+AuthzSVNAccessFile /svn/auth.conf 
+Require valid-user  
+</Location>
+说明
+<Location /svn> 
+DAV svn 
+SVNParentPath /svn/project (此处配置你的版本库根目录) 
+AuthType Basic （连接类型设置 基本验证） 
+AuthName "Hello welcome to here" （此处字符串内容修改为提示对话框标题） 
+AuthUserFile /svn/passwd (访问版本库用户的文件，用apache 的htpasswd命令生成) 
+AuthzSVNAccessFile /svn/auth.conf （此处修改为访问版本库权限的文件） 
+Require valid-user （"Require valid-user"告诉apache在authfile中所有的用户都可以访问） 
+</Location>
+重启 apache 
+/usr/local/apache2/bin/apachectl –k restart
+5 配置 Subversion
+创建版本库
+创建用户
+给用户分配权限
+6 常用的 SVN 服务端命令列表
+FAQ
+1 安装 Subversion 哪个版本？
+安装 1.5.9 暂时不要安装 1.6。
+1.5 使用
+Berkeley DB here:
+1.6 使用
+Sqlite
+Sqlite 会遇到一个纠结的问题。见文章
+http://os.51cto.com/art/201003/191849.htm
+2 可否使用 yum 或 wget 安装？
+可以。
+yum 安装 Subversion 1.6 没问题，但是不知道安装到哪里了？
+SVN+Apache 套装
+sudo apt-get install subversion  libapache2-svn
+3 启动Apache 服务器时报错
+解决方法
+httpd: Could not reliably determine theserver's fully qualified domain name, using 10.100.50.21 for ServerName
+在apache2/conf/httpd.conf
+添加ServerName 10.100.50.21:80
+4 
+与 SVN 协同工作
+启动 Apache 报错：undefined symbol: dav_register_provider 
+解决方法
+./configure --prefix=/usr/local/apache2 --with-apr=/usr/local/apr/bin/apr-1-config --with-apr-util=/usr/local/apr/bin/apu-1-config --enable-modules=so --enable-dav --enable-maintainer-mode --enable-rewrite
+没有在 configure 时打开 dav 模块
+5 
+与 SVN 协同工作
+启动 Apache 报错：Unknown DAV provider: svn
+解决方法
+没有这个动态链接库
+LoadModule dav_svn_module modules/mod_dav_svn.so
+直接运行这个命令，Linux会报错说没有 LoadModule 这个命令。
+将这两句话，添加到 vi /usr/local/apache2/conf/httpd.conf 的末尾
+LoadModule dav_svn_module modules/mod_dav_svn.so 
+LoadModule authz_svn_module modules/mod_authz_svn.so

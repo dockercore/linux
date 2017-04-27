@@ -1,0 +1,640 @@
+                                                第22章 配置VPN服务器
+
+
+22.1 VPN简介
+
+22.11. 什么是VPN
+
+     VPN(Virtual Private Network,虚拟专用网络)指的是在公用网络上建立专用网络的技术。
+
+之所以称为虚拟网，主要是因为整个VPN网络的人任意两个节点之间的连接并没有传统专网所需的
+
+端到端的物理链路，而是架构在公用网络服务商锁提供的网络平台，如Internet、ATM(异步传输
+
+模式）、Frame Relay（帧中继）等之上的逻辑网络，用户数据在逻辑链路中传输。它涵盖了跨共享
+
+或公共网络的封装、加密和身份验证链路的专用网络的扩展。
+
+22.1.2 VPN隧道协议
+
+    隧道是利用一种协议传输另一种协议的技术u，也就是使用隧道协议来实现VPN功能。为了创建隧道，
+
+隧道的客户机和服务器必须使用相同的隧道协议。通过隧道可以将来自一种协议类型的数据包封装在其他
+
+协议的数据包内。
+
+    VPN隧道协议有PPTP、L2TP和IPSec三大类。
+
+    1.PPTP
+
+    PPTP(Point to Point Tunneling Protocol,点对点隧道协议) 是点对点协议(PPP)的扩展，并协调使用PPP
+
+的身份验证、压缩和加密机制，以此来对数据包进行加密、封装和隧道传输。
+
+    PPTP能将PPP帧封装成IP数据包，以便能够在基于IP的互联网上进行传输。PPTP使用TCP连接的创建、维护
+
+和终止隧道，并使用GRE(通用路由封装）将PPP帧封装成隧道数据。被封装后的PPP帧的有效载荷可以被加密或压缩，
+
+或者同时被加密与压缩。
+
+    PPTP允许对多协议通信进行加密，然后封装在IP包头中，以通过IP网络或公用IP网络发送。
+
+
+    2.L2TP
+
+    L2TP(Layer2 Tunneling Protocol,第二层隧道协议）是基于RFC的隧道协议，是PPTP和L2F(第2层转发）的组合，允许
+
+对多协议通信进行加密，然后通过任何支持点对点数据包传输的媒体发送。L2TP依靠Internet协议安全(IPSec)传输模式来
+
+提供加密服务。L2TP和IPsec的组合称为L2TP/IPsec。L2TP/IPSec提供了封装和加密专用数据的主要VPN服务。
+
+    3.IPSec
+
+    IPSec(Internet Protocol Security, Internet协议安全）协议是IETF开发出的IP网络安全标准，支持各种常用的对称
+
+加密算法、非对称加密算法和hash算法。IPSec协议是一个标准的第三层安全协议，它是在隧道外面再封装，保证了传输过程
+
+中的安全。IPSec的主要特征在于它可以对所有IP级的通信进行加密。
+
+
+22.2 VPN服务器安装和配置
+
+22.2.1 安装VPN服务器软件包
+
+    1.安装ppp软件包
+
+    -->rpm -q ppp
+
+       ppp-2.4.5-5.el6.x86_64
+
+    -->yum install ppp -y
+
+
+    2.安装pptpd软件
+
+    -->wget http://dl.fedoraproject.org/pub/epel/6/x86_64/pptpd-1.4.0-3.el6.x86_64.rpm
+
+    -->rpm -ivh pptpd-1.4.0-3.el6.x86_64.rpm 
+
+
+22.2.2 /etc/pptpd.cofn文件详解
+
+    VPN服务器的主配置文件是/etc/pptpd.conf文件，在该文件中可以指定PPP选项文件，以及为VPN服务器和VPN客户端指定隧道
+
+IP地址。
+
+    -->more /etc/pptpd.conf 
+###############################################################################
+# $Id: pptpd.conf,v 1.11 2011/05/19 00:02:50 quozl Exp $
+#
+# Sample Poptop configuration file /etc/pptpd.conf
+#
+# Changes are effective when pptpd is restarted.
+###############################################################################
+
+# TAG: ppp
+#	Path to the pppd program, default '/usr/sbin/pppd' on Linux
+#
+#ppp /usr/sbin/pppd
+
+# TAG: option
+#	Specifies the location of the PPP options file.
+#	By default PPP looks in '/etc/ppp/options'
+#
+option /etc/ppp/options.pptpd
+
+# TAG: debug
+#	Turns on (more) debugging to syslog
+#
+#debug
+
+# TAG: stimeout
+#	Specifies timeout (in seconds) on starting ctrl connection
+#
+# stimeout 10
+
+# TAG: noipparam
+#       Suppress the passing of the client's IP address to PPP, which is
+#       done by default otherwise.
+#
+#noipparam
+
+# TAG: logwtmp
+#	Use wtmp(5) to record client connections and disconnections.
+#
+logwtmp
+
+# TAG: vrf <vrfname>
+#	Switches PPTP & GRE sockets to the specified VRF, which must exist
+#	Only available if VRF support was compiled into pptpd.
+#
+#vrf test
+
+# TAG: bcrelay <if>
+#	Turns on broadcast relay to clients from interface <if>
+#
+#bcrelay eth1
+
+# TAG: delegate
+#	Delegates the allocation of client IP addresses to pppd.
+#
+#       Without this option, which is the default, pptpd manages the list of
+#       IP addresses for clients and passes the next free address to pppd.
+#       With this option, pptpd does not pass an address, and so pppd may use
+#       radius or chap-secrets to allocate an address.
+#
+#delegate
+
+# TAG: connections
+#       Limits the number of client connections that may be accepted.
+#
+#       If pptpd is allocating IP addresses (e.g. delegate is not
+#       used) then the number of connections is also limited by the
+#       remoteip option.  The default is 100.
+#connections 100
+
+# TAG: localip
+# TAG: remoteip
+#	Specifies the local and remote IP address ranges.
+#
+#	These options are ignored if delegate option is set.
+#
+#       Any addresses work as long as the local machine takes care of the
+#       routing.  But if you want to use MS-Windows networking, you should
+#       use IP addresses out of the LAN address space and use the proxyarp
+#       option in the pppd options file, or run bcrelay.
+#
+#	You can specify single IP addresses seperated by commas or you can
+#	specify ranges, or both. For example:
+#
+#		192.168.0.234,192.168.0.245-249,192.168.0.254
+#
+#	IMPORTANT RESTRICTIONS:
+#
+#	1. No spaces are permitted between commas or within addresses.
+#
+#	2. If you give more IP addresses than the value of connections,
+#	   it will start at the beginning of the list and go until it
+#	   gets connections IPs.  Others will be ignored.
+#
+#	3. No shortcuts in ranges! ie. 234-8 does not mean 234 to 238,
+#	   you must type 234-238 if you mean this.
+#
+#	4. If you give a single localIP, that's ok - all local IPs will
+#	   be set to the given one. You MUST still give at least one remote
+#	   IP for each simultaneous client.
+#
+# (Recommended)  //指定VPN隧道中VPN服务器和VPN客户端的IP地址范围，可以使用逗号分割的单个IP地址
+                   也可以使用IP地址范围。
+#localip 192.168.0.1
+#remoteip 192.168.0.234-238,192.168.0.245
+# or
+#localip 192.168.0.234-238,192.168.0.245
+#remoteip 192.168.1.234-238,192.168.1.245
+
+
+    文件中可以添加和修改的主要参数：
+
+    。ppp /usr/sbin/pppd: 指定ppp程序的路径
+
+    。option /etc/ppp/options.pptpd:指定PPP选项文件的路径
+
+    。debug:打开调试功能
+
+    。stimeout 10:指定启动ctrl连接超时，单位为秒。
+
+    。logwtmp:使用/var/log/wtmp文件来记录客户连接和断开的信息
+
+    。bcrelay eth1: 打开从接口到客户端的广播中继。
+
+    。connections 100:限制可被接受客户端的连接数量。
+
+    。localip 192.168.0.1: 在隧道中为VPN服务器设置一个IP地址
+
+    。remoteip 192.168.0.234~238,192.168.0.245: 在隧道中指定自动分配给VPN客户端的IP地址范围
+
+
+22.2.3 /etc/ppp/options.pptpd文件详解
+
+     在该文件中可以指定身份认证方式、加密长度、以及为VPN客户端指定DNS服务器和WINS服务器的IP地址。
+
+     -->more /etc/ppp/options.pptpd 
+
+# Authentication
+
+name pptpd
+
+#chapms-strip-domain
+
+
+# choose with of the following sections you will use.)
+
+# BSD licensed ppp-2.4.2 upstream with MPPE only, kernel module ppp_mppe.o
+
+# {{{
+refuse-pap
+refuse-chap
+refuse-mschap
+# Require the peer to authenticate itself using MS-CHAPv2 [Microsoft
+# Challenge Handshake Authentication Protocol, Version 2] authentication.
+require-mschap-v2
+# Require MPPE 128-bit encryption
+# (note that MPPE requires the use of MSCHAP-V2 during authentication)
+require-mppe-128
+# }}}
+
+
+# OpenSSL licensed ppp-2.4.1 fork with MPPE only, kernel module mppe.o
+# {{{
+#-chap
+#-chapms
+
+#+chapms-v2
+
+#mppe-40	# enable either 40-bit or 128-bit, not both
+#mppe-128
+#mppe-stateless
+# }}}
+
+
+# Network and Routing
+
+#ms-dns 10.0.0.1
+#ms-dns 10.0.0.2
+
+
+#ms-wins 10.0.0.3
+#ms-wins 10.0.0.4
+
+proxyarp
+
+#10.8.0.100
+
+
+# Logging
+
+#debug
+
+
+#dump
+
+
+# Miscellaneous
+
+# access.
+lock
+
+# Disable BSD-Compress compression
+nobsdcomp 
+
+novj
+novjccomp
+
+# turn off logging to stderr, since this may be redirected to pptpd, 
+# which may trigger a loopback
+nologfd
+
+# put plugins here 
+# (putting them higher up may cause them to sent messages to the pty)
+
+
+    在文件中可以添加和硒鼓的主要参数
+
+    。name pptpd:进程身份验证的本地系统的名称。
+
+    。ms-dns 10.0.0.1:如果VPN服务器为Microsoft Windows客户端做服务器，允许VPN服务器提供一个或两个
+
+ DNS服务器IP地址发给客户单。此选项的第一个实例指定主DNS服务器IP地址，第二个实例（如果有）指定备用
+
+ DNS访问权IP地址。
+
+    。ms-wins 10.0.0.3:如果VPN服务器为Microsoft Windows或Samba客户端做服务器，允许VPN服务器提供一个或两个
+
+WINS服务器IP地址发给客户单。此选项的第一个实例指定主WINS服务器IP地址，第二个实例（如果有）指定备用WINS服务
+
+器IP地址。
+
+    。debug: 启用连接调试工具
+
+    。dump;显示出所有已设置的选项值
+
+    。lock:为伪tty以确保独家访问创建一个UUCP风格的锁定文件
+
+    。require-mschap-v2：要求对方使用MS-CHAPv2认证
+
+    。require-mppe-128:要求MPPE 128位加密
+
+    。nobsdcomp:关闭BSD-compress压缩
+
+    。nologfd:关闭日志记录到标准错误，因为这可能会被重定向到pptpd，这可能会触发一个回送。
+
+22.2.4 /etc/ppp/chap-secrets文件详解
+
+    通过/etc/ppp/chap-secrets文件来添加VPN连接用户，一个用户一行内容，一行分为四列，其格式如下：
+
+    -->cat /etc/ppp/chap-secrets 
+
+# Secrets for authentication using CHAP
+# client	server	secret			IP addresses
+
+
+    VPN用户名   服务名   密码                    隧道IP地址
+
+
+    。VPN用户名：指定VPN连接用户
+
+    。服务名: 默认服务名为pptpd,如果使用其他的名称，需要修改/etc/ppp/options.pptpd文件中的name参数的内容。
+
+    。密码：VPN连接时使用的密码。
+
+    。隧道IP地址：以该用户连接时分配给VPN客户端的隧道IP地址，如果使用"*"表示由VPN服务器随机分配IP地址。
+
+    例如：
+
+    zhangsan    pptpd   redhatlinux    192.168.0.203
+
+
+22.2.5 管理VPN用户
+
+    使用vpnuser命令可以添加、删除、显示VPN用户以及为VPN用户设置域，操作后将会改变/etc/ppp/chap-secrets文件的内容。
+   
+    命令语法：
+
+    vpnuser add [用户名] [密码]
+
+    vpnuser del [用户名]
+
+    vpnuser show [用户名]
+
+    vpnuser domain [用户名] [域名]
+
+                                    vpnuser命令选项含义
+    --------------------------------------------------------------------------------
+        选项                                   选项含义
+    --------------------------------------------------------------------------------
+         add                                    添加VPN用户
+    --------------------------------------------------------------------------------
+         del                                    删除VPN用户
+    --------------------------------------------------------------------------------
+         show                                   显示VPN用户
+    --------------------------------------------------------------------------------
+         domain                                 为VPN用户设置域
+    --------------------------------------------------------------------------------
+
+
+    例22.1 显示VPN用户
+
+    -->vpnuser show
+
+User	Server	Passwd	IPnumber
+---------------------------------
+# Secrets for authentication using CHAP
+# client	server	secret			IP addresses
+zhangsan        pptpd   redhatlinux             192.168.0.203
+
+
+    例22.2 显示VPN用户zhangsan 
+
+    -->vpnuser show zhangsan
+
+User	Server	Passwd	IPnumber
+---------------------------------
+zhangsan        pptpd   redhatlinux             192.168.0.203
+
+    例22.3 添加VPN用户wangwu 
+
+    -->vpnuser add wangwu redhatlinux
+
+    -->vpnuser show wangwu
+
+User	Server	Passwd	IPnumber
+---------------------------------
+wangwu	*	redhatlinux	*
+
+
+    例22.4 删除VPN用户wangwu 
+
+    -->vpnuser del wangwu
+
+    例22.5 为VPN用户设置域fulong 
+
+    -->vpnuser domain zhangsan fulong
+
+    -->vpnuser show zhangsan
+
+User	Server	Passwd	IPnumber
+---------------------------------
+FULONG\\zhangsan        pptpd   redhatlinux             192.168.0.203
+fulong\\zhangsan        pptpd   redhatlinux             192.168.0.203
+
+
+22.2.6 VPN服务器配置实例
+
+    在公司内部配置一台VPN服务器，为公司员工出差在外提供远程VPN访问服务，具体参数如下：
+
+    。VPN服务器内网卡(eth0)IP地址：192.168.0.203
+
+    。VPN服务器外网卡(eth1)IP地址：192.168.1.100
+
+    。分配VPN客户端隧道IP地址：192.168.2.1
+
+    。VPN客户端IP地址：192.168.1.2
+
+    。分配VPN客户端隧道IP地址范围：192.168.2.60~192.168.2.160
+
+    。为VPN客户端指定DNS服务器IP地址：202.106.0.20  202.106.46.151
+
+    。允许进行VPN连接的用户：zhangsan和lisi
+
+    。给用户zhangsan连接时指定固定隧道IP地址：192.168.2.105
+
+    。给用户lisi连接时指定隧道IP地址：由/etc/pptpd.conf文件决定
+
+    。限制可被接收客户端的连接数：100个
+
+    环境准备：
+
+    VPN服务器：192.168.0.203
+
+    两块网卡：分别对应内外网IP
+
+    VPN客户端：Window和Linux
+
+    1.打开内核路由转发功能
+
+    -->vim /etc/sysctl.conf 
+
+       net.ipv4.ip_forward = 1
+
+    -->sysctl  -p
+
+net.ipv4.ip_forward = 1
+net.ipv4.ip_nonlocal_bind = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.default.accept_source_route = 0
+kernel.sysrq = 0
+kernel.core_uses_pid = 1
+net.ipv4.tcp_syncookies = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.shmmax = 68719476736
+kernel.shmall = 4294967296
+
+    2.编辑/etc/pptpd.conf文件，该文件上修改后内容如下所示：
+
+    -->vim /etc/pptpd.conf
+
+      ppp /usr/sbin/pppd  #去掉注释
+
+
+      connections 100     #去掉注释
+
+      localip 192.168.2.1 #去掉注释
+
+      remoteip 192.168.2.60-160  #去掉注释并修改
+
+
+    3.编辑/etc/ppp/options.pptpd文件
+
+    -->vim /etc/ppp/options.pptpd 
+
+      ms-dns 202.106.0.20    #公司DNS
+      ms-dns 202.106.46.151
+
+    4.添加VPN连接用户
+
+    -->vim /etc/ppp/chap-secrets
+
+    给VPN服务器添加需要连接的用户
+
+zhangsan        pptpd   redhatlinux             192.168.2.105
+lisi            pptpd   redhatlinux             *
+                                                 
+
+    说明：给用户zhangsan进行VPN连接时分配隧道IP地址为192.168.2.105,
+
+          给用户lisi分配隧道IP地址则由/etc/pptpd.conf文件决定
+
+    5.配置NAT服务器
+
+    在NAT服务器上添加iptables规则并保存规则
+
+    -->iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o eth1 -j SNAT --to-source 192.168.1.100
+
+    -->iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth1 -j SNAT --to-source 192.168.1.100
+
+    -->service iptables save
+
+       iptables：将防火墙规则保存到 /etc/sysconfig/iptables：     [确定]
+
+
+
+    注意：一般VPN服务器和NAT服务器安装在同一台服务器上面
+
+
+22.2.7 控制pptpd服务
+
+22.27 控制pptpd服务
+
+    1.启动pptpd服务
+
+    -->service pptpd start
+
+       Starting pptpd:                                            [确定]
+
+    2.查看pptpd服务运行状态
+
+    -->pptpd (pid  3229) 正在运行...
+
+    3.停止pptpd服务
+
+    -->service pptpd stop
+
+    Shutting down pptpd:                                       [确定]
+
+
+    4.重新启动pptpd服务
+
+    -->ervice pptpd restart
+
+Shutting down pptpd:                                       [确定]
+Starting pptpd:                                            [确定]
+Warning: a pptpd restart does not terminate existing 
+connections, so new connections may be assigned the same IP 
+address and cause unexpected results.  Use restart-kill to 
+destroy existing connections during a restart.
+
+    5.重新加载pptpd服务配置
+
+    -->service pptpd reload
+
+Shutting down pptpd:                                       [失败]
+Starting pptpd:                                            [确定]
+Warning: a pptpd restart does not terminate existing 
+connections, so new connections may be assigned the same IP 
+address and cause unexpected results.  Use restart-kill to 
+destroy existing connections during a restart.
+
+    6.开机自动启动pptpd服务
+
+    -->chkconfig pptpd on
+
+    -->chkconfig --list pptpd
+
+       pptpd          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+22.3 配置VPN客户端
+
+22.3.1 Windows客户端配置
+
+    1.设置VPN连接
+
+    Windows7系统：
+
+    -->开始-->控制面板-->网络和共享中心-->设置新的连接或网络
+
+    -->连接到工作区-->下一步
+
+    -->否，创建新连接-->下一步
+
+    -->使用我的Internet连接(VPN)
+
+    -->我稍后决定-->下一步
+
+    -->Intenet地址：192.168.1.100  #VPN的外网卡 -->下一步
+
+       目标名称：VPN连接
+
+    -->用户名：zhangsan  -->创建
+
+       密码：redhatlinux
+
+    -->提示：“连接已经可以使用”-->关闭
+ 
+    2.VPN连接
+
+    -->桌面上“网络”-->属性-->更改适配器设置-->双击：VPN连接
+
+    -->用户名：zhangsan
+
+       密码:redhatlinux
+
+    -->连接
+
+
+22.3.2 查看VPN服务器和VPN客户端
+
+    连接成功后，查看VPN服务器和VPN客户端的相关信息。获取分配给VPN服务器
+
+和VPN可兑换的隧道IP地址、DNS服务器IP地址、身份验证方式以及加密强度等内容。
+
+    1.查看VPN服务器
+
+    -->ifocnfig ppp0
+
+    2.查看VPN客户端
+
+    -->右键“VPN连接状态”-->详细信息
+
+
+

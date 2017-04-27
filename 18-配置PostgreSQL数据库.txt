@@ -1,0 +1,1614 @@
+                                             第18章 配置PostgreSQL数据库
+
+
+18.1 PostgreSQL简介
+
+    PostgreSQL是加州大学伯克利分校计算机系开发的一个关系型数据库管理系统，它在灵活地BSD风格许可
+
+证下发行。
+
+    PostgreSQL的特性覆盖了SQL-2/SQL-92和SQL-99，包括了世界上最丰富的数据类型的支持，其中有些数据
+
+类型连商业数据库都不具备。
+
+    PostgreSQL采用的是比较经典的C/S结构，也就是一个客户端对应一个服务器守护进程的模式，这个守护
+
+进程分析客户端来的请求，生成规划树，进行数据检索并最终把结果格式化输出后返回给客户端。
+
+
+18.2 PostgreSQL服务器安装和配置
+
+18.2.1 安装PostgreSQL服务器软件包
+
+    -->rpm -qa|grep postgresql
+    
+    -->rpm -qa|grep postgresql-test
+
+    -->rpm -qa|grep postgresql-server
+
+    -->rpm -qa|grep postgresql-libs 
+
+    -->yum install postgresql postgresql-test postgresql-server postgresql-libs -y
+
+18.2.2 初始化PostgreSQL数据库
+
+    使用initdb命令初始化一个PostgreSQL数据库
+
+    initdb [选项] [目录]
+
+                                  initdb命令选项含义
+  ------------------------------------------------------------------------------------------
+       选项                                                     选项含义
+  ------------------------------------------------------------------------------------------
+       -U <用户名>                                          指定数据库超级用户名
+  ------------------------------------------------------------------------------------------
+       -W                                                   对于新的超级用户提示输入口令
+  ------------------------------------------------------------------------------------------
+       -A<认证方法>                                         本地连接的默认认证方法
+  ------------------------------------------------------------------------------------------
+       -D<数据目录>                                         当前数据库簇的位置
+  ------------------------------------------------------------------------------------------
+       -E<编码>                                             为新数据库设置默认编码
+  ------------------------------------------------------------------------------------------
+       --pwfile=<文件名>                                    对于新的超级用户从文件读取口令
+  ------------------------------------------------------------------------------------------
+       --X <日志目录>                                       当前事务日志目录的位置
+  ------------------------------------------------------------------------------------------
+       -d                                                   产生大量的调试除错信息
+  -------------------------------------------------------------------------------------------
+       -s                                                   显示内部设置
+  -------------------------------------------------------------------------------------------
+
+    例18.1 显示内部设置
+
+  -->su - postgres
+
+  -->initdb  -s
+
+VERSION=8.4.20
+PGDATA=/var/lib/pgsql/data
+share_path=/usr/share/pgsql
+PGPATH=/usr/bin
+POSTGRES_SUPERUSERNAME=postgres
+POSTGRES_BKI=/usr/share/pgsql/postgres.bki
+POSTGRES_DESCR=/usr/share/pgsql/postgres.description
+POSTGRES_SHDESCR=/usr/share/pgsql/postgres.shdescription
+POSTGRESQL_CONF_SAMPLE=/usr/share/pgsql/postgresql.conf.sample
+PG_HBA_SAMPLE=/usr/share/pgsql/pg_hba.conf.sample
+PG_IDENT_SAMPLE=/usr/share/pgsql/pg_ident.conf.sample
+
+    例18.2 初始化PostgreSQL数据库
+
+    -->su - postgres
+
+    -->initdb
+
+The files belonging to this database system will be owned by user "postgres".
+This user must also own the server process.
+
+The database cluster will be initialized with locale en_US.UTF-8.
+The default database encoding has accordingly been set to UTF8.
+The default text search configuration will be set to "english".
+
+fixing permissions on existing directory /var/lib/pgsql/data ... ok
+creating subdirectories ... ok
+selecting default max_connections ... 100   -----------------------------#选择默认最大联接数
+selecting default shared_buffers ... 32MB   -----------------------------#设置默认共享缓存区大小
+creating configuration files ... ok
+creating template1 database in /var/lib/pgsql/data/base/1 ... ok
+initializing pg_authid ... ok
+initializing dependencies ... ok
+creating system views ... ok
+loading system objects' descriptions ... ok
+creating conversions ... ok
+creating dictionaries ... ok
+setting privileges on built-in objects ... ok
+creating information schema ... ok
+vacuuming database template1 ... ok
+copying template1 to template0 ... ok
+copying template1 to postgres ... ok
+
+WARNING: enabling "trust" authentication for local connections  #警告：为本地连接启动了"trust"认证
+You can change this by editing pg_hba.conf or using the -A option the  #可以更改或下次允许initdb时使用-A选项
+next time you run initdb.
+
+Success. You can now start the database server using:
+
+    postgres -D /var/lib/pgsql/data
+or
+    pg_ctl -D /var/lib/pgsql/data -l logfile start
+
+-bash-4.1$ 
+
+
+    例18.3 初始化PostgreSQL数据库，将数据库存储在/var/lib/pgsql/postgresql目录中
+
+    -->su - postgres
+
+    -->mkdir /var/lib/pgsql/postgresql
+
+    -->initdb /var/lib/pgsql/postgresql/
+
+The files belonging to this database system will be owned by user "postgres".
+This user must also own the server process.
+
+The database cluster will be initialized with locale en_US.UTF-8.
+The default database encoding has accordingly been set to UTF8.
+The default text search configuration will be set to "english".
+
+fixing permissions on existing directory /var/lib/pgsql/postgresql ... ok
+creating subdirectories ... ok
+selecting default max_connections ... 100
+selecting default shared_buffers ... 32MB
+creating configuration files ... ok
+creating template1 database in /var/lib/pgsql/postgresql/base/1 ... ok
+initializing pg_authid ... ok
+initializing dependencies ... ok
+creating system views ... ok
+loading system objects' descriptions ... ok
+creating conversions ... ok
+creating dictionaries ... ok
+setting privileges on built-in objects ... ok
+creating information schema ... ok
+vacuuming database template1 ... ok
+copying template1 to template0 ... ok
+copying template1 to postgres ... ok
+
+WARNING: enabling "trust" authentication for local connections
+You can change this by editing pg_hba.conf or using the -A option the
+next time you run initdb.
+
+Success. You can now start the database server using:
+
+    postgres -D /var/lib/pgsql/postgresql
+or
+    pg_ctl -D /var/lib/pgsql/postgresql -l logfile start
+
+-bash-4.1$ 
+
+
+    。查看数据库目录文件
+
+    -->ls /var/lib/pgsql/postgresql/
+
+base    pg_clog      pg_ident.conf  pg_stat_tmp  pg_tblspc    PG_VERSION  postgresql.conf
+global  pg_hba.conf  pg_multixact   pg_subtrans  pg_twophase  pg_xlog
+
+
+
+18.2.3 控制postgresql服务
+
+    1.启动postgresql服务
+
+    -->service postgresql start   #root用户
+
+       Starting postgresql service:                               [  OK  ]
+
+    2.查看postgresql服务运行状态
+
+    -->service postgresql status
+
+       postmaster (pid  4954) is running...
+
+    3.停止postgresql服务
+
+    -->service postgresql stop
+
+       Stopping postgresql service:                               [  OK  ]
+
+
+    4.重新启动postgresql服务
+
+    -->service postgresql restart
+
+       Stopping postgresql service:                               [  OK  ]
+       Starting postgresql service:                               [  OK  ]
+
+
+    5.重新加载postgresql服务配置
+
+    -->service postgresql reload
+
+
+    6.开机自动启动postgresql服务
+
+    -->chkconfig  postgresql on
+
+    -->chkconfig --list postgresql
+
+       postgresql     	0:off	1:off	2:on	3:on	4:on	5:on	6:off
+
+
+18.3 PostgreSQL实用程序
+
+18.3.1 常用PostgreSQL实用程序
+
+    要对PostgreSQL数据库进行管理和操作，使用的PostgreSQL实用程序有两种：
+
+    。用户实用程序
+
+    。系统实用程序
+
+    1.用户实用程序
+
+    用户实用程序主要是由postgresql软件包生成的，用于执行PostgreSQL数据库的常规管理操作，
+
+比如创建数据、创建用户等。用户实用程序可以再任何计算机上运行，连接到PostgreSQL服务器进行
+
+操作。
+
+                                          用户实用程序
+    ---------------------------------------------------------------------------------------
+          命令                                           描述
+    ---------------------------------------------------------------------------------------
+        createdb                           创建PostgreSQL数据库
+    ---------------------------------------------------------------------------------------
+        dropdb                             删除PostgreSQL数据库
+    ---------------------------------------------------------------------------------------
+        createuser                         创建PostgreSQL用户
+    ---------------------------------------------------------------------------------------
+        dropuser                           删除PostgreSQL用户
+    ---------------------------------------------------------------------------------------
+        pg_dump                            将PostgreSQL数据库导出到一个脚本文件
+    ---------------------------------------------------------------------------------------
+        pg_dumpall                         将所有的PostgreSQL数据库导出到一个脚本文件
+    ---------------------------------------------------------------------------------------
+        pg_restore                         从一个由pg_dump或pg_dumpall程序导出的脚本文件中
+	                                   恢复PostgreSQL数据库。
+    ---------------------------------------------------------------------------------------
+        psql                               基于命令行的PostgreSQL交互式客户端工具。
+    ---------------------------------------------------------------------------------------
+        vacuumdb                           清理并且优化PostgreSQL数据库
+    ---------------------------------------------------------------------------------------
+        clusterdb                          对一个数据库中之前已经建立过簇的表进行建簇
+    ---------------------------------------------------------------------------------------
+        createlang                         将一个过程语言安装到PostgreSQL数据库中
+    ---------------------------------------------------------------------------------------
+        droplang                           从数据库中删除一个过程语言
+    ---------------------------------------------------------------------------------------
+        reindexdb                          对PostgreSQL数据库重新创建索引
+    ---------------------------------------------------------------------------------------
+
+    2.系统实用程序
+
+    系统实用程序主要是由postgresql-server软件包生成的，用于完成PostgreSQL数据库系统相关的操作，
+
+ 比如初始化数据库、重置日志。系统使用程序只能在PostgreSQL服务器上运行，不能在其他计算机上运行。
+
+                                          系统实用程序
+    ----------------------------------------------------------------------------------------------
+          命令                                描述
+    ----------------------------------------------------------------------------------------------
+        initdb                      初始化一个PostgreSQL数据库簇
+     ---------------------------------------------------------------------------------------------
+        pg_ctl                      启动、停止、重新启动或重新加载配置文件，报告PostgreSQL服务器
+	                            状态，杀掉PostgreSQL进程。
+     ---------------------------------------------------------------------------------------------
+        pg_controldata              显示PostgreSQL数据库簇控制信息
+     ---------------------------------------------------------------------------------------------
+        postgres                    PostgreSQL单用户模式的数据库服务
+     ---------------------------------------------------------------------------------------------
+        postmaster                  PostgreSQL多用户模式的数据库服务
+     ---------------------------------------------------------------------------------------------
+        pg_resetxlog                重置PostgreSQL事务日志
+     ---------------------------------------------------------------------------------------------
+
+18.3.2 pg_ctl 
+
+     pg_ctl是一个启动、停止、重新启动、重新加载配置文件、报告PostgreSQL服务器的状态，或者是杀掉
+
+PostgreSQL进程的工具。
+
+     命令语法：
+
+     pg_ctl[命令][选项]
+
+
+                             pt_ctl命令选项含义
+    ------------------------------------------------------------------------------
+      选项                                          选项含义
+    ------------------------------------------------------------------------------
+      -D<数据目录>                  指定数据库存储的位置。
+     ------------------------------------------------------------------------------
+      -s                            只显示错误信息，没有其他信息
+     ------------------------------------------------------------------------------
+      -t<等待时间>                  指定当使用-w选项时需要等待的秒数
+     ------------------------------------------------------------------------------
+      -W                            不用等待操作完成
+     ------------------------------------------------------------------------------
+      -w                            等待直到操作完成
+     ------------------------------------------------------------------------------
+      -l <日志文件>                 写入或追加PostgreSQL服务器日志到指定文件中
+     ------------------------------------------------------------------------------
+      -c                            允许postgres进程产生核心文件
+     ------------------------------------------------------------------------------
+      -m<关闭模式>                  停止或重启的选项，关闭模式有以下几种方式：
+
+                                    smart:所有客户端断开连接后退出
+
+				    fast:直接退出，正确的关闭
+
+				    immediate:不完全的关闭退出，重启后恢复
+     ------------------------------------------------------------------------------
+      start                         启动postgresql服务
+     ------------------------------------------------------------------------------
+      stop                          停止postgresql服务
+     ------------------------------------------------------------------------------
+      restart                       重新启动postgresql服务
+     ------------------------------------------------------------------------------
+      reload                        重新加载postgresql服务配置
+     ------------------------------------------------------------------------------
+      status                        查看postgresql服务运行状态
+     ------------------------------------------------------------------------------
+
+     例18.4 启动postgresql服务
+
+     -->su - postgres
+
+     -->pg_ctl start
+
+pg_ctl: another server might be running; trying to start server anyway
+FATAL:  lock file "postmaster.pid" already exists
+HINT:  Is another postmaster (PID 5036) running in data directory "/var/lib/pgsql/data"?
+pg_ctl: could not start server
+Examine the log output.
+
+
+    例18.5 查看postgresql服务运行状态
+
+    -->pg_ctl status
+
+pg_ctl: server is running (PID: 5036)
+/usr/bin/postgres "-p" "5432" "-D" "/var/lib/pgsql/data"
+
+
+    例18.6 停止postgresql服务
+
+    --> pg_ctl stop
+
+    waiting for server to shut down.... done
+    server stopped
+
+
+    
+    例18.7 重新启动postgresql服务
+
+    -->pg_ctl restart
+
+waiting for server to shut down.... done
+server stopped
+server starting
+
+
+    例18.8 重新加载postgresql服务配置
+
+    -->pg_ctl reload
+
+    server signaled
+
+18.3.3 psql
+
+    psql是PostgreSQL的交互式客户端工具，通过该工具来管理和操作PostgreSQL数据库。
+
+    命令语法：
+
+    psql [选项][数据库名称 [用户名称]]
+
+                                  psql命令选项含义
+    ----------------------------------------------------------------------------
+      选项                                           选项含义
+    ----------------------------------------------------------------------------
+     -c <命令>                   执行单一命令(SQL或内部指令)后结束
+    ----------------------------------------------------------------------------
+     -d <数据库名称>             指定需要连接的数据库
+    ----------------------------------------------------------------------------
+     -l                          列出所有可用的数据库，然后退出
+    ----------------------------------------------------------------------------
+     -o <文件>                   将查询结果写入文件
+    ----------------------------------------------------------------------------
+     -h <主机名>                 数据库服务器主机
+    ----------------------------------------------------------------------------
+     -p <端口>                   指定PostgreSQL数据库服务器端口，如果不指定则默认
+                                 使用5432
+    -----------------------------------------------------------------------------
+     -S                          单行模式，一行就是一条SQL命令。
+    ------------------------------------------------------------------------------
+     -E                          显示内部命令产生的查询
+    ------------------------------------------------------------------------------
+     -U<用户名>                  指定数据库用户名。如果不知道则默认使用postgres
+    ------------------------------------------------------------------------------
+     -w                          永远不提示输入口令
+    ------------------------------------------------------------------------------
+     -W                          强制口令提示
+    ------------------------------------------------------------------------------
+     -L<文件名>                  将会话日志写入文件
+    ------------------------------------------------------------------------------
+     -s                          单步模式，确认每个查询
+    ------------------------------------------------------------------------------
+     -e                          显示发送给服务器的命令
+    ------------------------------------------------------------------------------
+     -f<文件名>                  从文件中执行命令然后退出。
+    ------------------------------------------------------------------------------
+
+                                            快捷命令
+    -----------------------------------------------------------------------------------
+        快捷命令                                     描述
+    -----------------------------------------------------------------------------------
+        \1[+]                           列出所有的数据库
+    -----------------------------------------------------------------------------------
+        \d[S+]                          列出表、视图和序号
+    -----------------------------------------------------------------------------------
+        \d[S+]名称                      描述表、视图和序列或索引
+    -----------------------------------------------------------------------------------
+        \da[+][模式]                    列出聚合函数
+    -----------------------------------------------------------------------------------
+        \db[+][模式]                    列出表空间
+    -----------------------------------------------------------------------------------
+        \dc[S][模式]                    列出字元编码转换
+    -----------------------------------------------------------------------------------
+        \dC[模式]                       列出类型强制转换
+    -----------------------------------------------------------------------------------
+        \dd[S][模式]                    显示对象的注释
+    -----------------------------------------------------------------------------------
+        \dD[S][模式]                    列出共同值域
+    -----------------------------------------------------------------------------------
+        \di[S+][模式]                   列出索引
+    -----------------------------------------------------------------------------------
+        \ds[S+][模式]                   列出序列
+    -----------------------------------------------------------------------------------
+        \du[+][模式]                    列出角色(用户)
+    -----------------------------------------------------------------------------------
+        \dT[S+][模式]                   列出数据类型
+    -----------------------------------------------------------------------------------
+        \dv[S+][模式]                   列出视图
+    -----------------------------------------------------------------------------------
+        \dt[S+][模式]                   列出表
+    -----------------------------------------------------------------------------------
+        \dp[模式]                       列出表、视图和序列的访问权限
+    -----------------------------------------------------------------------------------
+        \dg[+][模式]                    列出角色(组) 
+    ------------------------------------------------------------------------------------
+        \dn[+][模式]                    列出模式
+    ------------------------------------------------------------------------------------
+        \deu[+][模式]                   列出用户映射
+    ------------------------------------------------------------------------------------
+        \des[+][模式]                   列出外部服务器
+    ------------------------------------------------------------------------------------
+        \dFt[+][模式]                   列出文本搜索模板
+    -------------------------------------------------------------------------------------
+        \dF[+][模式]                    列出文本搜索配置
+    --------------------------------------------------------------------------------------
+        \dFp[+][模式]                   列出文本搜索解析器
+    --------------------------------------------------------------------------------------
+        \dFd[+][模式]                   列出文本搜索字典
+    --------------------------------------------------------------------------------------
+        \dew[+][模式]                   列出外部数据封装器
+    --------------------------------------------------------------------------------------
+        \df[antw][S+][模式]             列出[只包含聚合/常规/触发器/窗口]函数
+    ---------------------------------------------------------------------------------------
+        \dl                             列出大对象
+    ---------------------------------------------------------------------------------------
+         \do[S][模式]                   列出运算符
+    ---------------------------------------------------------------------------------------
+
+
+                                           提示符
+     ---------------------------------------------------------------------------------------------------------------------
+          提示符                                        状态
+     ----------------------------------------------------------------------------------------------------------------------
+        postgres=#                      以管理员连接到postgres数据库
+     ----------------------------------------------------------------------------------------------------------------------
+        postgres=>                      以普通用户连接到postgres数据库
+     ----------------------------------------------------------------------------------------------------------------------
+        postgres-#                      等待多行命令的下一行(管理员连接)
+     ----------------------------------------------------------------------------------------------------------------------
+        postgres->                      等待多行命令的下一行(普通用户连接)
+     ----------------------------------------------------------------------------------------------------------------------
+        postgres(#                      以括号开始的字符串还没有以括号结束，等待下一行匹配开始的括号（管理员连接)
+     ----------------------------------------------------------------------------------------------------------------------
+        postgres(>                      以括号开始的字符串还没有以括号结束，等待下一行匹配开始的括号（普通用户连接）
+     -----------------------------------------------------------------------------------------------------------------------
+        postgres'#                      以一个单引号开始的字符串还没有以单引号结束，等待下一行匹配开始的单引号(管理员连接）
+     ------------------------------------------------------------------------------------------------------------------------
+        postgres'>                      以一个单引号开始的字符串还没有以单引号结束，等待下一行匹配开始的单引号(普通用户连接）
+     ------------------------------------------------------------------------------------------------------------------------
+        postgres"#                      以一个双引号开始的字符串还没有以双引号结束，等待下一行匹配开始的双引号(管理员连接)
+     ------------------------------------------------------------------------------------------------------------------------
+        postgres">                      以一个双引号开始的字符串还没有以双引号结束，等待下一行匹配开始的双引号(普通用户连接)
+     ------------------------------------------------------------------------------------------------------------------------
+
+
+     查询用户角色
+
+     -->psql
+
+     -->SELECT * FROM pg_roles;
+
+
+     例18.9 连接到数据库template1，并列出服务器上所有的数据库
+ 
+     -->su - postgres
+
+     -->psql template1
+
+psql (8.4.20)
+Type "help" for help.
+template1=#
+
+     -->help
+
+     -->\copyright    -----------------------------#显示发行条款
+
+PostgreSQL Data Base Management System
+
+Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+
+This software is based on Postgres95, formerly known as Postgres, which
+contains the following notice:
+
+Portions Copyright(c) 1994, Regents of the University of California
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose, without fee, and without a written agreement
+is hereby granted, provided that the above copyright notice and this paragraph
+and the following two paragraphs appear in all copies.
+
+IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR
+DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST
+PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
+THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
+
+THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE.THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS,
+AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,
+SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+    -->\h  ----------------------------------------------------------------------------#显示SQL命令的说明
+
+Available help:
+  ABORT                            CREATE LANGUAGE                  DROP TEXT SEARCH DICTIONARY
+  ALTER AGGREGATE                  CREATE OPERATOR                  DROP TEXT SEARCH PARSER
+  ALTER CONVERSION                 CREATE OPERATOR CLASS            DROP TEXT SEARCH TEMPLATE
+  ALTER DATABASE                   CREATE OPERATOR FAMILY           DROP TRIGGER
+  ALTER DOMAIN                     CREATE ROLE                      DROP TYPE
+  ALTER FOREIGN DATA WRAPPER       CREATE RULE                      DROP USER
+  ALTER FUNCTION                   CREATE SCHEMA                    DROP USER MAPPING
+  ALTER GROUP                      CREATE SEQUENCE                  DROP VIEW
+
+
+
+    
+    -->\?   ---------------------------------------------------------------------------#显示pgsql命令的说明
+General
+  \copyright             show PostgreSQL usage and distribution terms
+  \g [FILE] or ;         execute query (and send results to file or |pipe)
+  \h [NAME]              help on syntax of SQL commands, * for all commands
+  \q                     quit psql
+
+Query Buffer
+  \e [FILE]              edit the query buffer (or file) with external editor
+  \ef [FUNCNAME]         edit function definition with external editor
+  \p                     show the contents of the query buffer
+  \r                     reset (clear) the query buffer
+  \s [FILE]              display history or save it to file
+  \w FILE                write query buffer to file
+
+Input/Output
+  \copy ...              perform SQL COPY with data stream to the client host
+  \echo [STRING]         write string to standard output
+  \i FILE                execute commands from file
+  \o [FILE]              send all query results to file or |pipe
+  \qecho [STRING]        write string to query output stream (see \o)
+
+      
+    -->\g 或者以分号(;)结尾以执行查询
+
+    -->\q 退出
+
+    -->template1=# \l     -----------------------------------------------#列出所有的数据库
+
+
+                                  List of databases(资料库列表)
+
+   名称       拥有者    子元编码    排序规则                     存取权限
+   Name    |  Owner   | Encoding |  Collation  |    Ctype    |   Access privileges   
+-----------+----------+----------+-------------+-------------+-----------------------
+ postgres  | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ template0 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ template1 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+(3 rows)
+
+
+18.4 管理和维护PostgreSQL数据库
+
+18.4.1 数据库
+
+    数据库是指以一定方式存储在一起，能为多个用户共享，具有尽可能小的冗余度、与应用程序彼此独立的
+
+数据集合。
+
+    1.创建数据库
+
+    在PostgreSQL服务器中可以使用createdb命令和CREATE DATABASE语句创建数据库
+
+    (1)createdb命令
+
+    使用createdb命令可以创建一个PostgreSQL数据库
+
+    命令语法：
+
+    createdb[选项][数据库][描述]
+
+                                               createdb命令选项含义
+    ------------------------------------------------------------------------------------------------------
+        选项                                                        选项含义
+    ------------------------------------------------------------------------------------------------------
+       -D<表空间>                               数据库默认表空间
+    ------------------------------------------------------------------------------------------------------
+       -e                                       显示发送到服务端的命令
+    ------------------------------------------------------------------------------------------------------
+       -O<所有者>                               新数据库的所属用户
+   -------------------------------------------------------------------------------------------------------
+       -E<编码>                                 指定数据库的编码
+   -------------------------------------------------------------------------------------------------------
+       -h<主机名>                               数据库服务器的主机名
+   -------------------------------------------------------------------------------------------------------
+       -p<端口>                                 数据库服器端口号
+   -------------------------------------------------------------------------------------------------------
+       -U<用户>                                 连接的用户名
+   -------------------------------------------------------------------------------------------------------
+       -w                                       永远不提示输入输入口令
+   -------------------------------------------------------------------------------------------------------
+       -W                                       强制提示输入口令
+   -------------------------------------------------------------------------------------------------------
+       -T<模板数据库>                           指定要复制的数据库模板
+   -------------------------------------------------------------------------------------------------------
+
+   例18.10 创建数据库www
+
+   -->-bash-4.1$ createdb www   #创建数据库www
+
+   -->-bash-4.1$ psql -l        #查看数据库
+
+                                  List of databases(资料库列表)
+
+   名称      拥有者     字元编码    排序规则                     存取权限
+   Name    |  Owner   | Encoding |  Collation  |    Ctype    |   Access privileges   
+-----------+----------+----------+-------------+-------------+-----------------------
+ postgres  | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ template0 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ template1 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ www       | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+(4 rows)
+
+
+    (2)CREATE DATABASE语句
+
+    CREATE DATABASE 语句用于创建数据库。
+
+
+
+    例18.12 创建数据库www2
+
+    -->bash-4.1$ psql
+psql (8.4.20)
+Type "help" for help.
+
+postgres=# CREATE DATABASE www2;
+CREATE DATABASE
+
+      
+    -->postgres=# \l
+                                  List of databases
+   Name    |  Owner   | Encoding |  Collation  |    Ctype    |   Access privileges   
+-----------+----------+----------+-------------+-------------+-----------------------
+ postgres  | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ template0 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ template1 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ www       | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ www2      | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+
+
+    -->-bash-4.1$ psql
+
+       psql (8.4.20)
+       Type "help" for help.
+
+    -->postgres=# CREATE DATABASE www2;
+
+       CREATE DATABASE
+
+
+    -->postgres-# \q         ------------------------#退出再查询
+
+    -->-bash-4.1$ psql  -l  
+                                  List of databases
+   Name    |  Owner   | Encoding |  Collation  |    Ctype    |   Access privileges   
+-----------+----------+----------+-------------+-------------+-----------------------
+ postgres  | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ template0 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ template1 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ www       | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ www2      | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+(5 rows)
+
+
+
+    例18.13 创建数据库www3,所有者为postgres，表空间为pg_default
+
+    -->postgres=# CREATE DATABASE www3 OWNER postgres TABLESPACE pg_default;
+
+       CREATE DATABASE
+
+
+    例18.14 创建数据库www4,字符集编码为UTF8，临时表空间为template0
+
+    -->postgres=# CREATE DATABASE www4 ENCODING 'UTF8' TEMPLATE template0;
+
+       CREATE DATABASE
+
+    注意：必须和系统字符集一样。
+
+
+    2. 修改数据库
+
+    alter database语句用于修改数据库的属性
+
+    例18.15 在数据库www中禁用索引扫描
+
+    -->postgres=# alter database www set enable_indexscan to off;
+
+       ALTER DATABASE
+
+
+    例18.16 更改数据库www的所有者为psql_1(该用户需要先创建)
+
+    -->create user psql_1;
+
+       CREATE ROLE
+
+    -->alter database www owner to psql_1;
+
+       ALTER DATABASE
+
+
+    例18.7 将数据库www的名称更改为www9
+
+    -->alter database www rename to www9;
+
+       ALTER DATABASE
+
+
+    3.删除数据库
+
+    在PostgreSQL数据库中，可以使用dropdb命令和drop database语句删除数据库。
+
+    (1)dropdb命令
+
+    命令语法：
+
+    dropdb [选项] [数据库]
+
+                                      dropdb命令选项含义
+    -------------------------------------------------------------------------
+       选项                                    选项含义
+    -------------------------------------------------------------------------
+        -e                     显示发送到服务端的命令
+    -------------------------------------------------------------------------
+        -i                     删除数据库之前显示提示信息
+    -------------------------------------------------------------------------
+        -h<主机名>             数据库服务器的主机名
+    -------------------------------------------------------------------------
+        -p<端口号>             数据库服务器端口号
+    -------------------------------------------------------------------------
+        -U<用户名>             连接的用户名
+    -------------------------------------------------------------------------
+        -w                     永远不提示输入口令
+    ------------------------------------------------------------------------
+        -W                     强制提示输入口令
+    ------------------------------------------------------------------------
+
+
+    例18.18 删除数据库www9
+
+    -->-bash-4.1$ dropdb www9
+
+    -->-bash-4.1$ psql -l
+                                  List of databases
+   Name    |  Owner   | Encoding |  Collation  |    Ctype    |   Access privileges   
+-----------+----------+----------+-------------+-------------+-----------------------
+ postgres  | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ template0 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres
+                                                             : postgres=CTc/postgres
+ template1 | postgres | UTF8     | en_US.utf8  | en_US.utf8  | 
+ www2      | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ www3      | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ www4      | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+(6 rows)
+
+
+    例18.19 删除数据库www，删除之前显示提示信息和发送到服务端的命令。
+
+    -->-bash-4.1$ dropdb -ie www
+
+Database "www" will be permanently removed.
+Are you sure? (y/n) y   #----------------------输入y确认
+DROP DATABASE www;
+-bash-4.1$ 
+
+
+    例18.20 删除数据库www
+
+    -->postgres=# drop database www;
+
+      DROP DATABASE
+      postgres=# 
+
+
+18.4.2 表空间
+
+
+    PostgreSQL表空间允许在文件系统里定义那些代表数据库对象的文件存放的位置，一旦创建了
+
+表空间，那么就可以在创建数据库对象的时候引用它。
+
+    使用表空间可以控制一个PostgreSQL安装的磁盘布局，具有以下用处：
+
+    。如果初始化集群所在的分区或者卷用光了空间，而又不能逻辑上扩展或者别的什么操作，那么
+
+表空间可以在一个不同的分区上创建和使用，直到系统可以重新配置。
+
+    。表空间允许根据数据库对象的使用模式安排数据位置，从而优化性能。比如一个频繁使用的索引
+
+可以放在非常快的，并且非常可靠的磁盘上，比如一种非常贵的固态设备。而同时，一个存储归档的数据，
+
+很少使用的，或者对性能要求不高的表可以存储在一个没那么昂贵，比较慢的磁盘系统上。
+
+
+    initdb初始化数据库的时候会自动创建两个表空间。
+
+    。pg_global表空间：用于共享的系统表。
+
+    。pg_default表空间：是template1和template0数据库默认表空间。
+
+
+    1.创建表空间
+
+    例18.21 创建表空间work，存储目录为/var/lib/pgsql/data/work
+
+    -->-bash-4.1$ mkdir  /var/lib/pgsql/data/work
+
+    -->-bash-4.1$ psql www
+
+      psql (8.4.20)
+      Type "help" for help.
+
+    。创建表空间work
+
+    -->www=# create tablespace work LOCATION '/var/lib/pgsql/data/work';
+
+
+
+    例18.22 查看表空间pg_tablespace的信息
+
+    -->www=# select spcname from pg_tablespace;
+
+  
+  spcname   
+------------
+ pg_default
+ pg_global
+ work
+(3 rows)
+
+
+    -->www=# \db
+               List of tablespaces(表空间列表)
+
+    名称      拥有者             所在地
+    Name    |  Owner   |         Location         
+------------+----------+--------------------------
+ pg_default | postgres | 
+ pg_global  | postgres | 
+ work       | postgres | /var/lib/pgsql/data/work
+(3 rows)
+
+
+    例18.23 在表空间work上创建表table5
+
+    -->www=# create table table5(id int,name varchar(20)) tablespace work;
+
+       CREATE TABLE
+
+
+    -->www=# \d table5
+
+           Table "public.table5"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id     | integer               | 
+ name   | character varying(20) | 
+Tablespace: "work"
+
+
+    例18.24 创建表空间indexspace，所有者为postgres，目录是/data/indexes
+
+    -->mkdir -p /data/indexes  #root
+
+    -->chown postgres:postgres /data/indexes/  #root
+
+    -->su - postgres
+
+    -->psql www
+
+    -->www=# create tablespace indexspace owner postgres location '/data/indexes';
+
+       CREATE TABLESPACE
+
+
+    2.修改表空间
+
+    例18.25 更改表空间work的名称为work2
+
+    -->www=# alter tablespace work rename to work2;
+
+       ALTER TABLESPACE
+
+    -->www=# select spcname from pg_tablespace;
+
+  spcname   
+------------
+ pg_default
+ pg_global
+ indexspace
+ work2
+(4 rows)
+
+
+     例18.26 更改表空间work2的所有者为psql_1
+
+     -->www=# alter tablespace work2 owner to psql_1;
+
+        ALTER TABLESPACE
+
+
+    3.删除表空间
+
+    drop tablespace语句从系统中删除一个表空间，表空间只能由其所有者或超级用户删除。
+
+只有先把使用这个表空间的所有数据库里的所有对象都删除掉，才能删除该表空间。
+
+    例18.27 删除表空间work2
+
+    -->www=# drop table table5;
+
+       DROP TABLE
+
+    -->www=# drop tablespace work2;
+
+       DROP TABLESPACE
+
+
+
+
+       1、通过命令行查询
+        \d 数据库 —— 得到所有表的名字
+        \d 表名 —— 得到表结构
+
+       2、通过SQL语句查询
+
+    "select * from pg_tables" —— 得到当前db中所有表的信息（这里pg_tables是系统视图）
+    "select tablename from pg_tables where schemaname='public'" —— 得到所有用户自定义表的名字
+    （这里"tablename"字段是表的名字，"schemaname"是schema的名字。
+    用户自定义的表，如果未经特殊处理，默认都是放在名为public的schema下）
+
+
+
+18.4.3 模式
+
+    模式类似于操作系统层次的目录，只不过模式不能嵌套。一个数据库包含一个或多个模式，模式又
+
+包含数据库对象，比如表、数据类型、函数以及操作符。同一个对象名可以在不同的模式里使用而不会导致
+
+冲突。模式不是严格分离的，一个用户只要有权限可以访问他所连接的数据库中的任意模式中的对象。
+
+    使用模式的原因：
+
+    。允许多个用户使用一个数据库而不会干扰其它用户。
+
+    。把数据库对象组织成逻辑组，让它们更便于管理。
+
+    。第三方的应用可以放在不同的模式中，这样他们就不会和其他对象的名字冲突。
+
+
+    1.创建模式
+
+    例18.28 创建模式schema_1
+
+    -->www=# create schema schema_1;
+
+       CREATE SCHEMA  
+
+
+    例18.29 创建模式schema_2，所有者为psql_1
+
+    -->www=# create schema schema_2 authorization psql_1;
+
+       CREATE SCHEMA
+
+    注意：要创建或者访问在模式中的对象，需要写出一个受修饰的名字，这个名字中包含
+
+模式名以及对象名，它们之间用一个句点分开，格式为schema.table，这个方式在任何需要
+
+表名字的地方都可用。
+
+    例18.30 在模式schema_1中创建表table1
+
+    -->www=# create table schema_1.table1(id int,name varchar(20));
+
+      CREATE TABLE
+
+
+    2.修改模式
+
+    alter schema语句用于修改模式，比如修改模式所有者和模式名称。修改模式的所有者还必须
+
+是新的所有者的直接或间接的成员，以及对数据库有CREATE权限。
+
+    例18.31 修改模式schema_1的所有者为postgres
+
+    -->www=# alter schema schema_1 owner to postgres;
+
+      ALTER SCHEMA
+
+    例18.32 重名名模式schema_1的名称为schema_3
+
+    -->www=# alter schema schema_1 rename to schema_3;
+
+      ALTER SCHEMA
+
+ 
+    3.模式搜索路径
+
+    在搜索路径中的第一个模式叫做当前模式。除了是搜索的第一个模式之外，它还是在create table没有
+
+声明模式名的时候，新创建的表所在的地方。
+
+    。要显示当前搜索路径：
+
+    -->www=# show search_path;
+
+  search_path   
+----------------
+ "$user",public
+(1 row)
+
+
+    第一个元素声明将要搜索一个和当前用户同名的模式。因为还没有这样的模式存在，所以这条记录被忽略。
+
+    第二个元素指向已经看过的公共模式。
+
+
+   。要把新的模式放到路径中来，使用以下命令
+
+   -->www=# SET search_path TO schema_2,public;
+
+      SET
+
+   -->www=# show search_path ;
+
+   search_path    
+------------------
+ schema_2, public
+(1 row)                #1行记录
+
+
+    -->www-# drop table table1;
+
+
+    4.删除模式
+
+    DROP SCHEMA语句用于在数据库中删除模式。如果模式中包含数据库对象则需使用CASCADE，模式删除时会把包
+
+含的所有对象都删除掉。只能由模式所有者或超级用户才能删除模式。
+  
+    -->www=# drop schema schema_1 cascade;
+
+      DROP SCHEMA
+
+
+18.4.4 表
+
+    表是数据库中用来存储数据的对象，是有结构的数据的集合。
+
+
+    1.创建表
+
+    CREATE TABLE语句用于创建一个新的表
+
+    例18.34：在数据库www中创建表table1
+
+    -->www=# create table table1(id int,name varchar(20));
+ 
+       CREATE TABLE
+
+
+   -->www=# \dt -----------------#查看表信息
+
+         List of relations
+ Schema |  Name  | Type  |  Owner   
+--------+--------+-------+----------
+ public | table1 | table | postgres
+(1 row)
+
+
+    例18.35 创建表table8,存储在表空间pg_default上。
+
+    -->www=# create table table8 (id int,name varchar(20)) tablespace pg_default;
+
+       CREATE TABLE
+
+
+    2.查看表结构
+
+    在psql中使用\d命令结合表名可以提供有关表中各列的信息。
+
+    -->www=# \d table1
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id     | integer               | 
+ name   | character varying(20) | 
+
+
+
+    3.修改表
+
+    ALTER TABLE语句用于修改表
+
+    例18.37 在表table1中添加列
+
+    -->www=# alter table table1 add column pay int;
+
+       ALTER TABLE
+
+    -->www=# \d table1;
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id     | integer               | 
+ name   | character varying(20) | 
+ pay    | integer               | 
+ 
+
+    例18.38 修改表table1中的pay列数据类型为varchar(20)
+
+    -->www=# alter table table1 alter column pay type varchar(20);
+
+       ALTER TABLE
+
+    -->www=# \d table1;
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id     | integer               | 
+ name   | character varying(20) | 
+ pay    | character varying(20) | 
+
+
+
+    例18.39 删除表table1中的列pay
+
+    -->www=# alter table table1 drop column pay;
+
+       ALTER TABLE
+
+    -->www=# \d table1;
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id     | integer               | 
+ name   | character varying(20) | 
+
+
+    例18.40：将表table1移动到表空间work中。
+
+    -->www=# alter table table1 set tablespace work;
+
+       ALTER TABLE
+
+
+    例18.41 重命名表table1的id列名称为id2
+
+    -->www=# alter table table1 rename column id to id2;
+
+       ALTER TABLE
+
+    -->www=# \d table1
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id2    | integer               | 
+ name   | character varying(20) | 
+Tablespace: "work"
+
+
+
+    例18.42 修改表table1的name列为非空约束
+
+    -->www=# alter table table1 alter column name set not null;
+
+       ALTER TABLE
+
+    -->www=# \d table1
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id2    | integer               | 
+ name   | character varying(20) | not null
+Tablespace: "work"
+
+
+    例18.43 修改表table1,删除name列的非空约束
+
+    -->www=# alter table table1 alter column name drop not null;
+
+       ALTER TABLE
+
+
+    -->www=# \d table1
+
+           Table "public.table1"
+ Column |         Type          | Modifiers 
+--------+-----------------------+-----------
+ id2    | integer               | 
+ name   | character varying(20) | 
+Tablespace: "work"
+
+
+
+    例18.44 修改表table1的name列设置默认值
+
+    -->www=# alter table table1 alter column name set default 'zhangsan';
+
+       ALTER TABLE
+
+
+    -->www=# \d table1
+                         Table "public.table1"
+ Column |         Type          |               Modifiers               
+--------+-----------------------+---------------------------------------
+ id2    | integer               | 
+ name   | character varying(20) | default 'zhangsan'::character varying
+Tablespace: "work"
+
+
+    例18.45 去除表table1的name列的默认值
+
+    -->www=# alter table table1 alter column name drop default;
+
+       ALTER TABLE
+
+
+    例18.46 将表table1从模式public移动到模式information_schema中
+
+    -->www=# alter table public.table1 set schema information_schema;
+
+       ALTER TABLE
+
+    例18.47 重命名表table1的名称为table10
+
+    -->www=# alter table table1 rename to table10;
+
+       ALTER TABLE
+
+
+    4.删除表
+
+    DROP TABLE语句用于在数据库中删除表。删除表的同时也会删除表中的任何索引、
+
+规则、触发器和约束。但是要删除一个由一个视图或另一个表的外键约束引用的表，必须
+
+声明CASCADE，CASCADE将完全删除相关视图，但在外键情况下，它只会删除外键约束，而
+
+不是其他的表。
+
+    例18.48 删除表table1
+
+    -->www=# drop table table1;
+
+       DROP TABLE
+
+    例18.49 同时删除表table2和table3
+
+    -->www=# drop table table2,table3;
+
+
+18.4.5 DML数据操作
+
+    DML(Data Manipulation Language，数据操纵语言)语句使用户能够查询表或视图中的数据以及
+
+操作已有表或视图中的数据。基本的DML数据操作可以分为4种：插入INSERT、查询SELECT、更新UPDATE
+
+和删除DELETE。
+
+    1.INSERT: 插入数据
+
+    例18.50 往表table1中插入数据
+
+    -->www=# create table table1(id int,name varchar(20));
+
+CREATE TABLE
+www=# insert into table1 values(1,'张三');
+INSERT 0 1
+
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+  1 | 张三
+(1 row)
+
+
+    例18.51 往表table1中的id列插入数据
+
+    -->www=# insert into table1(id) values(2);
+
+       INSERT 0 1
+
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+  1 | 张三
+  2 | 
+(2 rows)
+
+
+    例18.52 往表table1中插入默认值
+
+    -->www=# insert into table1 default values;
+
+INSERT 0 1
+www=# 
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+  1 | 张三
+  2 | 
+    | 
+(3 rows)
+
+
+    例18.53 查询表table1的数据插入表table1
+
+    -->www=# insert into table1 select * from table1;
+
+       INSERT 0 3
+
+
+    2. SELECT:查询数据
+
+    例18.54：查询表table1数据
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+  1 | 张三
+  2 | 
+    | 
+  1 | 张三
+  2 | 
+    | 
+(6 rows)
+
+
+
+    3. UPDATE：更新数据
+
+    例18.55 更新表table1中满足条件id=1的数据
+
+    -->www=# update table1 set id=2 where id =1;
+
+       UPDATE 2
+
+
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+  2 | 
+    | 
+  2 | 
+    | 
+  2 | 张三
+  2 | 张三
+(6 rows)
+
+
+    例18.56：更新表table1中满足条件id=10的id和name列的数据
+
+    -->www=# update table1 set id=10,name='wangwu' where id=2;
+
+       UPDATE 4
+
+    -->www=# select * from table1;
+
+ id |  name  
+----+--------
+    | 
+    | 
+ 10 | wangwu
+ 10 | wangwu
+ 10 | wangwu
+ 10 | wangwu
+(6 rows)
+
+
+    例18.57：更新表table1中满足条件id=1的id和name列的数据
+
+    -->www=# update table1 set(id,name)=(10,'lis') where id=10;
+
+       UPDATE 4
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+    | 
+    | 
+ 10 | lis
+ 10 | lis
+ 10 | lis
+ 10 | lis
+(6 rows)
+
+
+    4. DELETE:删除数据
+
+    DELETE语句用于删除数据表中的数据。如果没有指定WHERE条件，那么将删除表中所有的数据。
+
+    例18.58 删除table1中满足id=10的条件的数据
+
+    -->www=# delete from table1 where id=10;
+
+        DELETE 4
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+    | 
+    | 
+(2 rows)
+
+
+    例18.59 删除表table1数据
+
+    -->www=# delete from table1;
+
+       DELETE 2
+
+    -->www=# select * from table1;
+
+ id | name 
+----+------
+(0 rows)
+
+
+18.4.6 索引
+
+    索引是对表中一列或多列的值进行排序的一种结构，通过使用索引可以快速地访问表中的数据。
+
+索引提供者指向存储在表的指定列中的数据指的指针，然后根据指定的排序顺序对这些指针排序。在
+
+PostgreSQL数据库中可以创建B-tree(默认)、hash、GiST和GIN等几种索引来提高数据库的性能。
+
+    1.创建索引
+
+
+    例18.60 创建索引index1
+
+    -->www=# create index index1 on table1(id);
+
+       CREATE INDEX
+
+    -->www=# \di
+
+
+              List of relations(关联列表)
+
+ 架构模式  名称    型别     拥有者    资料表
+ Schema |  Name  | Type  |  Owner   | Table  
+--------+--------+-------+----------+--------
+ public | index1 | index | postgres | table1
+
+
+
+    -->www=# \d index1
+
+Index "public.index1"
+ Column |  Type   
+--------+---------
+ id     | integer
+btree, for table "public.table1"
+
+
+    2. 创建唯一索引index2
+
+    -->www=# create unique index index2 on table1(id);
+
+       CREATE INDEX
+
+www=# \di
+              List of relations
+ Schema |  Name  | Type  |  Owner   | Table  
+--------+--------+-------+----------+--------
+ public | index1 | index | postgres | table1
+ public | index2 | index | postgres | table1
+(2 rows)
+
+
+    例18.62：创建唯一索引index3，设置填充因子为70
+
+    -->www=# create unique index index3 on table1(id) with (fillfactor=70);
+
+      CREATE INDEX
+
+    -->www=# \di
+              List of relations
+ Schema |  Name  | Type  |  Owner   | Table  
+--------+--------+-------+----------+--------
+ public | index1 | index | postgres | table1
+ public | index2 | index | postgres | table1
+ public | index3 | index | postgres | table1
+(3 rows)
+
+
+
+    备注：填充因子是为了优化索引数据的存储和性能。当创建或重新生成索引时，填充因子的值可以确定
+
+每个叶级页上要填充数据的空间百分比，以便保留一定百分比的可用空间供以后扩展索引。比如指定填充因子
+
+的值为80，表示每个叶级页上将有20%的空间保留位空，以便随着在基础表中添加数据而为扩展索引提供空间。
+
+填充因子值是1到100之间的百分比只，服务器范围的默认值为0，这表示将完全填充叶级页。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

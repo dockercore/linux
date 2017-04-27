@@ -1,0 +1,1382 @@
+                                       第12章 配置vsftpd服务器
+
+12.1 FTP简介
+
+    在企业中，将文件存储在FTP服务器上的主目录中以便用户可以建立FTP连接，然后通过FTP客户端进行
+
+文件传输以便访问。
+
+12.1.1 什么是FTP 
+
+    FTP(File Transfer Protocol，文件传输协议)可以在网络中传输稳定、图像、音频、视频以及应用程序
+
+等多种类型的文件。
+
+    一个完整的FTP文件传输需要建立两种类型的连接，一种为控制文件传输的命令，称为控制连接，另一种实现
+
+真正的文件传输，称为数据连接。
+
+    1.控制连接
+
+    FTP服务器接受来自客户端的请求，完成连接的建立过程。
+
+    2.数据连接
+
+    FTP数据连接就是FTP传输数据的过程，它有【主动传输】和【被动传输】两种。
+
+12.1.2 FTP数据传输原理
+
+12.1.3 FTP传输模式
+
+    1.主动模式(PORT模式)
+
+    主动模式的数据传输专有连接时在建立控制连接后，首先由20端口主动向客户端进行连接，建立专用于传输数据的连接。
+
+    FTP服务器上的端口21用于用户验证，端口20用于数据传输，只要将这两个端口开放就可以使用FTP功能。
+
+
+    2.被动模式(PASV模式)
+
+    数据传输专有连接是在建立控制连接后（用户身份验证完成）由客户端向FTP服务器发起连接的。客户端使用哪个端口，
+
+ 连接到FTP服务器的哪个端口都是随机产生的。服务器并不参与数据的主动传输，只是被动接受。
+
+
+ 12.1.4 FTP协议消息号
+
+                                    FTP协议号
+    -------------------------------------------------------------------------------------------------------------------------
+      消息号                                                      描述
+    -------------------------------------------------------------------------------------------------------------------------
+        110                  重新启动标记应答。在这种情况下文本是确定的，它必须是MARK yyyy=mmmm,其中yyyy是用户进程数据流标记，
+	                     mmmm是服务器标记。
+    --------------------------------------------------------------------------------------------------------------------------
+        120                  服务在nnn分钟内准备好
+    --------------------------------------------------------------------------------------------------------------------------
+        125                  打开数据连接，开始传输
+    --------------------------------------------------------------------------------------------------------------------------
+        150                  文件状态良好，打开数据连接
+    --------------------------------------------------------------------------------------------------------------------------
+        200                  命令成功
+    --------------------------------------------------------------------------------------------------------------------------
+        202                  命令未实现
+    --------------------------------------------------------------------------------------------------------------------------
+        211                  系统状态或系统帮助响应 
+    --------------------------------------------------------------------------------------------------------------------------
+        212                  目录状态
+    --------------------------------------------------------------------------------------------------------------------------
+        213                  文件状态
+    --------------------------------------------------------------------------------------------------------------------------
+        214                  帮助信息
+    ---------------------------------------------------------------------------------------------------------------------------
+        215                  名字系统类型
+    ---------------------------------------------------------------------------------------------------------------------------
+        221                  退出FTP 
+    ---------------------------------------------------------------------------------------------------------------------------
+        220                  对新用户服务准备好
+    ----------------------------------------------------------------------------------------------------------------------------
+        225                  数据连接打开，无传输正在进行
+    ----------------------------------------------------------------------------------------------------------------------------
+        226                  数据传输完毕
+    ----------------------------------------------------------------------------------------------------------------------------
+        227                  进入被动模式
+    ----------------------------------------------------------------------------------------------------------------------------
+        230                  用户登录成功
+    ----------------------------------------------------------------------------------------------------------------------------
+        250                  请求的文件操作完成
+    ----------------------------------------------------------------------------------------------------------------------------
+        257                  创建目录
+    ----------------------------------------------------------------------------------------------------------------------------
+        331                  用户名正确，需要输入密码
+    ----------------------------------------------------------------------------------------------------------------------------
+        332                  登录时需要账户信息
+    ----------------------------------------------------------------------------------------------------------------------------
+        350                  请求的文件操作需要进一步命令
+    ----------------------------------------------------------------------------------------------------------------------------
+        421                  不能提供服务，关闭控制连接
+    ----------------------------------------------------------------------------------------------------------------------------
+        425                  不能打开数据连接
+    ----------------------------------------------------------------------------------------------------------------------------
+        426                  数据连接关闭，传输中断
+    ----------------------------------------------------------------------------------------------------------------------------
+        450                  请求的文件操作未执行
+    ----------------------------------------------------------------------------------------------------------------------------
+        451                  中止请求的操作：有本地错误
+    ----------------------------------------------------------------------------------------------------------------------------
+        452                  未执行请求的操作：系统存储空间不足
+    ----------------------------------------------------------------------------------------------------------------------------
+        500                  语法错误，命令不可识别
+    ----------------------------------------------------------------------------------------------------------------------------
+        501                  参数语法错误
+    -----------------------------------------------------------------------------------------------------------------------------
+        502                  命令未实现
+    ------------------------------------------------------------------------------------------------------------------------------
+        503                  命令顺序错误
+    ------------------------------------------------------------------------------------------------------------------------------
+        504                  此参数下的命令功能未实现
+    ------------------------------------------------------------------------------------------------------------------------------
+        530                  未登录，登录账号或密码错误
+    ------------------------------------------------------------------------------------------------------------------------------
+        532                  存储文件需要账户信息
+    ------------------------------------------------------------------------------------------------------------------------------
+        550                  未执行请求的操作
+    ------------------------------------------------------------------------------------------------------------------------------
+        551                  请求操作中止，页类型未知
+    ------------------------------------------------------------------------------------------------------------------------------
+        552                  请求的文件操作中止，存储分配溢出
+    ------------------------------------------------------------------------------------------------------------------------------
+        553                  未执行请求的操作：文件名不合法
+    ------------------------------------------------------------------------------------------------------------------------------
+  
+12.1.5  FPT用户
+
+    FTP服务器提供了3类用户。
+
+    1.匿名用户
+
+      匿名用户访问FTP服务器时使用账户anonymous或ftp
+
+    2.本地用户
+
+      这类用户是指在FTP服务器上拥有账户。当这类用户访问FTP服务器的时候，其默认的主目录就是账户命名目录。
+
+但是它可以变更到其它目录中去。
+
+    3.虚拟用户
+
+      在FTP服务器中，使用这类用户只能够访问其主目录下的文件，而不能访问主目录意外的文件。
+
+
+12.1.6 vsftpd简介
+
+    vsftpd(very secure FTP daemon,非常安全的FTP守护进程）是由Chris Evans开发的一款可以运行在UNIX/Linux操作
+
+系统上，安全、易用、完全免费和开放源代码的FTP服务器软件。
+
+    vsftpd具有以下特点：
+
+    。vsftpd是以一般身份启动服务，所以对于Linux系统的使用权限较低，对于Linux系统的危害就相对较低了。
+
+    。任何需要具有较高执行权限的vsftpd命令均以一支特殊的父进程所控制，该父进程享有的较高执行权限功能已经被
+
+限制得相当低，并以不影响Linux本身的系统为准。
+
+    。所有来自客户端，想要使用这支付进程锁提供的较高执行权限的vsftpd命令的需求，均被视为不可信任的要求来处理，
+
+必须经过相当程度身份确认后，方可利用该上层程序的功能。
+
+    。父进程中，依然使用chroot()的功能来限制使用者的执行权限。
+
+
+12.2 vsftpd服务器安装和配置
+
+    -->rpm -q vsftpd 
+
+    package vsftpd is not installed
+
+    -->yum install  vsftpd -y
+
+12.2.2 /etc/vsftpd/vsftpd.conf文件详解
+
+
+    -->vim /etc/vsftpd/vsftpd.conf
+
+anonymous_enable=YES     #设置是否允许匿名用户登录，YES允许，NO不允许
+local_enable=YES         #设置是否允许本地用户登录，YES允许，NO不允许
+write_enable=YES         #设置是否允许用户有写入权限，YES允许，NO不允许
+local_umask=022          #设置本地用户新建文件时的umask值
+#anon_upload_enable=YES  #设置是否允许匿名用户上传文件,YES允许，NO不允许
+#anon_mkdir_write_enable=YES   #设置是否允许匿名用户上传文件，YES允许，NO不允许
+dirmessage_enable=YES          #设置是否显示目录说明文件，默认是YES，但需要手工创建.message文件允许为目录配置显示信息
+                                显示每个目录下面的message_file文件的内容
+xferlog_enable=YES
+connect_from_port_20=YES
+# recommended!
+#chown_uploads=YES             #设置是否允许修改上传文件的用户所有者，YES允许，NO不允许
+#chown_username=whoever        #设置想要修改的上传文件的用户所有者，YES允许，NO不允许
+#xferlog_file=/var/log/xferlog
+xferlog_std_format=YES
+#idle_session_timeout=600      #设置用户会话空闲超过指定时间后断开连接
+#data_connection_timeout=120   #设置数据连接空闲超过指定时间后断开连接
+#nopriv_user=ftpsecure
+#async_abor_enable=YES
+#ascii_upload_enable=YES
+#ascii_download_enable=YES
+#ftpd_banner=Welcome to blah FTP service.
+#deny_email_enable=YES
+# (default follows)
+#banned_email_file=/etc/vsftpd/banned_emails
+# users to NOT chroot().
+#chroot_local_user=YES         #设置是否将本地用户锁定在自己的主目录中。
+#chroot_list_enable=YES        #设置是否锁定用户在自己的主目录中。
+# (default follows)
+#chroot_list_file=/etc/vsftpd/chroot_list   #被列入该文件的用户，在登录后锁定用户在自己的主目录中。
+#ls_recurse_enable=YES
+listen=YES
+#listen_ipv6=YES
+
+pam_service_name=vsftpd
+userlist_enable=YES
+tcp_wrappers=YES
+
+
+                                                        
+                                                 
+    其它：
+message_file=.message:设置提示信息文件名，该参数只有diremessage_enable启用时才有效。
+download_enable=YES   #设置是否允许下载，YES允许， NO不允许
+accept_timeout=60: 设置客户端空闲超过指定时间自动断开连接，单位为秒。
+connect_timeout=60: 设置客户端空闲断开连接后在指定时间自动激活连接，单位为秒
+max_clients=100:  允许连接客户端的最大数量。0表示不限制最大连接数
+max_per_ip=5: 设置每个IP地址的最大连接数。0表示不限制。
+anon_max_rate=51200: 设置匿名用户传输数据的最大速度，单位是字节/秒
+local_max_rate=512000: 设置本地用户传输数据的最大速度，单位是字节/秒
+pasv_min_port: 设置在被动模式连接vsftpd服务器时，服务器响应的最小端口号，0表示任意。默认值为0.
+pasv_max_port=0: 设置在被动模式连接vsftpd服务器时，服务器响应的最大端口号，0表示任意，默认值为0
+ascii_update_enable=YES:设置是否使用ASCII模式上传文件，YES使用，NO不使用。
+ascii_download_enable=YES:设置是否使用ASCII模式下载文件，YES使用，NO不使用。
+ftpd_banner=Welcome to blah FTP service  #设置定制欢迎信息，登录时显示欢迎信息。如果设置了banner_file，则此设置无效
+
+
+listen_address=192.168.0.2:设置vsftpd服务器监听的IP地址
+listen_port=21:设置vsftpd服务器监听的端口号
+
+
+
+
+
+12.2.3 控制vsfptd服务
+    
+    1.启动vsftpd服务
+
+    -->service vsftpd start
+
+      为 vsftpd 启动 vsftpd：                                    [确定]
+
+    2.查看vsftpd服务状态
+
+    -->service vsftpd status
+
+       vsftpd (pid 3316) 正在运行...
+
+    3.停止vsfptd服务
+
+    -->service vsftpd stop
+
+       关闭 vsftpd：                                              [确定]
+
+    4.重新启动vsfptd服务
+
+    -->service vsftpd restart
+
+       关闭 vsftpd：                                              [失败]
+       为 vsftpd 启动 vsftpd：                                    [确定]
+
+    
+    5.重新加载vsftpd服务配置
+
+    -->service vsftpd reload
+
+       关闭 vsftpd：                                              [确定]
+       为 vsftpd 启动 vsftpd：                                    [确定]
+
+
+    6.开机自动启动vsftpd服务
+
+    -->chkconfig vsftpd on
+
+    -->chkconfig --list vsftpd
+
+      vsftpd         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+12.3 配置vsftpd客户端
+
+    可以支持windows和linux客户端
+
+12.3.1 Linux客户端配置
+
+    使用ftp命令或浏览器访问vsftpd服务器上的资源。
+
+    1. ftp命令
+
+    (1)安装ftp软件包  #客户端
+
+    -->rpm -q ftp
+
+    -->yum install ftp -y
+
+    (2)使用ftp命令
+
+    语法：
+    ftp [选项][FTP服务器]
+
+                                 ftp命令选项含义
+    -----------------------------------------------------------------------------------------------
+         选项                                       选项含义
+    -----------------------------------------------------------------------------------------------
+         -v                              显示详细信息
+    -----------------------------------------------------------------------------------------------
+         -i                              关闭交互过程中的多个文件传输提示
+    -----------------------------------------------------------------------------------------------
+         -d                              启用调试
+    -----------------------------------------------------------------------------------------------
+         -f                              导致凭证转发到远程主机
+    -----------------------------------------------------------------------------------------------
+         -x                              使客户端尝试协商加密
+    -----------------------------------------------------------------------------------------------
+         -t                              启用包跟踪
+    -----------------------------------------------------------------------------------------------
+
+    使用ftp命令连接到vsftpd服务器
+
+    -->ftp 192.168.0.203                       #203为vsftpd服务器IP
+Connected to 192.168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): anonymous   #输入匿名账户连接vsfptd服务器
+331 Please specify the password.
+Password:                              #不用输入密码，直接按回车
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> help                              #输入help查看帮助
+Commands may be abbreviated.  Commands are:
+
+!		debug		mdir		sendport	site
+$		dir		mget		put		size
+account		disconnect	mkdir		pwd		status
+append		exit		mls		quit		struct
+ascii		form		mode		quote		system
+bell		get		modtime		recv		sunique
+binary		glob		mput		reget		tenex
+bye		hash		newer		rstatus		tick
+case		help		nmap		rhelp		trace
+cd		idle		nlist		rename		type
+cdup		image		ntrans		reset		user
+chmod		lcd		open		restart		umask
+close		ls		prompt		rmdir		verbose
+cr		macdef		passive		runique		?
+delete		mdelete		proxy		send
+
+ftp> quit                     #quit退出
+221 Goodbye.
+[root@Master2 ~]# 
+
+
+    2.Mozilla Firefox浏览器
+
+    浏览器：ftp://192.168.0.203  ，默认页面显示为：
+
+    ftp://192.168.0.203/ 的索引
+
+    回到上一层文件夹
+
+    名称 	大小 	修改时间
+    pub
+		2014/10/17 	0:00:00
+
+12,3,2 Windows客户端配置
+
+    1.IE浏览器
+
+    -->ftp://192.168.0.203
+
+    FTP 根位于 192.168.0.203
+若要在 Windows 资源管理器中查看此 FTP 站点，请单击“页面”，然后单击“在 Windows 资源管理器中打开 FTP 站点”。
+--------------------------------------------------------------------------------
+
+10/17/2014 12:00上午      目录 pub
+
+
+--------------------------------------------------------------------------------
+
+
+    2.CuteFTP
+
+    连接192.168.0.203 FTP方式,端口21
+
+ 
+12.4 vsftpd服务器配置实例
+
+12.4.1 测试默认匿名用户登录
+
+    默认匿名用户不能离开vsftpd服务器匿名用户目录/var/ftp，匿名用户只能下载文件，而没有权限上传文件到
+
+vsftpd服务器上。
+
+    1.创建测试文件
+
+    -->touch /var/ftp/pub/abc.txt
+
+    -->ls /var/ftp/pub/
+
+       abc.txt
+
+    2.生成目录信息文件
+
+    -->echo Hello FTP > /var/ftp/pub/.message
+
+    3.重启vsftpd服务
+
+    -->service vsftpd restart
+
+     关闭 vsftpd：                                              [确定]
+     为 vsftpd 启动 vsftpd：                                    [确定]
+
+
+    4.测试默认匿名用户登录
+
+    -->ftp 192.168.0.203
+Connected to 192.168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): anonymous
+331 Please specify the password.
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> ls                                  --------------------#列出vsfptd服务器目录。
+227 Entering Passive Mode (192,168,0,203,106,46).
+150 Here comes the directory listing.
+drwxr-xr-x    2 0        0            4096 Jun 08 12:21 pub
+226 Directory send OK.
+ftp> cd pub                             ---------------------#进入pub（vsftpd服务器文件下载目录）目录
+250-Hello FTP
+250 Directory successfully changed.
+ftp> ls                                 ---------------------#ls显示目录内容
+227 Entering Passive Mode (192,168,0,203,80,241).
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0               0 Jun 08 12:20 abc.txt
+226 Directory send OK.
+ftp> get abc.txt                       ----------------------#下载abc.txt
+local: abc.txt remote: abc.txt
+227 Entering Passive Mode (192,168,0,203,194,75).
+150 Opening BINARY mode data connection for abc.txt (0 bytes).
+226 Transfer complete.
+ftp> put mm.txt                       ----------------------#上传mm.txt失败
+local: mm.txt remote: mm.txt
+227 Entering Passive Mode (192,168,0,203,90,166).
+550 Permission denied.
+ftp> bye                              ----------------------#退出vsftpd服务器连接      
+221 Goodbye.
+[root@Master2 ~]#
+
+
+    
+12.4.2 允许匿名用户上传、下载文件和创建目录
+
+    1.创建匿名用户上传目录
+
+    -->mkdir /var/ftp/up
+
+    -->chmod o+w /var/ftp/up
+
+
+    2.编辑/var/vsftpd/vsftpd.conf文件
+
+    -->vim /var/vsftpd/vsftpd.conf
+
+anon_upload_enable=YES           #去掉注释  
+anon_mkdir_write_enable=YES      #去掉注释  
+anon_world_readable_only=NO      #添加
+anon_other_write_enable=YES      #添加
+
+
+    3.重启vsftpd服务
+
+    -->service vsftpd restart
+
+      关闭 vsftpd：                                              [确定]
+      为 vsftpd 启动 vsftpd：                                    [确定]
+
+
+    4.FTP客户端测试
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): anonymous
+331 Please specify the password.
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> ls
+227 Entering Passive Mode (192,168,0,203,174,79).
+150 Here comes the directory listing.
+drwxr-xr-x    2 0        0            4096 Jun 08 12:21 pub
+drwxr-xrwx    2 0        0            4096 Jun 08 12:29 up
+226 Directory send OK.
+ftp> cd up
+250 Directory successfully changed.
+ftp> put mm.txt                     -------------------------------#上传文件
+local: mm.txt remote: mm.txt
+227 Entering Passive Mode (192,168,0,203,78,111).
+150 Ok to send data.
+226 Transfer complete.
+ftp> mkdir qq                       -------------------------------#创建目录
+257 "/up/qq" created
+ftp> bye
+221 Goodbye.
+
+
+12.4.3 只允许本地用户账户登录
+
+   1.创建用户zhangsan
+
+   -->useradd zhangsan
+
+      useradd: user 'zhangsan' already exists
+
+   -->passwd zhangsan
+
+      更改用户 zhangsan 的密码 。
+      新的 密码：
+      重新输入新的 密码：
+      passwd： 所有的身份验证令牌已经成功更新。
+
+   2.编辑/etc/vsftpd/vsftpd.conf文件
+
+   -->vim /etc/vsftpd/vsftpd.conf
+
+anonymous_enable=NO  #修改为NO
+local_root=/home     #添加
+
+   3.重启vsftpd服务
+
+   -->service vsftpd restart
+
+   关闭 vsftpd：                                              [确定]
+   为 vsftpd 启动 vsftpd：                                    [确定]
+
+
+   4. FTP客户端测试
+
+   -->168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): anonymous  #使用匿名用户连接vsftpd服务器
+331 Please specify the password.
+Password:
+530 Login incorrect.
+Login failed.                         #登录失败
+ftp> 
+
+
+    在FTP客户端以本地用户可以登录vsftpd服务器
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): zhangsan  #输入用户zhangsan
+331 Please specify the password.     #输入zhangsan密码
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> pwd                            #查看当前目录
+257 "/home"
+ftp> cd /
+250 Directory successfully changed.
+ftp> pwd
+257 "/"
+ftp> bye
+221 Goodbye.
+
+
+12.4.4 限制用户目录
+
+    限制用户只能访问自己的目录，而不能访问别的目录
+
+    1.编辑/etc/vsftpd/vsftpd.conf文件
+
+    -->vim /etc/vsftpd/vsftpd.conf 
+
+       chroot_list_enable=YES                     #打开注释
+       chroot_list_file=/etc/vsftpd/chroot_list   #打开注释
+
+    2.创建/etc/vsftpd/chroot_list文件
+
+    -->touch /etc/vsftpd/chroot_list
+
+    -->vim /etc/vsftpd/chroot_list 
+       
+       zhangsan   #添加用户zhangsan 
+
+    3.重新启动vsftpd服务
+
+    -->service vsftpd restart
+
+       关闭 vsftpd：                                              [确定]
+       为 vsftpd 启动 vsftpd：                                    [
+
+    4.FTP客户端测试
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): zhangsan  #用户zhangsan
+331 Please specify the password.     #zhangsan密码
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> pwd                             #查看当前目录位置
+257 "/"
+ftp> ls
+227 Entering Passive Mode (192,168,0,203,124,175).
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0             622 Jun 02 11:55 check_slave.zip
+drwxr-xr-x    7 1000     1000         4096 Jun 02 09:52 keepalived-1.2.12
+-rw-r--r--    1 0        0          337974 Jun 02 09:22 keepalived-1.2.12.tar.gz
+drwx------    4 504      504          4096 May 25 03:08 zhangsan
+226 Directory send OK.
+ftp> cd /home/                      #进入/home目录
+550 Failed to change directory.     #进入目录失败
+ftp> pwd
+257 "/"
+ftp> bye
+221 Goodbye.
+[root@Master2 ~]# 
+
+
+
+12.4.5 配置vsftpd服务器使用非标准端口
+
+    默认vsftpd使用21端口，配置和vsftpd服务器使用端口号3000
+
+    1.编辑/etc/vsftpd/vsftpd.conf
+
+    -->vim /etc/vsftpd/vsftpd.conf
+
+    listen_port=3000  #添加
+
+   
+    2.重新启动vsftpd服务
+
+    -->service vsftpd restart
+
+       关闭 vsftpd：                                              [确定]
+       为 vsftpd 启动 vsftpd：                                    [确定]
+ 
+    3.FTP客户端测试
+
+    -->ftp 192.168.0.203 3000   #使用3000端口登录
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 (vsFTPd 2.2.2)
+Name (192.168.0.203:root): zhangsan
+331 Please specify the password.
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> 
+
+
+    4.查看vsftpd服务器使用的端口
+
+    -->netstat -tn|grep 3000
+
+    tcp        0      0 192.168.0.203:3000          192.168.0.204:42580         TIME_WAIT
+
+    可以看到客户端192.168.0.204连接了vsftpd服务器，服务器上使用的端口号是30000
+
+
+12.4.6 配置高安全匿名vsftpd服务器
+
+    要求如下：
+
+    配置一台高安全的匿名vsftpd服务器，为公司网络内的匿名用户提供FTP服务
+
+    。只允许匿名用户访问， 而不允许本地用户访问
+
+    。关闭所有写权限
+
+    。不允许匿名用户上传文件
+
+    。客户端连接时的端口范围：50000~60000
+
+    。匿名用户最大传输速率：50KB/s
+
+    。匿名用户登录信息：Welcome to FTP Server
+
+    。允许匿名连接客户端的最大数量：100个
+
+    。每个IP地址的最大连接数：2个
+
+    。客户单空闲断开时间：60秒
+
+    。客户端空闲断开自动激活连接时间60秒
+
+    。用户会话断开时间：120秒
+
+    。数据连接空闲断开时间：300秒
+
+
+    1.修改配置文件vsftpd.conf
+
+    -->vim /etc/vsftpd/vsftpd.conf 
+
+max_clients=100                #添加
+max_per_ip=2                   #添加 
+anon_upload_enable=NO          #修改为NO
+anon_mkdir_write_enable=NO     #修改为NO
+anon_other_write_enable=NO     #修改为NO
+local_enable=YES               #修改为YES
+write_enable=NO                #修改为NO
+pasv_min_port=50000            #添加
+pasv_max_port=60000            #添加
+ftpd_banner=Welcome to blah  service.  #打开注释并修改
+idle_session_timeout=120       #去掉注释，修改
+data_connection_timeout=300    #去掉注释，修改
+accept_timeout=60              #添加
+connect_timeout=60             #添加
+anon_max_rate=50000            #添加
+
+
+    2.重启vsftpd服务
+
+    -->service vsftpd restart
+
+       关闭 vsftpd：                                              [确定]
+       为 vsftpd 启动 vsftpd：                                    [确定]
+
+12.4.7 拒绝指定用户连接vsfptd服务器
+
+   1.编辑/etc/vsftpd/ftpusers文件
+
+   -->vim /etc/vsftpd/ftpusers 
+
+   默认里面已经有拒绝连接vsfptd服务器的用户了，在末尾添加zhangsan
+
+   zhangsan
+
+   
+   2.重启vsftpd服务
+
+   -->service vsftpd restart
+
+     关闭 vsftpd：                                              [确定]
+     为 vsftpd 启动 vsftpd：                                    [确定]
+
+   3.FTP客户端测试
+
+   -->ftp 192.168.0.203
+   
+Connected to 192.168.0.203 (192.168.0.203).
+220 Welcome to FTP service.
+Name (192.168.0.203:root): zhangsan  #输入用户zhangsan
+331 Please specify the password.     #输入zhangsan密码
+Password:
+530 Login incorrect.
+Login failed.                        #failed失败，说明zhangsan无法登陆vsftpd服务
+ftp> 
+
+
+
+12.5 虚拟用户
+
+12.5.1 虚拟用户简介
+
+12.5.2 配置虚拟用户vsftpd服务器
+
+    1.创建虚拟用户口令库文件
+
+    (1)创建/root/virtual文件
+
+    -->touch /root/virtual
+
+    -->vim /root/virtual 
+
+    文件内容为：一行虚拟用户名，一行虚拟用户的口令
+
+wangwu
+redhat
+zhaoliu
+linux
+luqi
+redhat
+wangba
+linux
+
+    注意：不要在linux中创建wangwu、zhaoliu、luqi和wangba
+
+
+    (2)生成虚拟用户口令库文件
+
+    -->db_load -T -t hash -f /root/virtual  /etc/vsftpd/virtual.db
+
+    -->chmod 600 /etc/vsftpd/virtual.db 
+
+    2.创建/etc/pam.d/vsftpd.vu文件
+
+    -->vim /etc/pam.d/vsftpd 
+
+auth             required            /lib64/security/pam_userdb.so db=/etc/vsftpd/virtual
+account          required            /lib64/security/pam_userdb.so db=/etc/vsftpd/virtual
+
+
+    3.创建用户
+
+    -->useradd -d /home/ftpuser virtualuser
+
+    -->chmod 700 /home/ftpuser/
+
+    -->su - virtualuser -c "echo Hello Linux" > /home/ftpuser/testfile
+
+   4.编辑vsftpd.conf文件
+
+   -->vim /etc/vsftpd/vsftpd.conf 
+
+anonymous_enable=NO
+write_enable=NO
+anon_upload_enable=NO
+anon_mkdir_write_enable=NO
+anon_other_write_enable=NO
+none_process_model=NO                 #添加
+chroot_local_user=YES                #打开注释
+ftpd_banner=Welcome to FTP service.
+guest_enable=YES                     #添加
+guest_username=virtualuser           #添加
+pam_service_name=vsftpd.vu           #修改
+
+
+    5.重新启动vsftpd服务
+
+    -->service vsftpd restart
+
+      关闭 vsftpd：                                              [确定]
+      为 vsftpd 启动 vsftpd：                                    [确定]
+
+ 
+    6.FTP客户端测试
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 Welcome to FTP service.
+Name (192.168.0.203:root): zhaoliu   #用户名
+331 Please specify the password.     #密码
+Password:
+230 Login successful.                #登录成功
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> sz ftp 192.168.0.203 Connected to 192.168.0.203 (192.168.0.203). 220 Welcome to FTP service. Name (192.168.0.203:root): zhaoliu 331 Please specify the password. Password: 230 Login successful. Remote system type is UNIX. Using binary mode to transfer files. ftp>  
+?Invalid command
+ftp> pwd
+257 "/"
+ftp> ls
+227 Entering Passive Mode (192,168,0,203,201,120).
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0             622 Jun 02 11:55 check_slave.zip
+drwx------    4 505      505          4096 Jun 08 13:36 ftpuser
+drwx------    4 501      501          4096 Jun 26  2014 zabbix
+drwx------    4 504      504          4096 May 25 03:08 zhangsan
+226 Directory send OK.
+ftp> quit
+221 Goodbye.
+[root@Master2 ~]# 
+
+12.5.3 对不同的虚拟用户设置不同的权限
+
+    按以下要求配置配置vsftpd服务器，使得对不同的虚拟用户设置不同的权限。
+
+    。虚拟用户wangwu:浏览目录和下载权限
+
+    。虚拟用户zhaoliu:浏览目录、上传、下载、重命名文件和删除权限
+
+    1.创建/etc/vsftpd/vsftpd_user目录
+
+    -->mkdir /etc/vsftpd/vsftpd_user
+    
+    2.编辑/etc/vsftpd/vsftpd.conf文件
+
+    -->vim /etc/vsftpd/vsftpd.conf
+    
+    user_config_dir=/etc/vsftpd/vsftpd_user   #添加
+
+    3.创建虚拟用户配置文件
+
+    为虚拟用户wagnwu创建/etc/vsftpd/vsftpd_user/wagnwu文件
+
+    -->vim /etc/vsftpd/vsftpd_user/wangwu,内容为：
+
+    anon_world_readable_only=NO
+
+    修改为：luqi:
+
+    -->vim /etc/vsftpd/vsftpd_user/luqi,内容为：
+
+    anon_world_readable_only=NO
+
+
+    为虚拟用户zhaoliu创建/etc/vsftpd/vsftpd_user/zhaoliu 
+
+    -->vim /etc/vsftpd/vsftpd_user/zhaoliu
+
+anon_world_readable_only=NO
+anon_upload_enable=YES
+write_enable=YES
+anon_other_write_enable=YES
+
+    4.重启vsftpd服务
+
+    -->service vsftpd restart
+
+      关闭 vsftpd：                                              [确定]
+      为 vsftpd 启动 vsftpd：                                    [确定]
+
+
+    5.FTP客户端测试(204)
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 Welcome to FTP service.
+Name (192.168.0.203:root): luqi   #-----------------------用户luqi登录
+331 Please specify the password.
+Password:
+230 Login successful.             #-----------------------登录成功
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> ls                           #-----------------------查看用户文件
+227 Entering Passive Mode (192,168,0,203,232,224).
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0             622 Jun 02 11:55 check_slave.zip
+drwx------    4 505      505          4096 Jun 08 13:36 ftpuser
+drwx------    4 504      504          4096 May 25 03:08 zhangsan
+226 Directory send OK.
+ftp> put install.log              #-----------------------上传文件测试
+local: install.log remote: install.log
+No control connection for command: 成功  #正常应该是失败的，可能配置问题
+Passive mode refused.
+ftp> bye
+
+
+    。使用虚拟用户zhaoliu进行测试
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 Welcome to FTP service.
+Name (192.168.0.203:root): zhaoliu   #用户zhaoliu登录
+331 Please specify the password.
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> ls                              #查看文件
+227 Entering Passive Mode (192,168,0,203,209,138).
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0             622 Jun 02 11:55 check_slave.zip
+drwxr-xr-x    4 0        0            4096 May 26 11:35 usr
+drwxrwxrwx   25 503      503          4096 Apr 30 01:08 weblogic
+-rwxr-xr-x    1 0        0             127 Apr 29 02:11 wls.rsp
+drwx------    5 502      502          4096 Jun 27  2014 yhq
+drwx------    4 501      501          4096 Jun 26  2014 zabbix
+drwx------    4 504      504          4096 May 25 03:08 zhangsan
+226 Directory send OK.
+ftp> put install.log                #上传文件)
+local: install.log remote: install.log
+227 Entering Passive Mode (192,168,0,203,232,36).
+553 Could not create file.
+ftp> delete test.war                #删除文件（配置正确的话是删除成功了，此处有问题）
+550 Delete operation failed.
+ftp> rename test.war test2.war      #重命名文件（配置正确的话是重命名成功了，此处有问题）    
+350 Ready for RNTO.
+550 Rename failed.
+ftp> bye
+221 Goodbye.
+[root@Master2 ~]# 
+
+
+12.6 以xinetd方式运行vsftpd
+
+   在默认情况下，vsftpd是以独立启动方式运行的，如果服务器主要提供其他服务，而FTP服务只是
+
+辅助功能，那么最好将vsftpd配置为由xinetd启动。
+
+
+12.6.1 /etc/xinetd.d/vsftpd文件详解
+
+   -->cp /usr/share/doc/vsftpd-2.2.2/vsftpd.xinetd /etc/xinetd.d/vsftpd
+
+   默认内容为：
+
+   -->cat /etc/xinetd.d/vsftpd 
+
+# default: off
+# description: The vsftpd FTP server serves FTP connections. It uses \
+#	normal, unencrypted usernames and passwords for authentication.
+service ftp
+{
+	socket_type		= stream
+	wait			= no
+	user			= root                              #设置运行vsftpd服务的用户
+	server			= /usr/sbin/vsftpd
+	server_args             = /etc/vsftpd/vsftpd.conf
+	nice			= 10
+	disable			= yes
+	flags			= IPv4
+}
+
+
+    其他参数：
+
+    only_from = 192.168.0.204: 指定允许访问的计算机
+
+    no_access = 192.168.0.230: 指定不允许访问的计算机
+
+    per_source = 5           : 设置每个客户端计算机的最大连接数
+
+    instances = 100          : 设置vsftpd服务器支持的最大连接数
+
+    access_times = 9:00~18:00 :设置允许访问vsftpd服务器的时间
+
+    banner_fail = /etc/vsftpd/banner_fail   #指定连接失败时显示的信息所保存的文件，需手动创建
+
+    对于only_from和no_access参数，可以指定表所示的主机。
+
+                                         主机表示方法
+    -------------------------------------------------------------------------------------------------
+      选项值                                            举例
+    -------------------------------------------------------------------------------------------------
+      主机名                                            linux 
+     -------------------------------------------------------------------------------------------------
+      网络名                                            在/etc/networks文件中定义网络名
+     -------------------------------------------------------------------------------------------------
+      网络地址                                          192.168.0.0
+     -------------------------------------------------------------------------------------------------
+      多个IP地址                                        192.168.0.{5,7,9,11}
+     -------------------------------------------------------------------------------------------------
+      IP地址/子网掩码                                   192.168.0/24
+     -------------------------------------------------------------------------------------------------
+
+12.6.2 通过xinetd方式启动vsftpd服务器
+
+    1.编辑/etc/vsftpd/vsftpd.conf文件
+
+    -->vim /etc/vsftpd/vsftpd.conf 
+ 
+    #listen=YES     #注释
+    ##tcp_wrappers  #注释 
+
+    
+    2.停止vsftpd服务
+
+    -->service vsftpd stop
+
+       关闭 vsftpd：       [确定]
+
+
+    3.开机自动停止vsftpd服务
+
+    -->chkconfig  vsftpd off
+
+    -->chkconfig --list vsftpd
+
+      vsftpd         	0:关闭	1:关闭	2:关闭	3:关闭	4:关闭	5:关闭	6:关闭
+
+
+    4.安装xinetd软件包
+
+    -->yum install xinetd -y
+
+
+    5.复制vsftpd文件
+
+    -->cp /usr/share/doc/vsftpd-2.2.2/vsftpd.xinetd /etc/xinetd.d/vsftpd
+
+       cp：是否覆盖"/etc/xinetd.d/vsftpd"？ y
+
+
+    6.修改/etc/xinetd.d/vsftpd文件
+
+    -->vim /etc/xinetd.d/vsftpd 
+
+    disable                 = no  #修改为no
+
+
+    7.启动xinetd服务
+
+    -->service xinetd start
+
+       正在启动 xinetd：                 [确定]
+
+    8.开机自动启动xinetd服务
+
+    -->chkconfig xinetd on
+
+    -->chkconfig --list xinetd
+
+      xinetd         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+    9.FTP客户端测试
+
+    -->ftp 192.168.0.203
+
+Connected to 192.168.0.203 (192.168.0.203).
+220 Welcome to FTP service.
+Name (192.168.0.203:root): ftp     #使用匿名用户ftp登录
+331 Please specify the password.   #不用输入密码，直接回车
+Password:
+530 Login incorrect. 
+Login failed.                      #登录失败 (配置正确的话此处是成功的)
+ftp> 
+
+解决方法：
+-->vim /etc/vsftpd/vsftpd.conf  
+
+   nonymous_enable=YES  #设置允许匿名用户登录
+
+-->service vsftpd restart
+
+
+12.7 虚拟vsftpd服务器
+
+    可以再一台服务器上创建多个FTP站点，需要在该服务器上设置多个IP地址，并且为每一个FPT
+    
+站点指定IP地址。
+
+12.7.1 独立启动的虚拟vsftpd服务器
+
+    在公司内部一台服务器上通过基于IP地址的方式配置两个FTP站点，为公司网络内的客户端计算机提供FTP服务，
+
+具体参数如下：
+
+   (1)第一个FTP站点
+
+   。网站IP地址： 192.168.0.93
+
+   。FTP目录： /var/ftp/pub
+
+   。登录时显示欢迎信息：This is ftp1.sh.com
+
+
+   (2)第二个FTP站点
+
+   。网站IP地址：192.168.0.89
+
+   。FTP目录：/var/ftp2/pub
+
+   。登录时显示欢迎信息：This is ftp2.sh.com
+
+   1.配置虚拟IP地址
+
+   使用以下命令为网卡再设置2个IP地址192.168.0.89和192.168.0.93
+
+   -->ifconfig eth0:0 192.168.0.93 netmask 255.255.255.0
+
+   -->ifconfig eth0:1 192.168.0.89 netmask 255.255.255.0
+
+   2.创建第二个FTP站点目录
+
+   -->mkdir -p /var/ftp2/pu
+
+   3.编辑/etc/vsftpd/vsftpd.conf和/etc/vsftpd/vsftpd2.conf文件
+
+   -->cp /etc/vsftpd/vsftpd.conf /etc/vsftpd/vsftpd2.conf
+
+   -->vim /etc/vsftpd/vsftpd.conf
+
+   listen_address=192.168.0.93
+   ftpd_banner=This is ftp1.sh.com
+
+   
+   -->vim /etc/vsftpd/vsftpd2.conf 
+
+   listen_address=192.168.0.89
+   ftp_username=ftp2
+   ftpd_banner=This is ftp2.sh.com
+
+   4.重启vsfptd服务
+
+   -->service vsftpd restart
+
+---------------------------------------------------------------------------------------------------------
+报错：关闭 vsftpd：                                              [失败]
+为 vsftpd2 启动 vsftpd：500 OOPS: vsftpd: not configured for standalone, must be started from inetd
+                                                           [失败]
+为 vsftpd 启动 vsftpd：500 OOPS: vsftpd: not configured for standalone, must be started from inetd
+                                                           [失败]
+
+---------------------------------------------------------------------------------------------------------
+解决方法：
+
+因为xinetd已经启动了vsftpd，而你的vsftpd设置成了stardalone模式
+如果要用inetd启动，那用如下方面启动：
+首先copy你的安装文件里的vsftpd.xinetd到/etc/xinetd.d/下
+
+-->cp /usr/share/doc/vsftpd-2.2.2/vsftpd.xinetd /etc/xinetd.d/vsftpd 
+
+-->/etc/rc.d/init.d/xinetd restart
+   用inetd模式启动
+
+
+采用第2种解决：
+
+如果你想用standalone启动，必须做如下更改
+
+-->vim /etc/xinetd.d/vsftpd 
+    
+   disable         = yes  #修改为yes
+
+-->vim /etc/vsftpd/vsftpd.conf  
+
+   listen=YES  #去掉注释
+   nonymous_enable=YES  #设置允许匿名用户登录
+
+
+
+-->vim /etc/vsftpd/vsftpd2.conf  
+
+   listen=YES  #去掉注释
+   nonymous_enable=YES  #设置允许匿名用户登录
+---------------------------------------------------------------------------------------------------------
+
+    5. FTP客户端测试
+
+    在客户端测试是否能连接到两个FTP站点
+
+    -->ftp 192.168.0.203
+       ftp: connect: 拒绝连接
+
+    说明已经不能连接到
+
+
+    -->ftp 192.168.0.93
+Connected to 192.168.0.93 (192.168.0.93).
+220 This is ftp1.sh.com
+Name (192.168.0.93:root): ftp     -----------输入ftp代表匿名用户
+331 Please specify the password.  -----------直接按 回车
+Password:  
+230 Login successful.             -----------登录成功
+Remote system type is UNIX.      
+Using binary mode to transfer files.
+ 
+    -->ftp 192.168.0.89
+Connected to 192.168.0.89 (192.168.0.89).
+500 OOPS: vsftpd: cannot locate user specified in 'ftp_username':ftp2
+ftp> exit
+[root@Master2 ~]# ftp 192.168.0.89
+Connected to 192.168.0.89 (192.168.0.89).
+220 This is ftp2.sh.com
+Name (192.168.0.89:root): ftp
+331 Please specify the password.
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> quit
+221 Goodbye.
+
+--------------------------------------------------------------------------------------------------------
+报错：
+为 vsftpd2 启动 vsftpd：500 OOPS: vsftpd: not configured for standalone, must be started from inetd
+
+解决方法：
+-->vim /etc/vsftpd/vsftpd2.conf 
+
+   ftp_username=nobody
+ 
+-->service vsftpd restart
+--------------------------------------------------------------------------------------------------------
+
+17.2 xinetd启动的虚拟vsftpd服务器
+
+   1.编辑/etc/vsftpd/vsftpd.conf
+
+   -->vim /etc/vsftpd/vsftpd.conf 
+
+      nonymous_enable=YES
+      #listen=YES  #注释
+
+   2.编辑/etc/vsftpd/vsftpd2.conf
+
+   -->vim /etc/vsftpd/vsftpd2.conf 
+
+      nonymous_enable=YES
+      #listen=YES  #注释
+
+
+   3.停止vsftpd服务
+
+   -->service vsftpd stop
+
+      关闭 vsftpd：                                              [确定]
+
+
+   4.复制文件
+
+   -->cp /etc/xinetd.d/vsftpd /etc/xinetd.d/vsftpd2
+
+   5.编辑/etc/xinetd.d/vsftpd文件
+
+   -->vim /etc/xinetd.d/vsftpd
+
+      disable                 = no            #修改
+      bind                    = 192.168.0.93  #添加
+
+   
+   6.编辑/etc/xinetd.d/vsftpd2文件
+
+   -->vim /etc/xinetd.d/vsftpd2
+
+      disable                 = no            #修改
+      bind                    = 192.168.0.89  #添加
+      server_args             = /etc/vsftpd/vsftpd2.conf  #添加
+
+   
+   7.重新启动xinetd服务
+
+   -->service xinetd restart
+
+      停止 xinetd：                                              [失败]
+      正在启动 xinetd：                                          [确定]
+
+
+   8.FTP客户端测试
+
+   -->ftp 192.168.0.203
+       ftp: connect: 拒绝连接
+      ftp> 
+
+   -->ftp 192.168.0.93   -------------------------#连接IP 93测试
+
+Connected to 192.168.0.93 (192.168.0.93).
+220 This is ftp1.sh.com
+Name (192.168.0.93:root): ftp          #输入匿名用户:ftp
+331 Please specify the password.       #直接回车
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+
+
+   -->ftp 192.168.0.89   -------------------------#连接IP 89测试
+
+Connected to 192.168.0.89 (192.168.0.89).
+220 This is ftp1.sh.com
+Name (192.168.0.89:root): ftp            #输入匿名用户:ftp    
+331 Please specify the password.         #直接回车
+Password:
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+
+
+   通过以上测试，xinetd方式启动服务，匿名用户不用输入密码登录成功
+
+
+   
+  
+
+
+   
+
+
+    
+
+

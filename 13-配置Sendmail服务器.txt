@@ -1,0 +1,252 @@
+                                    第13章  配置Sendmail服务器
+
+
+13.2 Sendmail服务器软件包安装
+
+    -->yum install procmail  m4  sendmail-* -y
+
+    -->yum install bind-libs bind bind-utils -y
+
+
+13.2.2 /etc/mail/sendmail.mc文件详解
+
+   -->vim /etc/mail/sendmail.mc  #添加和修改的主要参数如下：
+
+      include(`/usr/share/sendmail-cf/m4/cf.m4')dnl
+
+      VERSIONID(`setup for linux')dnl   #定义版本信息
+
+      OSTYPE(`linux')dnl   #选择包含操作系统指定属性的文件
+
+13.2.3 /etc/mail/submit.mc文件详解
+
+    注意：文件中以"dnl"开头的行是注释行，它为用户配置参数起到解释作用。
+
+
+divert(-1)
+
+divert(0)dnl
+sinclude(`/usr/share/sendmail-cf/m4/cf.m4')dnl  
+VERSIONID(`linux setup')dnl
+define(`confCF_VERSION', `Submit')dnl                                     #设置配置版本
+define(`__OSTYPE__',`')dnl dirty hack to keep proto.m4 from complaining   #在经过proto.m4的检查后，将_OSTYPE的值设置为空
+define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet                      #设置支持DECnet
+define(`confTIME_ZONE', `USE_TZ')dnl                                      #设置系统时区
+define(`confDONT_INIT_GROUPS', `True')dnl                                 #设置执行initgroups程序
+define(`confPID_FILE', `/var/run/sm-client.pid')dnl                       #设置Sendmail的PID文件路径
+dnl define(`confDIRECT_SUBMISSION_MODIFIERS',`C')dnl
+FEATURE(`use_ct_file')dnl                                                 #设置可信用户名单
+dnl
+dnl If you use IPv6 only, change [127.0.0.1] to [IPv6:::1]
+FEATURE(`msp', `[127.0.0.1]')dnl                                          #设置msp的IP地址
+
+         
+13.2.4 /etc/mail/sendmail.cf文件详解
+
+
+13.2.5 /etc/mail/local-host-names文件详解
+
+    -->vim /etc/mail/local-host-names  #添加如下：
+
+    FEATURE(use_cw_file_dnl
+
+
+    163.com
+    mail.163.com
+
+
+13.2.6 /etc/mail/access文件详解
+
+    设置禁止其他主机利用本地Sendmail服务器投递邮件
+
+    使用/etc/mail/access文件可以用于控制邮件中继和邮件的进出管理
+
+     -->vim /etc/mail/access
+
+     默认设置表示来自本地的客户端允许使用Sendmail服务器接收和发送邮件
+
+Connect:localhost.localdomain           RELAY
+Connect:localhost                       RELAY
+Connect:127.0.0.1                       RELAY
+
+FEATURE('access_db','hash -T<TMPF> -o /etc/mail/access.db')dnl   #设置将使Sendmail读取/etc/mail/access.db 
+FEATURE('blacklist_recipients')dnl                               #设置将对access数据库中定义的规则应用到源地址和目的地址中
+
+   /etc/mail/access.db 是一个散列表数据库，是用/etc/mail/access这个纯文本文件产生的，每一行的格式都是以下这个形式。
+
+   地址    操作
+
+
+   access文件配置举例：
+
+
+
+13.2.7 /etc/aliases文件详解
+
+    -->vim /etc/mail/sendmail.mc  #默认有如下这行
+
+    define(`ALIAS_FILE', `/etc/aliases')dnl  #将会读取/etc/aliases文件内容
+
+
+    sendmail不会直接读取/etc/aliases文件，而是读取该文件创建的数据库。修改完毕，需使用newaliases命令生成/etc/aliases.db数据库
+
+    -->newaliases
+
+    -->ls /etc/aliases.db
+
+
+13.2.8 /etc/mail/userdb文件详解
+
+    
+13.2.9 Sendmail服务器配置实例
+
+     配置一台Sendmail服务器，为公司网络内的客户端计算机提供邮件收发服务，具体参数如下：
+
+     。DNS域名：fulong.com
+
+     。DNS服务器IP地址：192.168.0.217
+
+     。Sendmail服务器IP地址：192.168.0.217
+
+     。Sendmail服务器MX记录：www.fulong.com
+
+     。公司网络：192.168.0.0
+
+     。设置能给公司全体员工群发邮件
+
+     1.配置DNS服务器
+
+       1>编辑DNS配置文件named.conf
+ 
+
+       -->vim /etc/named.conf
+       
+options
+{
+        listen-on port  53 { 127.0.0.1; 192.168.0.217; };
+        listen-on-v6 port 53 { ::1; };
+        directory "/var/named"; // the default
+        dump-file               "data/cache_dump.db";
+        statistics-file         "data/named_stats.txt";
+        memstatistics-file      "data/named_mem_stats.txt";
+        allow-query { localhost;0.0.0.0/0; };
+
+        forwarders {  192.168.4.100; 194.168.8.100; };
+};
+logging
+{
+        channel default_debug {
+                file "data/named.run";
+               
+		severity dynamic;
+        };
+};
+
+
+zone "fulong.com" IN {
+        type master;
+        file "fulong.com";
+        allow-update { none; };
+};
+
+zone "0.168.192.in-addr.arpa." IN {
+        type master;
+        file "0.168.192.in-addr.arpa";
+        allow-update { none; };
+};
+
+
+
+===============================================================================
+
+       2>编辑区域文件
+
+       -->vim /var/named/fulong.com
+
+$ttl 38400
+@  IN         SOA    zabbix-217.fulong.com. root.zabbix-217. (
+                     1268345659
+                     10800
+                     3600
+                     604800
+                     38400)
+
+fulong.com.   IN        NS              zabbix-217.fulong.com.
+zabbix-217    IN        A               192.168.0.217
+mail          IN        CNAME           zabbix-217.fulong.com.
+@             IN        MX         10   mail.fulong.com.
+
+
+       2>重新启动named服务
+        
+	 -->service named restart
+
+            停止 named：                                               [确定]
+            Generating /etc/rndc.key:                                  [确定]
+            启动 named：                                               [确定]
+
+       3>验证邮件交换器设置
+
+         -->slookup -q=mx fulong.com
+
+
+------------------------------------------------------------------------------
+
+    -->chmod -R 755 /var/named/fulong.com
+
+    4>创建反向解析文件
+
+     -->vim  /var/named/0.168.192.in-addr.arpa
+
+--------------------------------------------------------------------------------
+$TTL 1H
+@      IN       SOA    zabbix-217.fulong.com.      root.zabbix-217.fulong.com. ( 2
+                                                    3H
+                                                    1H
+                                                    1W
+                                                    1H )
+@      IN  NS   fulong.com.
+240    IN  PTR  zabbix-217.www.fulong.com.
+
+--------------------------------------------------------------------------------
+     PTR表示反向解析，即IP地址解析成域名
+
+     -->chmod -R 755 /var/named/0.168.192.in-addr.arpa
+
+
+    5>测试配置文件是否正确
+
+     。检查文件配置是否正确
+
+     -->named-checkconf  #确保没问题再执行后面操作
+
+     。测试区域文件(正向解析文件):
+
+     -->cd /var/named/
+
+     -->named-checkzone fulong.com fulong.com
+     
+zone fulong.com/IN: fulong.com/MX 'mail.fulong.com' is a CNAME (illegal)
+zone fulong.com/IN: loaded serial 42
+OK
+
+
+    6>启动DNS服务
+
+    -->service  named restart
+    
+      启动 named：                 [确定]
+
+    7>查看启动设置级别
+
+    -->chkconfig --level 345 named on
+     
+    -->chkconfig --list named
+
+    8>配置客户端
+
+      在其它机器上编辑文件/etc/resolv.conf，加入
+
+       nameserver 192.168.0.217  
+       search fulong.com
+

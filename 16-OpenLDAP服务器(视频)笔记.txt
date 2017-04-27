@@ -1,0 +1,1029 @@
+                                            OpenLDAP服务器安装配置
+
+
+1、安装软件包
+
+    -->yum install openldap-* -y 
+
+    或：
+
+    -->yum install openldap-servers openldap-devel openldap-clients -y
+
+2、复制模板文件
+
+    -->cp /usr/share/openldap-servers/slapd.conf.obsolete  /etc/openldap/slapd.conf
+
+
+3、设置LDAP管理员密码
+
+    -->slappasswd -h {MD5}
+
+New password: 
+Re-enter new password: 
+{MD5}b+K12rHkQG1FUDqjecAJyw==
+
+   复制MD5信息：
+
+4、编辑/etc/openldap/slapd.conf文件
+
+   -->vim /etc/openldap/slapd.conf 
+
+   修改“rootpw          {crypt}ijFYNcSNctBYg”为：
+
+       rootpw          {MD5}b+K12rHkQG1FUDqjecAJyw==  #为上面生成的MD5
+
+    
+   修改：
+
+   suffix          "dc=fulong,dc=com"               #修改为域 
+   checkpoint      1024 15
+   rootdn          "cn=Manager,dc=fulong,dc=com"    #修改为域 
+
+
+   修改：
+
+   access to *
+        by dn.exact="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read
+        by dn.exact="cn=Manager,dc=fulong,dc=com" read   #修改dc=fulong 域名
+
+
+   
+5、复制DB_CONFIG文件
+
+    -->cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+
+
+6、设置目录所有者
+ 
+    -->chown -R ldap.ldap /var/lib/ldap
+
+7、删除/etc/openldap/slapd.d/下的所有内容
+
+    -->rm -rf /etc/openldap/slapd.d/*
+
+
+8、启动slapd服务
+
+    -->service slapd start
+
+    ls: 无法访问/etc/openldap/slapd.d//cn=config/olcDatabase*.ldif: 没有那个文件或目录
+    正在启动 slapd：                                           [确定]
+
+
+    。查看进程
+
+    -->netstat -alpo|grep slapd
+
+tcp        0      0 *:ldap                      *:*                         LISTEN      1297/slapd          off (0.00/0/0)
+tcp        0      0 *:ldap                      *:*                         LISTEN      1297/slapd          off (0.00/0/0)
+unix  2      [ ACC ]     STREAM     LISTENING     10150  1297/slapd          /var/run/ldapi
+unix  2      [ ]         DGRAM                    10144  1297/slapd          
+[root@pssh-2 local]# 
+   
+
+9、测试OpenLDAP配置文件
+
+    -->slapd -T test -f /etc/openldap/slapd.conf 
+
+       config file testing succeeded
+
+10、监测服务设置
+
+    -->ldapsearch -x -b '' -s base '(objectclass=*)' namingContexts  #输出如下：
+
+# extended LDIF
+#
+# LDAPv3
+# base <> with scope baseObject
+# filter: (objectclass=*)
+# requesting: namingContexts 
+#
+
+#
+dn:
+namingContexts: dc=fulong,dc=com
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+
+    检查输出信息中的namingContexts: dc=fulong,dc=com是否和/etc/openldap/slapd.conf文件中设置的
+
+    一致，如果一致代表配置正确。
+
+
+11、控制slapd服务
+
+    1>启动slapd服务
+
+    -->service slapd start
+
+    2>查看slapd服务运行状态
+
+    -->service slapd status
+
+    3>停止slapd服务
+
+    -->service slapd stop
+
+    4>重新启动salpd服务
+
+    -->service slapd restart
+
+    5>开机自动启动salpd服务
+
+    -->chkconfig slapd on
+
+    -->chkconfig --list slapd
+
+      slapd          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+12、管理OpenLDAP服务器
+
+    对OpenLDAP服务器进行故那里，主要涉及添加LDAP条目、查询LDAP数据信息、LDAP塑化剂导出成LDIF、
+
+修改LDAP条目以及删除LDAP条目。
+
+    1>添加LDAP目录树的根和LDAP管理员
+
+    添加LDAP目录树的根dc=fulong,dc=com和LDAP管理员Manager
+
+    (1)创建/root/sh.ldif文件
+
+    -->vim /root/sh.ldif
+
+//定义LDAP目录树的根，使用类top
+dn:dc=fulong,dc=com
+objectclass:top
+objectclass:dcObject
+objectclass:organization
+o:fulong,Inc.
+dc:fulong  
+
+
+//定义LDAP管理员Manager信息，使用类organizationalRole
+dn:cn=Manager,dc=fulong,dc=com
+objectclass:organizationalRole
+cn:Manager
+
+
+    (2)添加LDAP目录树的根和LDAP管理员Manager
+
+
+    -->ldapadd -x -W -D "cn=Manager,dc=fulong,dc=com" -f /root/sh.ldif 
+
+Enter LDAP Password:   #输入LDAP管理员的密码
+adding new entry "dc=fulong,dc=com"
+ldap_add: Already exists (68)  #正常应该输出：addming new entry "cn=Manager,dc=sh,dc=com"
+
+
+    2>添加组织单元
+
+    在fulong.com域中添加组织单元sales，然后在组织单元sales中创建子组织单元it
+
+    (1)创建/root/ou.ldif文件
+
+    -->vim /root/ou.ldif
+
+//定义LDAP组织单元sales，使用类organizationalUnit
+dn:ou=sales,dc=fulong,dc=com
+objectclass:top
+objectclass:organizationalUnit
+ou:sales
+
+//定义LDAP组织单元it,使用类organizationalUnit
+dn:ou=it,ou=sales,dc=fulong,dc=com
+objectclass:top
+objectclass:organizationalUnit
+ou:it
+
+
+   (2)使用以下命令添加组织单元sales和it
+
+    -->ldapadd -x -W -D "cn=Manager,dc=fulong,dc=com" -f /root/ou.ldif 
+
+Enter LDAP Password: 
+adding new entry "ou=sales,dc=fulong,dc=com"
+
+adding new entry "ou=it,ou=sales,dc=fulong,dc=com"
+
+
+    3>添加用户
+
+    在组织单元sales中添加用户zhangsan
+
+    (1)创建/root/user.ldif文件
+
+    -->vim /root/user.ldif
+
+dn:cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectclass:top
+objectclass:person
+objectclass:organizationalPerson
+obectclass:inetOrgPerson
+cn:zhangsan
+gn:san
+sn:zhang
+mail:zhangsan@fulong.com
+physicalDeliveryOfficeName:fulong,services
+ou:sales
+st:beijing
+postalcode:111111
+telephonenumber:010-82335566-
+mobile:18410125799
+
+    
+    
+    -->adduser zhangsan
+
+    -->passwd zhangsan
+
+更改用户 zhangsan 的密码 。
+新的 密码：
+重新输入新的 密码：
+passwd： 所有的身份验证令牌已经成功更新。
+
+    使用以下命令添加用户zhangsan 
+
+    -->ldapadd -x -W -D "cn=Manager,dc=fulong,dc=com" -f /root/user.ldif 
+
+Enter LDAP Password:  #输入LDAP管理员密码
+adding new entry "cn=zhangsan,ou=sales,dc=fulong,dc=com"
+
+
+13 查询LDAP数据信息
+
+    1>查找OpenLDAP服务器中所有对象类的信息
+
+    -->ldapsearch -x -b "dc=fulong,dc=com" "objectclass=*"   #输出如下：
+
+# extended LDIF
+#
+# LDAPv3
+# base <dc=fulong,dc=com> with scope subtree
+# filter: objectclass=*
+# requesting: ALL
+#
+
+# fulong.com
+dn: dc=fulong,dc=com
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: fulong,Inc.
+dc: fulong
+
+# Manager, fulong.com
+dn: cn=Manager,dc=fulong,dc=com
+objectClass: organizationalRole
+cn: Manager
+
+# sales, fulong.com
+dn: ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: sales
+
+# it, sales, fulong.com
+dn: ou=it,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: it
+
+# zhangsan, sales, fulong.com
+dn: cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: zhangsan
+givenName: san
+sn: zhang
+mail: zhangsan@fulong.com
+physicalDeliveryOfficeName: fulong,services
+ou: sales
+st: beijing
+postalCode: 111111
+telephoneNumber: 010-82335566-
+mobile: 18410125799
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 6
+# numEntries: 5
+
+
+     2>查找OpenLDAP服务器中所有的信息
+
+     -->ldapsearch -x -b "dc=fulong,dc=com" "*"     #输出如下：
+
+# extended LDIF
+#
+# LDAPv3
+# base <dc=fulong,dc=com> with scope subtree
+# filter: (objectclass=*)
+# requesting: * 
+#
+
+# fulong.com
+dn: dc=fulong,dc=com
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: fulong,Inc.
+dc: fulong
+
+# Manager, fulong.com
+dn: cn=Manager,dc=fulong,dc=com
+objectClass: organizationalRole
+cn: Manager
+
+# sales, fulong.com
+dn: ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: sales
+
+# it, sales, fulong.com
+dn: ou=it,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: it
+
+# zhangsan, sales, fulong.com
+dn: cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: zhangsan
+givenName: san
+sn: zhang
+mail: zhangsan@fulong.com
+physicalDeliveryOfficeName: fulong,services
+ou: sales
+st: beijing
+postalCode: 111111
+telephoneNumber: 010-82335566-
+mobile: 18410125799
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 6
+# numEntries: 5
+
+
+
+
+    3>查找用户名为:zhangsan的信息
+
+    -->ldapsearch -x -b "dc=fulong,dc=com" "cn=zhangsan"
+
+# extended LDIF
+#
+# LDAPv3
+# base <dc=fulong,dc=com> with scope subtree
+# filter: cn=zhangsan
+# requesting: ALL
+#
+
+# zhangsan, sales, fulong.com
+dn: cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: zhangsan
+givenName: san
+sn: zhang
+mail: zhangsan@fulong.com
+physicalDeliveryOfficeName: fulong,services
+ou: sales
+st: beijing
+postalCode: 111111
+telephoneNumber: 010-82335566-
+mobile: 18410125799
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+
+
+    4>查找电子邮件地址为zhangsan@fulong.com的信息
+
+    -->ldapsearch -x -b "dc=fulong,dc=com" "mail=zhangsan@fulong.com"
+
+# extended LDIF
+#
+# LDAPv3
+# base <dc=fulong,dc=com> with scope subtree
+# filter: mail=zhangsan@fulong.com
+# requesting: ALL
+#
+
+# zhangsan, sales, fulong.com
+dn: cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: zhangsan
+givenName: san
+sn: zhang
+mail: zhangsan@fulong.com
+physicalDeliveryOfficeName: fulong,services
+ou: sales
+st: beijing
+postalCode: 111111
+telephoneNumber: 010-82335566-
+mobile: 18410125799
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+
+
+    5>查找用户zhangsan的信息
+
+    -->ldapsearch -x -b cn=zhangsan,ou=sales,dc=fulong,dc=com
+
+# extended LDIF
+#
+# LDAPv3
+# base <cn=zhangsan,ou=sales,dc=fulong,dc=com> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# zhangsan, sales, fulong.com
+dn: cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: zhangsan
+givenName: san
+sn: zhang
+mail: zhangsan@fulong.com
+physicalDeliveryOfficeName: fulong,services
+ou: sales
+st: beijing
+postalCode: 111111
+telephoneNumber: 010-82335566-
+mobile: 18410125799
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+
+14 、LDAP数据导出成LDIF
+
+   在OpenLDAP服务器中导出LDAP数据
+
+   -->slapcat 
+
+5562ad46 The first database does not allow slapcat; using the first available one (2)
+dn: dc=fulong,dc=com
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: fulong,Inc.
+dc: fulong
+structuralObjectClass: organization
+entryUUID: 457a8a5e-96d7-1034-9145-0926f33d9edb
+creatorsName: cn=Manager,dc=fulong,dc=com
+createTimestamp: 20150525030959Z
+entryCSN: 20150525030959.174777Z#000000#000#000000
+modifiersName: cn=Manager,dc=fulong,dc=com
+modifyTimestamp: 20150525030959Z
+
+dn: cn=Manager,dc=fulong,dc=com
+objectClass: organizationalRole
+cn: Manager
+structuralObjectClass: organizationalRole
+entryUUID: 457d5248-96d7-1034-9146-0926f33d9edb
+creatorsName: cn=Manager,dc=fulong,dc=com
+createTimestamp: 20150525030959Z
+entryCSN: 20150525030959.193006Z#000000#000#000000
+modifiersName: cn=Manager,dc=fulong,dc=com
+modifyTimestamp: 20150525030959Z
+
+dn: ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: sales
+structuralObjectClass: organizationalUnit
+entryUUID: 4c889c64-96dc-1034-9149-0926f33d9edb
+creatorsName: cn=Manager,dc=fulong,dc=com
+createTimestamp: 20150525034558Z
+entryCSN: 20150525034558.494689Z#000000#000#000000
+modifiersName: cn=Manager,dc=fulong,dc=com
+modifyTimestamp: 20150525034558Z
+
+dn: ou=it,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: it
+structuralObjectClass: organizationalUnit
+entryUUID: 4c8b770e-96dc-1034-914a-0926f33d9edb
+creatorsName: cn=Manager,dc=fulong,dc=com
+createTimestamp: 20150525034558Z
+entryCSN: 20150525034558.513398Z#000000#000#000000
+modifiersName: cn=Manager,dc=fulong,dc=com
+modifyTimestamp: 20150525034558Z
+
+dn: cn=zhangsan,ou=sales,dc=fulong,dc=com
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: zhangsan
+givenName: san
+sn: zhang
+mail: zhangsan@fulong.com
+physicalDeliveryOfficeName: fulong,services
+ou: sales
+st: beijing
+postalCode: 111111
+telephoneNumber: 010-82335566-
+mobile: 18410125799
+structuralObjectClass: inetOrgPerson
+entryUUID: 92813d4c-96dd-1034-914b-0926f33d9edb
+creatorsName: cn=Manager,dc=fulong,dc=com
+createTimestamp: 20150525035505Z
+entryCSN: 20150525035505.383621Z#000000#000#000000
+modifiersName: cn=Manager,dc=fulong,dc=com
+modifyTimestamp: 20150525035505Z
+
+
+15、修改LDAP条目
+
+    使用ldapmodify命令可以在OpenLDAP服务器中修改条目
+
+    可以使用changetype:modify关键字在现有条目中添加、替换或删除属性及属性值。指定changetype:modify时，
+
+还必须提供一个或多个更改操作(add replace或delete)，以表明将如何修改条目。
+ 
+    示例：3种可能的LDIF更改操作
+
+    //添加属性和属性值
+
+    dn:entryDN
+    changetype:modify
+    add:attribute
+    attribute: value..
+
+    //替换属性和属性值
+    replace:attribute
+    attribute: newValue...
+
+    
+    //删除属性和属性值
+    delete：attribute
+    attribute:value
+
+
+    1>添加属性值
+
+     添加用户zhangsan的title属性
+
+     -->ldapmodify -x -D "cn=Manager,dc=fulong,dc=com" -W
+
+Enter LDAP Password:   #输入LDAP管理员密码
+dn:cn=zhangsan,ou=sales,dc=fulong,dc=com  #开始输入信息
+changetype:modify
+add:title
+title:aaaaa   #输入完毕按2次Enter
+     
+modifying entry "cn=zhangsan,ou=sales,dc=fulong,dc=com"  #出现这个信息
+
+^C  #按Ctrl+C退出
+
+
+    2>修改属性值
+
+    修改用户zhangsan的title属性值
+
+    -->ldapmodify -x -D "cn=Manager,dc=fulong,dc=com" -W
+
+Enter LDAP Password: 
+dn:cn=zhangsan,ou=sales,dc=fulong,dc=com
+changetype:modify
+replace:title
+title:bbbbb  #修改为:bbbbb ,按2次Enter
+
+modifying entry "cn=zhangsan,ou=sales,dc=fulong,dc=com"
+
+^C  #Ctrl+C
+
+    
+    3>删除属性值
+
+    通过使用LDIF中的delete语法完整地删除属性值，或者只删除多值属性的一个值。
+
+使用delete语法时，如果不指定attribute:value对，将删除该属性的所有值。如果执行
+
+attribute:value对，那么只会删除该值。
+
+    删除用户zhangsan的title属性值：
+
+    -->ldapmodify -x -D "cn=Manager,dc=fulong,dc=com" -W
+
+Enter LDAP Password: 
+dn:cn=zhangsan,ou=sales,dc=fulong,dc=com
+changetype:modify
+delete:title   #删除title属性
+
+modifying entry "cn=zhangsan,ou=sales,dc=fulong,dc=com"
+
+
+
+
+16、删除LDAP条目
+
+   使用ldapdelete命令可以从OpenLDAP服务器中删除条目
+
+   1>删除用户zhangsan
+
+   -->ldapdelete -x -D "cn=Manager,dc=fulong,dc=com" "cn=zhangsan,ou=sales,dc=fulong,dc=com" -W
+      Enter LDAP Password:   #输入LDAP管理员密码
+
+   2>删除组织单元it
+
+   -->ldapdelete -x -D "cn=Manager,dc=fulong,dc=com" "ou=it,ou=sales,dc=fulong,dc=com" -W
+      Enter LDAP Password: 
+
+   为了后面学习，先不删除,或添加
+
+    -->ldapadd -x -W -D "cn=Manager,dc=fulong,dc=com" -f /root/sh.ldif 
+    -->ldapadd -x -W -D "cn=Manager,dc=fulong,dc=com" -f /root/ou.ldif 
+    -->ldapadd -x -W -D "cn=Manager,dc=fulong,dc=com" -f /root/user.ldif 
+    -->ldapsearch -x -b "dc=fulong,dc=com" "objectclass=*"
+    -->ldapsearch -x -b "dc=fulong,dc=com" "*"  
+    -->ldapsearch -x -b "dc=fulong,dc=com" "cn=zhangsan"
+    -->ldapsearch -x -b "dc=fulong,dc=com" "mail=zhangsan@fulong.com"
+    -->ldapsearch -x -b cn=zhangsan,ou=sales,dc=fulong,dc=com
+    -->slapcat 
+    -->ldapmodify -x -D "cn=Manager,dc=fulong,dc=com" -W
+
+
+
+17、phpLDAPadmin
+
+    1>安装和配置phpLDAPadmin
+
+    phpLDAPadmin是一个基于Web的LDAP管理工具，用于管理OpenLDAP服务器的各个方面。可以利用它浏览LDAP目录树，
+
+创建、删除、修改和赋值节点条目，执行搜索，导入和导出LDIF文件，查看服务器的模式。还可以再两个OpenLDAP服务器
+
+之间赋值对象、恢复删除、赋值节点
+
+   下载：http://jaist.dl.sourceforge.net/project/phpldapadmin/phpldapadmin-php5/1.2.3/phpldapadmin-1.2.3.zip
+
+   解压配置
+
+   -->unzip phpldapadmin-1.2.3.zip 
+
+   -->yum install httpd-* -y
+
+   -->mv phpldapadmin-1.2.3/ /var/www/html/phpldapadmin
+
+   -->cd /var/www/html/phpldapadmin/config/
+
+   -->cp config.php.example config.php
+
+   2>安装Apache服务器
+
+   (1)创建认证口令文件,并添加用户admin
+
+   -->htpasswd -c /etc/httpd/conf/phpldapadmin_pwd admin  #默认没有phpldapadmin_pwd文件，直接输入就行
+
+New password:            #输入admin密码
+Re-type new password: 
+Adding password for user admin
+
+   注意：admin无需在系统上创建。
+
+   (2)编辑/etc/httpd/conf/httpd.conf文件
+
+   -->vim /etc/httpd/conf/httpd.conf ,文件末尾添加：
+
+Alias /phpldapadmin/ "/var/www/html/phpldapadmin/"
+<Directory "/var/www/html/phpldapadmin/">
+  AllowOverride None
+  Options None
+  Order allow,deny
+  Allow from all
+  AuthType Basic
+  AuthName "Login phpldapadmin"
+  AuthUserFile /etc/httpd/conf/phpldapadmin_pwd
+  Require User admin
+</Directory>
+
+   (3)启动httpd服务
+
+   -->service httpd start
+
+正在启动 httpd：httpd: Could not reliably determine the server's fully qualified domain name, using 192.168.0.204 for ServerName
+                                                           [确定]
+   解决方法；
+
+   -->vim /etc/httpd/conf/httpd.conf
+
+   ServerName www.example.com:80  #去掉前面#
+
+   -->service httpd restart
+
+   停止 httpd：                                               [确定]
+   正在启动 httpd：                                           [确定]
+
+
+   3>登录phpLDAPadmin
+
+   -->yum install php-common php-cli php php-mysql php-pdo -y
+
+   -->yum install mysql mysql-server mysql-test -y
+
+   -->yum install php-ldap -y 
+
+   -->http://192.168.0.204/phpldapadmin/index.php 
+
+   用户名：admin
+
+   密码：******   #为htpasswd生成的密码
+
+   -->单击左侧“登录”-->登录DN:cn=manager,dc=fulong,dc=com
+
+                       密码:
+
+   -->单击“认证”，即可先死LDAP中的所有对象，比如OU、用户、组等。
+
+
+   4>使用phpLDAPadmin
+
+   (1)创建组织单元
+
+   -->页面中单击"dc=fulong,dc=com(2)"-->右侧点击“创建一个子条目”
+
+   -->选择"Generic: Organisational Unit"
+
+   -->组织单元(Organizaitonal Unit): finance #名字根据需要创建-->创建对象
+
+   -->显示如下：
+
+属性	新值	跳过
+ou=finance,dc=fulong,dc=com
+Organisational Unit	finance	
+objectClass	organizationalUnit	
+
+   -->单击“提交”
+		      
+
+   (2)创建组
+
+   -->单击"ou=finance"-->创建一个子条目
+
+   -->选择"Generic: POsix Group"
+
+   -->组：group1
+
+      GID号：500
+
+   -->创建对象
+
+   -->提交
+
+
+   (3)创建用户
+
+   -->单击"ou=finance"-->创建一个子条目
+
+   -->"Generic: User Account"
+
+   -->第一个名字：wang
+
+      最后一个名字:wu
+
+      Common Name: wang wu
+
+      User ID:wangwu
+
+      密码：******          #md5
+
+            ******
+
+       UID号：1000
+
+       GID号：group1 #选择
+
+       HOme directory: /home/users/wwu
+
+       Login shell: Bash
+
+    -->创建对象 #即可显示用户信息
+
+    
+属性	新值	跳过
+cn=wang wu,cn=group1,ou=finance,dc=fulong,dc=com
+First name	wangwu	
+Last name	wu	
+Common Name	wang wu	
+User ID	wangwu	
+Password	****************	
+UID Number	1000	
+GID Number	500	
+Home directory	/home/users/wangwu	
+Login shell	/bin/sh	
+objectClass	inetOrgPerson
+posixAccount	
+ 
+
+    (4)LDAP导出
+
+    使用phpLDAPadmin软件导出LDAP内容为LDIF文件，起到对OPenLDAP服务器备份的作用
+
+    -->单击"ou=finance"-->点击上方"export"
+
+    -->基本DN: 浏览选：ou=finance,内容为：
+
+       ou=finance,dc=fulong,dc=com
+
+       。Base(仅限于base dn)
+
+       搜索过滤器：(objectClas=*)
+
+       显示属性：*
+
+       导出格式：LDIF
+
+    -->单击"Proceed >>"
+
+    显示内容为：
+
+# LDIF Export for ou=finance,dc=fulong,dc=com
+# 服务器: My LDAP Server (127.0.0.1)
+# 搜索范围: base
+# 搜索过滤器: (objectClass=*)
+# 条目总数: 1
+#
+# Generated by phpLDAPadmin (http://phpldapadmin.sourceforge.net) on May 25, 2015 10:58 am
+# Version: 1.2.3
+
+version: 1
+
+# 条目 1: ou=finance,dc=fulong,dc=com
+dn: ou=finance,dc=fulong,dc=com
+objectclass
+ 
+    (5)导入
+
+    -->单击"ou=finance"-->点击上方"导入"
+
+    Select an LDIF file: 浏览：选择要导入的LDIF文件
+
+    比如选择：/root/product.ldif文件
+
+    -->Proceed 
+
+
+
+18、配置OPenLDAP客户端
+
+    1>/etc/openldap/ldap文件详解
+
+    OpenLDAP客户端配置文件是：/etc/openldap/ldap.conf文件
+
+    此配置文件中更可以添加和修改的主要参数有：
+
+    。HOST 192.168.0.188
+
+    。BASE dc=example,dc=com
+
+    。URL ldap://ldap.example.com ldap://ldap-master.example.com:6666
+
+
+    2>配置Linux系统OpenLDAP客户端
+
+    (1)安装软件包
+
+    -->rpm -q openldap #如果没有输出，则安装
+
+    -->yum install php-ldap openldap-clients -y
+
+    -->yum install pam_ldap nss-pam-ldapd -y
+
+    -->service nslcd start  #也可暂时不用启动
+    
+   (2)验证配置
+
+    <1>图形方式验证
+
+    -->系统-->管理-->验证-->“识别(!)和验证”
+
+    -->用户账户数据库(U): LDAP  #选择
+
+       LDAP搜索基点DN(B): dc=fulong,dc=com
+
+       LDAP服务器：ldaps://192.168.0.204
+
+       验证方法: LDAP密码
+
+    -->应用
+
+    正在启动 nslcd：                                           [确定]
+
+    备注：sssd守护进程可以用来访问多种验证服务器，并提供授权。
+
+    sssd守护进程介于本地用户和数据存储之间的进程，本地客户端首选连接sssd，
+    
+    再由sssd联系外部资源提供者。
+
+    。使用sssd具有以下优点：
+
+    1)避免了本地每个客户端程序对认证服务器大量的连接，所有本地程序只联系sssd，
+
+由sssd连接认证服务器或sssd缓存，有效地降低了负载。
+
+    2)允许离线授权
+
+    允许离线授权。sssd可以缓存远程服务器的用户认证身份，这允许在远程认证服务器宕机的时候，
+
+继续成功授权用户访问必要的资源。
+
+   <2>文本方式验证配置
+
+   -->authconfig-tui   #或：setup-->验证配置
+
+   -->用户信息     验证             -->下一步
+
+      * 使用LDAP   使用LDAP验证
+
+
+   --> LDAP设置界面
+
+      [ ]使用TLS  #空
+
+      服务器：ldap://192.168.0.204
+
+      基点：dc=fulong,dc=com
+
+   -->确定  #启动后自动启动nslcd服务
+
+   正在启动 nslcd：                                           [确定]
+
+
+
+   (3)用户登录
+
+   Linux客户端以OpenLDAP用户wangwu登录Linux系统
+
+   -->mkdir -p /home/users/wangwu  #给wangwu作为主目录使用
+
+   -->chown -R wangwu /home/users/wangwu
+
+   -->su - wangwu  #wangwu为ldap服务器端的用户登录验证。
+
+   -->-sh-4.1$ whoami 
+
+      wangwu
+
+   -->-sh-4.1$ pwd
+
+      /home/users/wangwu
+
+
+    (4)自动创建用户主目录
+
+    如果没有创建/home/users/wangwu目录，那么当用户王五登录系统时，Linux系统会提示目录
+
+/home/users/wangwu不存在，可以通过修改/etc/pam.d/system-auth文件来配置i自动创建用户
+
+的主目录。
+
+    <1>编辑/etc/pam.d/system-auth文件
+
+    -->session     required      pam_mkhomedir.so skel=/etc/skel
+       session     optional      pam_ldap.so
+
+
+    <2>用户登录
+
+    -->su - wangwu 
+ 

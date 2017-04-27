@@ -1,0 +1,531 @@
+                                                      第21章配置NAT服务器
+
+21.1 NAT简介
+
+    NAT是将局域网内每台计算机的私网IP地址转换成一个公网合法的IP地址，使局域网计算机能访问Inter资源。
+
+通过使用少量的公网IP地址代表较多的私网IP地址的方式，有助于减缓可用IP地址空间的枯竭。
+
+21.1.1 什么是NAT
+
+   NAT(Network Address Translation,网络地址转换)是一种将私网保留IP地址转化为公网合法IP地址的转换技术，
+
+使局域网计算机能访问Internet资源，它被广泛应用于各种类型Internet接入方式和各种类型的网络中。NAT不仅
+
+完美地解决了IP地址不足的问题，而且还能够有效地避免来自网络外部的攻击，隐藏并保护网络内部的计算机。
+
+   NAT与防火墙技术相结合，把局域网内部IP地址隐藏起来不被公网容易访问到，使外界难以直接访问内部网络计算机，
+
+同时它还帮助网络可以超越地址的限制，合理地安排网络中的公网IP地址和私网IP地址的使用。
+
+   NAT技术的主要作用是节约地址空间。
+
+   NAT技术能帮助解决令人头痛的IP地址紧缺的问题，而且能使内外网络隔离，提供一定的网络安全保障，特别适合以下
+
+4种环境：
+
+   。超过两台以上计算机需要连接到互联网，但局域网中只有一个ISP分配的IP地址。
+
+   。在一定程度上隐藏内部网络，保护内部局域网的安全。
+
+   不增加过多的额外投资，只要具有普通台式机和两块网卡就可以实现NAT技术
+
+   。不增加过多的额外投资，只要具有普通台式机和两块网卡就可以实现NAT技术。
+
+   。较适应于中、小型企业局域网共享上网，计算机总数量不超过150台。
+
+20.1.2 NAT工作原理
+
+   NAT技术允许一个公司以一个公网IP地址出现在Internet上，它是一种把内部丝网网络IP地址翻译成外部公用网络IP地址的技术。
+
+   当一个内部网计算机用户连接到Inernet资源时，该用户的TCP/IP协议产生一个IP数据包，该数据包包含以下值，这些值位于IP、
+
+TCP、或UDP协议头部中。
+
+   。目标IP地址：Internet资源IP地址。
+
+   。源IP地址：私网IP地址
+
+   。目标端口：Internet资源TCP或UDP端口
+
+   。源端口：源应用程序TCP或UDP端口
+
+   请求主机或者其他路由器将此IP数据包发送给NAT服务器，然后由NAT服务器向外发送的数据包的地址解析如下：
+
+   。目的IP地址：Internet资源IP地址
+
+   。源IP地址：ISP分配的公用地址。
+
+   。目标端口：Internet资源TCP或UDP端口
+
+   。源端口：重新映射的源应用程序TCP或UDP端口
+
+   NAT将重新映射的IP数据包发送到Internet。响应计算机向NAT的服务器返回一个响应。当NAT服务器接收到此响应时，该数据
+
+包含以下地址信息。
+
+   。目标IP地址：ISP分配的公用地址
+
+   。源IP地址: Internet资源IP地址
+
+   。目标端口：重新映射的源应用程序TCP或UDP端口
+
+   。源端口：Internent资源的TCP或者UDP端口
+
+   当NAT服务器完成映射和解析后，将向客户端发送数据包，此数据包包含以下地址信息。
+
+   。目标IP地址：私网IP地址
+
+   。源IP地址：Internet资源IP地址
+
+   。目标端口：源应用程序TCP或者UDP端口
+
+   。源端口：Internet资源TCP或UDP端口
+
+
+
+   对于向外发送的数据包，源IP地址和TCP/UDP端口号将被映射到一个公用源IP地址和一个可能变化的
+
+TCP/UDP端口号。度易于接收的数据包，目标IP地址和TCP/UDP端口号将被映射到私网IP地址和初始TCP/UDP
+
+端口号。
+
+
+21.1.3 NAT技术类型
+
+    NAT地址转换有【静态转换】和【动态转换】两种主要类型，而【端口地址转换】只是动态NAT转换中的一种特殊类型
+
+    1. 静态转换
+
+    静态转换是指将内部网络的私网IP地址转换为公网IP地址，IP地址是一对一的，并且是一成不变的。
+
+    2. 动态转换
+
+    动态转换是指将内部网络的私网IP地址转换为公用IP地址时，IP地址是不确定、随机的，所有被授权访问Internet的
+
+私网IP地址可以随机转换为任何指定的合法公用IP地址。也就是说，只要指定哪些内部地址可以进行转换，以及哪些合法
+
+公用IP地址作为外部地址时，就可以进行动态转换。动态转换可以使用多个合法外部地址集。当ISP提供的合法IP地址略少于
+
+网络内部的计算机数量时，可以采用动态的转换方式。
+
+    3. 端口地址转换
+
+    端口地址转换(NAPT)是指改变外出数据报的源端口并进行端口转换。采用端口地址转换方式，内部网络的所有主机均可
+
+公网一个合法外部IP地址实现对Internent的访问，从而可以最大限度地节约IP地址资源。同时又可以隐藏网络内部的所有
+
+主机，有效避免来自Internent的攻击。因此，目前网络中应用最多的是端口地址转换方式。
+
+
+21.2 NAT服务器配置实例
+
+    iptables使用nat表来实现NAT转换，常用来实现SNAT、DNAT、MASQUERADE和REDIRECT方式。
+
+21.2.1 nat表、链和目标动作。
+
+    iptables中的表和链之间的关系如下表所示，一个表一般支持多个链，其中nat表支持POSTROUTING、PREROUTING和OUTPUT链。
+
+
+                                       iptables表和链的关系
+    ----------------------------------------------------------------------------------------------
+        表                                          链
+    ----------------------------------------------------------------------------------------------
+       filter                                       INPUT
+                                   ---------------------------------------------------------------
+                                                    FORWARD
+				   ---------------------------------------------------------------
+                                                    OUTPUT
+     ----------------------------------------------------------------------------------------------
+       nat                                          POSTROUTING
+                                   ---------------------------------------------------------------
+                                                    PREROUTING
+				   ---------------------------------------------------------------
+                                                    OUTPUT
+     ----------------------------------------------------------------------------------------------
+      mangle                                        INPUT
+                                   ---------------------------------------------------------------
+                                                    OUTPUT 
+				   ---------------------------------------------------------------
+                                                    FORWARD
+				   ---------------------------------------------------------------
+                                                    POSTROUTIGN
+				   ---------------------------------------------------------------
+				                    PREROUTING
+     ----------------------------------------------------------------------------------------------
+       raw                                          OUTPUT  
+                                   ---------------------------------------------------------------
+                                                    PREROUTING                                                  
+     ----------------------------------------------------------------------------------------------
+
+                             
+
+
+     -----------------------------------------------------------------------------------------------------------
+        表                描述                                                   支持的链
+     -----------------------------------------------------------------------------------------------------------
+       filter   netfilter默认表，过滤数据包设置                   INPUT、FORWARD和OUTPUT
+     ------------------------------------------------------------------------------------------------------------
+       nat      当数据包建立新的连接时，nat表能够修改数据包，     PREROUTING、OUTPUT和POSTROUTING
+                完成网络地址转换
+     ------------------------------------------------------------------------------------------------------------
+       mangle   用在数据包的特殊变更操作，比如修改TOS特性         PREROUTING、OUTPUT、INPUT、FORWARD和POSTROUTING
+     ------------------------------------------------------------------------------------------------------------
+       raw      优先级最高，设置raw一般是为了不再让iptables做     PREROUTING和OUTPUT
+                数据包的连接跟踪处理，提高性能。
+     ------------------------------------------------------------------------------------------------------------
+
+
+                                        nat表的链和目标动作的关系
+     ------------------------------------------------------------------------------------------
+          链                                                目标动作
+     -------------------------------------------------------------------------------------------
+                                                       SNAT
+          POSTROUTING                                 -------------------------------------------
+                                                       MASQUERADE
+     --------------------------------------------------------------------------------------------
+                                                       DANT
+          PREROUTING                               ---------------------------------------------
+                                                       REDIRECT
+     --------------------------------------------------------------------------------------------
+
+     POSTROUTING：在数据包离开防火墙时改变数据包的源地址
+
+     PREROUTING   数据包达到防火墙时改变数据包的目的地址
+     
+
+21.2.2 实现SNAT
+
+    SNAT方式将转换数据包的源IP地址，如果企业局域网内的计算机采用共享的方式访问Internet，就需要使用SNAT,将本地的
+
+私网IP地址替换为公网的IP地址。SNAT之能用在nat表的POSTROUTING链，并且只要连接的第一个符合条件的数据包被SNAT进行
+
+地址转换，那么这个连接的其它所有数据包都会自动完成地址替换工作，并且这个规则还会应用于这个连接的其它数据包。
+
+    在转换数据包的源IP地址时，按下表指定天魂的IP地址和端口
+
+                                      指定替换的IP地址和端口
+    -------------------------------------------------------------------------------
+       指定方式                                  举例
+    -------------------------------------------------------------------------------
+       指定单独的IP地址                   192.168.1.1
+    -------------------------------------------------------------------------------
+       指定一段连续的IP地址范围           192.168.1.1-192.168.1.20
+    -------------------------------------------------------------------------------
+       指定端口范围                       192.168.1.1:1024-2000
+    --------------------------------------------------------------------------------
+       同时指定一段连续的IP地址范围和端口范围  192.168.1.1-192.168.1.20:1024-2000
+    --------------------------------------------------------------------------------
+
+    注意：在指定端口范围的时候，一定要加上-p tcp或-p udp
+
+
+    实例：在公司内部配置一台NAT服务器，为公司网络内的客户端计算机连接Internet提供服务，具体参数如下：
+
+    。公司内部网络：192.168.0.0/24
+
+    。NAT服务器内网卡(eth0) IP地址：192.168.0.203
+
+    。NAT服务器外网卡(eth2) IP地址：192.168.1.1
+
+    。NAT服务器主机名: Master
+
+
+
+    1.打开内核路由转发功能
+
+    -->vim /etc/sysctl.conf 
+
+    net.ipv4.ip_forward = 1
+
+    -->sysctl -p
+
+net.ipv4.ip_forward = 1
+net.ipv4.ip_nonlocal_bind = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.default.accept_source_route = 0
+kernel.sysrq = 0
+kernel.core_uses_pid = 1
+net.ipv4.tcp_syncookies = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.shmmax = 68719476736
+kernel.shmall = 4294967296
+
+
+    2.配置iptables规则
+
+    -->iptables -t nat -A POSTROUTING -o eth2   -j SNAT  --to-source 192.168.1.1
+ 
+    -->iptables -t nat -L
+
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination         
+REDIRECT   tcp  --  192.168.0.0/24       anywhere            tcp dpt:http redir ports 3128 
+
+Chain POSTROUTING (policy ACCEPT)
+target     prot opt source               destination         
+SNAT       all  --  anywhere             anywhere            to:192.168.1.1 
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination      
+
+
+    3.保存iptables规则
+
+    -->service iptables save
+
+      iptables：将防火墙规则保存到 /etc/sysconfig/iptables：     [确定]
+
+
+21.2.3 实现DNAT
+
+    DNAT方式将改写数据包的目的IP地址，比如企业内部有一台Web服务器，使用私网IP地址，这时互联网用户是
+
+无法访问该服务的，通过使用DNAT方式，在NAT服务器接收到数据包之后，通过转换数据包的目的IP地址，信息会
+
+转发给企业内部的Web服务器，这个过程是透明的，用户感觉像直接在与内网服务器进行通信一样。
+
+    实例：在公司内部配置一台NAT服务器，发布企业内部的Web服务器，使得互联网用户可以访问该网站，具体
+
+参数如下：
+
+    。NAT服务器内网卡(eth0) IP地址:192.168.0.203
+
+    。NAT服务器外网卡(eth1) IP地址：192.168.1.1
+
+    。NAT服务器主机名:Master1
+
+    。企业内部Web服务器IP地址：192.168.0.188
+
+    1.配置iptables规则
+
+    -->iptables -t nat -A  PREROUTING -d 192.168.1.1 -p tcp --dport 80 -j DNAT --to-destination 192.168.0.188
+
+
+    --> iptables -t nat -L
+
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination         
+REDIRECT   tcp  --  192.168.0.0/24       anywhere            tcp dpt:http redir ports 3128 
+DNAT       tcp  --  anywhere             192.168.1.1         tcp dpt:http to:192.168.0.188 
+
+Chain POSTROUTING (policy ACCEPT)
+target     prot opt source               destination         
+SNAT       all  --  anywhere             anywhere            to:192.168.1.1 
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination  
+
+
+     2.保存iptables规则
+
+     -->service iptables save
+
+        iptables：将防火墙规则保存到 /etc/sysconfig/iptables：     [确定]
+
+
+21.2.4 实现MASQUERADE
+
+    MASQUERADE方式和SNAT的作用差不多，都是改变数据包的源IP地址，但是它只是针对外部接口使动态IP地址，不需要指定转换的
+
+IP地址，可以实现IP伪装。如果企业网络采用拨号方式接入Internet，而没有对外的静态IP地址，那么建议使用MASQUERADE
+
+   
+    实例：在公司内部配置一台NAT服务器，为公司网络内的客户端计算机以外部接口(ppp0)动态IP地址连接Internet提供服务。
+
+具体参数如下：
+
+    。公司内部网络：192.168.0.0/24
+
+    。NAT服务器内网卡(eth0) IP地址：192.168.0.203
+
+    。NAT服务器外网卡(ppp0) IP地址：动态IP地址
+
+    。NAT服务器主机名：Master1
+
+    1.配置iptables规则
+
+    -->iptables -t nat -A POSTROUTING -o ppp0 -s 192.168.0.0/24 -j MASQUERADE
+
+    -->iptables -t nat -L
+
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination         
+REDIRECT   tcp  --  192.168.0.0/24       anywhere            tcp dpt:http redir ports 3128 
+DNAT       tcp  --  anywhere             192.168.1.1         tcp dpt:http to:192.168.0.188 
+
+Chain POSTROUTING (policy ACCEPT)
+target     prot opt source               destination         
+SNAT       all  --  anywhere             anywhere            to:192.168.1.1 
+MASQUERADE  all  --  192.168.0.0/24       anywhere            
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination  
+
+    2.保存iptables规则
+
+    -->service iptables save
+
+      iptables：将防火墙规则保存到 /etc/sysconfig/iptables：     [确定]
+
+
+21.2.5 实现透明代理
+
+    REDIRECT目标动作相当于对进入接口进行DNAT的一种简单方便的形式，将数据包重定向到IP地址为进入系统时的
+
+网络接口的IP地址， 目的端口改写为指定的目的端口，这种方式可以应用于透明代理。
+
+    实例：
+
+    在公司内部配置一台NAT服务器，将NAT服务器端口80接收到的数据重定向到端口3128，从而实现透明代理，具体
+
+参数如下：
+
+    。公司内部网络：192.168.0.0、24
+
+    。NAT服务器内网卡(eth0)IP地址：192.168.0.203
+
+    。NAT服务器外网卡(eth1)IP地址：192.168.1.1 （实际应该为公网IP地址）
+
+    。NAT服务器主机名: Master1
+
+    。目的端口:80
+
+    。将目的端口重定向到：3128
+
+    1. 配置iptables规则
+
+    使用以下命令在NAT服务器上添加iptables规则
+
+    -->iptables -t nat -A PREROUTING -i eth0 -p tcp -s 192.68.0.0/24 --dport 80 -j REDIRECT --to-ports 3128
+
+    --> iptables -L -t nat
+
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination         
+REDIRECT   tcp  --  192.168.0.0/24       anywhere            tcp dpt:http redir ports 3128 
+DNAT       tcp  --  anywhere             192.168.1.1         tcp dpt:http to:192.168.0.188 
+REDIRECT   tcp  --  192.68.0.0/24        anywhere            tcp dpt:http redir ports 3128 
+
+Chain POSTROUTING (policy ACCEPT)
+target     prot opt source               destination         
+SNAT       all  --  anywhere             anywhere            to:192.168.1.1 
+MASQUERADE  all  --  192.168.0.0/24       anywhere            
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination       
+
+
+    2.保存iptables规则
+
+    -->service iptables save
+
+       iptables：将防火墙规则保存到 /etc/sysconfig/iptables：     [确定]
+
+
+    注意：iptables配置完成之后，还需要将Squid服务器配置成透明代理服务器。
+
+
+21.2.6 控制iptables服务
+
+    1.启动iptables服务
+
+    -->service iptables start
+
+    2.停止iptables服务
+
+    -->service iptables stop
+
+    3.重新启动iptables服务
+
+    -->service iptables restart
+
+    4.查看iptables服务运行状态
+
+    -->ervice iptables status
+
+表格：filter
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED 
+2    ACCEPT     icmp --  0.0.0.0/0            0.0.0.0/0           
+3    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           
+4    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:22 
+5    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited 
+6    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           
+7    ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           
+
+Chain FORWARD (policy ACCEPT)
+num  target     prot opt source               destination         
+1    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited 
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+
+表格：nat
+Chain PREROUTING (policy ACCEPT)
+num  target     prot opt source               destination         
+1    REDIRECT   tcp  --  192.168.0.0/24       0.0.0.0/0           tcp dpt:80 redir ports 3128 
+2    DNAT       tcp  --  0.0.0.0/0            192.168.1.1         tcp dpt:80 to:192.168.0.188 
+3    REDIRECT   tcp  --  192.68.0.0/24        0.0.0.0/0           tcp dpt:80 redir ports 3128 
+
+Chain POSTROUTING (policy ACCEPT)
+num  target     prot opt source               destination         
+1    SNAT       all  --  0.0.0.0/0            0.0.0.0/0           to:192.168.1.1 
+2    MASQUERADE  all  --  192.168.0.0/24       0.0.0.0/0           
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+
+    
+    5.开机自动启动iptables服务
+
+    -->chkconfig iptables on
+
+    -->chkconfig --list iptables
+
+      iptables       	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+21.3 NAT客户端配置
+
+21.3.1 Linux客户端配置
+
+  在Linux系统中，要设置系统默认网关，可以修改/etc/sysconfig/network-scripts/ifcfg-eth0文件
+
+或利用“网络连接”图形工具来实现。
+
+    1.编辑/etc/sysconfig/network-script/ifcfg-eth0
+
+    -->vim /etc/sysconfig/network-script/ifcfg-eth0
+
+        GATEWAY=192.168.0.203
+
+    -->vim /etc/sysconfig/network
+
+       2015/6/19 GATEWAY=192.168.0.203
+
+    -->/etc/init.d/network restart
+
+    
+    。图形方式
+
+    -->系统-->首选项-->网络连接-->添加-->有线网络-->编辑
+
+    -->IPv4设置-->添加-->地址            子网掩码       网关
+    
+                         192.68.0.204    255.255.255.0  192.168.0.203  #网关指向NAT服务器IP
+
+    -->应用-->关闭
+
+
+ 21.3.2 Windows客户端配置
+
+     win7:
+
+     -->开始-->控制面板-->网络和共享中心-->更改适配器
+
+     -->本地连接属性-->Inernet 协议版本 (TCP/IPv4)-->默认网关：192.168.0.203  （为NAT服务器IP）
+
+     -->确定

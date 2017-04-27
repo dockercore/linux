@@ -1,0 +1,727 @@
+                                            第24章 安装Oracle 12c数据库
+
+
+24.1 Oracle数据库简介
+
+24.1.1 什么是Oracle数据库
+
+    Oracle数据库系统是美国ORACLE(甲骨文）公司提供的以分布式数据库为核心的一组软件产品，是目前
+
+最流行的C/S体系结构的关系数据库之一。Oracle数据库是世界上第一个支持SQL语言的商业数据库，定位于
+
+高端服务器和小型计算机。Oracle数据库在集群技术、高可用性、商业智能、安全性和系统管理等方面都要
+
+优于其他数据库。
+
+    Oracle数据库的最新版本是Oracle 12c。Oracle 12c引入了一个新的多承租方架构，使用该架构可以轻松
+
+部署和管理数据库云。另外一些创新特性可最大限度地提高资源使用率和灵活性，比如Oracle Multitenant可以
+
+快速整合多个数据库，而Automatic Data Optimization和Heat MAp能够以更高的密度压缩数据和对数据分层。
+
+这些独一无二的技术再加上在可用性-安全性和打输了支持方面的主要增强，使得Oracle 12c成为私有云和公有云
+
+部署的理想平台。
+    
+24.1.2 Oracle数据库体系结构
+
+    Oracle服务器由Oracle实例和Oracle数据库组成。而Oracle实例又由后台进程和共享内存组成，所以Oracle
+
+的结构又包含了内存结构和进程结构；而Oracle数据库由物理文件组成，所以Oracle结构也包含了存储结构。
+
+    1.内存结构
+
+    Oracle内存结构由PGA(Program Global Area,程序全局区)和SGA(System Global Area系统全局区)两大部分组成。
+
+不管是服务器进程，还是后台进程，它们都有自己进程私有的内存空间，即PGA，而SGA则为所有后台进程间共享访问使用。
+
+    在Oracle数据库中，SGA主要分为以下6大部分
+
+    (1)共享池
+
+    (2)数据缓冲区
+
+    (3)重做日志缓冲区
+
+    (4)Large池
+
+    (5)JAVA池
+
+    (6)Stream池
+
+
+    2.后台进程
+
+    Oracle的进程主要有【后台进程】和【服务器进程】两类。后台进程主要对Oracle数据库进行各种维护和操作，而
+
+服务器进程主要用来处理用户的请求。用户进程通过监听器访问Oracle实例，那么就会触发生成一个服务器进程，来对
+
+该用户进程的请求进行处理。
+
+    Oracle后台进程主要有以下几种：
+    
+    (1)DBWn(数据库写进程）
+
+    (2)LGWR(日志写进程）
+    
+    (3)CKPT(检查点进程)
+
+    (4)SMON(系统监控进程)
+
+    (5)PMON(进程监控进程)
+
+    
+    3.存储结构
+
+    存储结构是Oracle物理文件的组成部分，Oracle涉及的物理文件有控制文件、数据文件、重做日志文件、参数文件、
+
+口令文件和归档日志文件。其中，控制文件、数据文件和重做日志文件是Oracle数据库不可或缺的关键文件。
+
+    (1)控制文件
+
+    (2)数据文件
+
+    (3)联机重做日志文件
+
+    (4)参数文件
+
+    (5)口令文件
+
+    (6)归档日志文件
+
+
+24.2 安装Oracle 12c 
+    
+24.2.1 Oracle 12c安装前准备工作
+
+    1.安装Linux软件包
+
+    -->yum install binutils compat-libcapl compat-libstdc gcc gcc-c++ glibc glibc-devel ksh \
+libgcc libstdc libstdc++-devel libaio libaio-devel libXext libXtst libX11 libXau libxcb libXi \
+make sysstat unixODBC unixODBC-devel -y
+
+实际应该安装：
+
+    -->yum install binutils compat-libcap compat-libstdc++ gcc-* gcc-c++  glibc-* \  glibc-devel-* ksh libgcc libgcc-*  ksh \
+libstdc*  libstdc++-devel libaio libaio-devel libXext libXtst libX11*  libXau libxcb libXi control-center  sysstat  \
+make unixODBC unixODBC-devel elfutils-libelf-devel-*  glibc-devel \
+ glibc-headers  kernel-headers -y
+
+
+    1.2 修改语言
+
+    -->vi /etc/sysconfig/i18n 
+
+LANG="zh_CN.UTF-8"
+LANG="en_US.UTF-8"
+SYSFONT="latarcyrheb-sun16"
+
+如果想中文显示安装界面只添加一条：
+LANG="zh_CN.UTF-8"
+
+
+或：
+
+LANG="zh_CN.GB18030" 
+LANGUAGE="zh_CN.GB18030:zh_CN.GB2312:zh_CN" 
+SUPPORTED="zh_CN.UTF-8:zh_CN:zh:en_US.UTF-8:en_US:en" 
+SYSFONT="lat0-sun16"
+
+    -->source /etc/sysconfig/i18n 
+
+
+    2.创建用户和组
+
+    -->groupadd dba                       #创建组群dba
+
+    -->groupadd oinstall                  #创建组群oinstall 
+
+    -->useradd -g oinstall -G dba oracle  #创建用户，该用户的主要组群是oinstall,次要组群是dba
+
+    -->passwd oracle                      #为oracle用户设置密码
+
+更改用户 oracle 的密码 。
+新的 密码：
+重新输入新的 密码：
+passwd： 所有的身份验证令牌已经成功更新
+
+    。查看用户oracle的组群信息
+
+    -->id oracle
+
+uid=500(oracle) gid=500(oracle) 组=500(oracle)
+
+    用户oracle的主要组群是oinstall，次奥组群是dba
+
+
+    3.创建Oracle软件安装目录
+
+    -->chown -R oracle:oinstall /u01
+ 
+    -->chmod -R 755 /u01/
+
+
+     4.编辑/etc/sysctl.conf文件
+
+     -->vim /etc/sysctl.conf
+
+     在文件末尾添加以下内容：
+
+kernel.shmmni = 4096
+kernel.sem = 250 32000 100 128
+net.ipv4.ip_local_port_range = 9000 65500
+net.core.rmem_default = 4194304
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048586
+fs.aio-max-nr = 1048576
+fs.file-max = 6815744
+
+    -->sysctl -p  #让内核生效
+
+net.ipv4.ip_forward = 1
+net.ipv4.ip_nonlocal_bind = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.default.accept_source_route = 0
+kernel.sysrq = 0
+kernel.core_uses_pid = 1
+net.ipv4.tcp_syncookies = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.shmmax = 68719476736
+kernel.shmall = 4294967296
+kernel.shmmni = 4096
+kernel.sem = 250 32000 100 128
+net.ipv4.ip_local_port_range = 900 65500
+net.core.rmem_default = 4194304
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048586
+fs.aio-max-nr = 1048576
+fs.file-max = 6815744
+
+    .4.1修改linux内核版本：
+
+    
+    -->vim /etc/redhat-release
+
+       Red Hat Enterprise Linux Server release 3 (Tikanga)
+
+
+    5.编辑/etc/security/limits.conf文件
+
+    -->vim /etc/security/limits.conf 
+
+    在文件末尾添加：
+
+  oracle         soft    nproc           2047
+  oracle         hard    nproc           16384
+  oracle         soft    nofile          1024
+  oracle         hard    nofile          65536
+
+    6.编辑/etc/pam.d/login文件
+
+    -->/etc/pam.d/login
+
+session    required     /lib64/security/pam_limits.so
+session    required     pam_limits.so
+
+
+    7.编辑/etc/profile文件
+
+    -->vim /etc/profile
+
+    文件末尾添加：
+
+if [ $USER = "oracle" ]; then
+if [ $SHELL = "/bin/ksh" ];then
+ulimit -p 16384
+ulimit -n 65536
+else
+ulimit -u 16384 -n 65536
+fi
+fi
+
+
+    8.编辑/etc/hosts文件
+
+    -->vim /etc/hosts 
+
+       192.168.0.203   Master1   #添加主机名和IP
+
+
+    9.编辑/home/oracle/.bash_profile文件（环境变量）
+
+    -->vim /home/oracle/.bash_profile
+
+export TMP=/tmp;
+export TMPDIR=$TMP;
+export ORACLE_TERM=xterm
+export ORACLE_BASE=/u01/app/oracle
+export ORACLE_HOME=$ORACLE_BASE/product/12.1.0/db_1
+export ORACLE_SID=orcl
+export PATH=$PATH:$HOME/bin:$ORACLE_HOME/bin   #PATH在原来基础上修改
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/usr/lib
+export LANG=en_US.UTF-8                            ---#为英文安装界面，如果想中文显示去掉这行
+export TNS_ADMIN=$ORACLE_HOME/network/admin
+export ORACLE_BASE ORACLE_HOME ORACLE_SID PATH LD_LIBRARY_PATH LANG
+
+    -->source /home/oracle/.bash_profile 
+
+    10.修改主机名
+
+    -->vim /etc/hosts
+
+    192.168.203  sql
+
+    -->vim /etc/sysconfig/network
+
+    HOSTNAME=sql
+
+    -->/etc/init.d/network restart
+
+
+
+24.2.2 高级方式安装Oracle 12c企业版
+
+    oracle下载地址：http://www.oracle.com
+
+    。解压软件
+
+    -->su - oracle
+
+    -->unzip linuxamd64_12c_database_1of2.zip 
+
+    -->unzip linuxamd64_12c_database_2of2.zip 
+
+    。查看解压的文件
+
+    -->ls 
+
+    database
+
+    。安装oracle 12c
+
+
+    以oracle身份登录图形界面
+
+    -->cd database/
+
+    -->./runInstaller 
+
+正在启动 Oracle Universal Installer...
+
+检查临时空间: 必须大于 500 MB。   实际为 25275 MB    通过
+检查交换空间: 必须大于 150 MB。   实际为 1983 MB    通过
+检查监视器: 监视器配置至少必须显示 256 种颜色。    实际为 16777216    通过
+准备从以下地址启动 Oracle Universal Installer /tmp/OraInstall2015-06-24_01-50-05PM. 请稍候...
+
+
+如果界面中出现"[][]"方格乱码，则：
+
+-->export  LANG=C
+-->export LC_ALL=C
+
+
+    -->去掉“我希望通过My Oracle Support接收安全更新”的勾-->是-->下一步
+
+    -->”跳过软件更新"-->下一步
+
+    -->“创建和配置数据库”(Create and configure a database)-->下一步
+
+    -->"服务器类"(Server class)-->下一步
+
+    -->"单实例数据库安装"(Single instance database installation)-->下一步
+
+    -->"高级安装"(Advanced install)-->下一步
+
+    -->从左侧添加“简体中文(Simplified Chinese)-->下一步
+
+    -->”企业版"(Enterprise Edition(6.4GB)-->下一步
+
+    -->"Oracle基目录(Oracle base): /u01/app/oracle -->下一步
+
+       "软件位置"(Software location:/u01/app/oracle/product/12.1.0/db_1-->下一步
+
+    -->“产品清单目录”:/u01/app/oraInventory"
+
+        "Oracle组名(oralnventory Group Name):oracle"  #书中是:oinstall-->下一步
+
+    -->"一般用途/事务处理"(General Purpose/Transaction Processing)-->下一步
+
+    -->"全局数据库名"(Global database name):Orcl  -->下一步
+
+       "Oracle系统标识符(SID)"(Oracle system identified(SID):orcl
+
+       "可插入数据库名"(Pluggable database name):pdborcl
+
+     -->“内存”(Memory)  -->下一步
+     
+        "字符集"项(Character sets):
+     
+           。(从以下字符集列表中选择)Choose from the following list of character sets
+	   
+	    Simplified Chinese ZHZ16GBK
+
+	 "示例方案"(Sample schemas)
+
+     -->"文件系统"(File system)-->下一步
+
+         指定数据文件位置(Specify database file location:):/u01/app/oracle/oradata
+
+     -->"注册到Enterprise Manager(EM) Cloud Control" 勾选-->下一步
+
+        OMS 主机：192.168.0.203
+
+	OMS 端口：1521
+
+	EM admin usernmae:sys
+
+	EM admin password:******
+
+	或者：不勾选：
+
+     -->勾选：“启用恢复"（Enable Recovery）-->下一步
+
+        。文件系统(File system)
+
+	  恢复区位置：/u01/app/oracle/archivelog  #最好自定义目录：archivelog
+
+	  -->mkdir /u01/app/oracle/archivelog
+ 
+     -->”对所有账户使用相同的口令“(Use the same password for all accounts)-->下一步
+
+        口令:******  确认口令：******  (ABC_yhq845541)
+
+     -->数据库管理员：(OSDBA)组(Database Administrator(OSDBA)group):oracle              #书中是dba
+
+        数据库操作者(OSOPER)组（可选)(Database Operator (OSPER)group (Optional): oracle  #书中是dba
+
+	数据库备份和恢复(OSBACKUP(DBA)组)(Database Backup and Recovery (OSBACKUPDBA)group:dba #书中是dba
+
+	Data Guard管理(OSDGDBA)组(Data Guard administrator(OSDGDBA)group): oracle #书中是db
+
+	加密密钥管理管理(OSKMDBA)组(Encryption_Key Management administrative (OSKMDBA)group:oracle #书中是db
+ 
+     -->下一步
+
+     -->安装(Install)
+
+     -->执行脚本：
+
+        以root身份执行：
+
+	-->cd /u01/app/oraInventory/
+
+	-->./orainstRoot.sh 
+
+Changing permissions of /u01/app/oraInventory.
+Adding read,write permissions for group.
+Removing read,write,execute permissions for world.
+
+Changing groupname of /u01/app/oraInventory to oracle.
+The execution of the script is complete.
+
+        -->cd /u01/app/oracle/product/12.1.0/db_1/
+
+        -->./root.sh 
+
+Performing root user operation for Oracle 12c 
+
+The following environment variables are set as:
+    ORACLE_OWNER= oracle
+    ORACLE_HOME=  /u01/app/oracle/product/12.1.0/db_1
+
+Enter the full pathname of the local bin directory: [/usr/local/bin]: 回车
+   Copying dbhome to /usr/local/bin ...
+   Copying oraenv to /usr/local/bin ...
+   Copying coraenv to /usr/local/bin ...
+
+
+Creating /etc/oratab file...
+Entries will be added to the /etc/oratab file as needed by
+Database Configuration Assistant when a database is created
+Finished running generic part of root script.
+Now product-specific root actions will be performed.
+
+
+        -->OK
+
+	-->ok
+ 
+        -->Close
+
+
+24.3 管理监听器和数据库启动关闭
+
+24.3.1 管理监听器
+
+    Oracle监听器是要给服务器端程序，用于监听所有来自可兑换的连接请求，并为其提供数据服务。
+
+    Oracle服务器抓哟实现以下功能：
+
+    。监听客户端请求。
+
+    。为客户端请求分配服器进程
+
+    。注册实例服务
+
+    。故障转移
+
+    。负载均衡
+
+    1.查看监听器状态
+
+    -->su - oracle
+
+    -->lsnrctl status
+
+LSNRCTL for Linux: Version 12.1.0.1.0 - Production on 24-JUN-2015 19:54:07
+
+Copyright (c) 1991, 2013, Oracle.  All rights reserved.
+
+Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=IPC)(KEY=EXTPROC1521)))
+STATUS of the LISTENER
+------------------------
+Alias                     LISTENER
+Version                   TNSLSNR for Linux: Version 12.1.0.1.0 - Production
+Start Date                24-JUN-2015 16:07:25
+Uptime                    0 days 3 hr. 46 min. 43 sec
+Trace Level               off
+Security                  ON: Local OS Authentication
+SNMP                      OFF
+Listener Parameter File   /u01/app/oracle/product/12.1.0/db_1/network/admin/listener.ora
+Listener Log File         /u01/app/oracle/diag/tnslsnr/sql/listener/alert/log.xml
+Listening Endpoints Summary...
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=EXTPROC1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=sql)(PORT=1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcps)(HOST=sql)(PORT=5500))(Security=(my_wallet_directory=/u01/app/oracle/admin/orcl/xdb_wallet))(Presentation=HTTP)(Session=RAW))
+Services Summary...
+Service "orcl" has 1 instance(s).
+  Instance "orcl", status READY, has 1 handler(s) for this service...
+Service "orclXDB" has 1 instance(s).
+  Instance "orcl", status READY, has 1 handler(s) for this service...
+Service "pdborcl" has 1 instance(s).
+  Instance "orcl", status READY, has 1 handler(s) for this service...
+The command completed successfully
+
+
+
+    2.启动监听器
+
+    -->lsnrctl start
+
+LSNRCTL for Linux: Version 12.1.0.1.0 - Production on 24-JUN-2015 19:55:12
+
+Copyright (c) 1991, 2013, Oracle.  All rights reserved.
+
+Starting /u01/app/oracle/product/12.1.0/db_1/bin/tnslsnr: please wait...
+
+TNSLSNR for Linux: Version 12.1.0.1.0 - Production
+System parameter file is /u01/app/oracle/product/12.1.0/db_1/network/admin/listener.ora
+Log messages written to /u01/app/oracle/diag/tnslsnr/sql/listener/alert/log.xml
+Listening on: (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=EXTPROC1521)))
+Listening on: (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=sql)(PORT=1521)))
+
+Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=IPC)(KEY=EXTPROC1521)))
+STATUS of the LISTENER
+------------------------
+Alias                     LISTENER
+Version                   TNSLSNR for Linux: Version 12.1.0.1.0 - Production
+Start Date                24-JUN-2015 19:55:12
+Uptime                    0 days 0 hr. 0 min. 0 sec
+Trace Level               off
+Security                  ON: Local OS Authentication
+SNMP                      OFF
+Listener Parameter File   /u01/app/oracle/product/12.1.0/db_1/network/admin/listener.ora
+Listener Log File         /u01/app/oracle/diag/tnslsnr/sql/listener/alert/log.xml
+Listening Endpoints Summary...
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=EXTPROC1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=sql)(PORT=1521)))
+The listener supports no services
+The command completed successfully
+
+
+
+    3.关闭监听器
+
+    -->lsnrctl stop
+
+LSNRCTL for Linux: Version 12.1.0.1.0 - Production on 24-JUN-2015 19:55:00
+
+Copyright (c) 1991, 2013, Oracle.  All rights reserved.
+
+Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=IPC)(KEY=EXTPROC1521)))
+The command completed successfully
+
+
+24.3.2 启动和关闭Oracle数据库
+
+    1.启动数据库
+
+                                               启动数据库的命令
+    ---------------------------------------------------------------------------------------------------
+    startup              完成启动实例、挂载数据库和打开数据库3个步骤。此时数据库使数据文件和重做日志文件
+                         在线，此时数据库系统处于正常工作状态，可以接收用户请求。
+    ---------------------------------------------------------------------------------------------------
+    startup nomount      只启动一个Oracle实例。读取参数文件、启动后台进程、初始化系统全局区(SGA)。
+    ---------------------------------------------------------------------------------------------------
+    startup mount        启动实例并且挂载数据库，但没有打开数据库。
+    ---------------------------------------------------------------------------------------------------
+    startup open         完成启动实例、挂载数据库和打开数据库3个步骤，是正常启动数据库模式。类似startup
+    ---------------------------------------------------------------------------------------------------
+    startup force        强制关闭数据库(shutdown abort)和打开数据库(startup)两条命令的综合。
+    ---------------------------------------------------------------------------------------------------
+    startup restrict     这种方式下，数据库将被成功打开，但只允许一些特权用户（具有DBA角色的用户）才可以
+                         使用数据库。常用来对数据库进行维护。
+    ---------------------------------------------------------------------------------------------------
+
+
+    例24.1 启动Oracle数据库
+
+    -->sqlplus / as sysdba
+
+ORACLE instance started.
+
+Total System Global Area  780824576 bytes
+Fixed Size		    2293248 bytes
+Variable Size		  574620160 bytes
+Database Buffers	  201326592 bytes
+Redo Buffers		    2584576 bytes
+Database mounted.
+Database opened.
+
+    2.关闭数据库
+
+                                                 关闭数据库的命令
+    ---------------------------------------------------------------------------------------------------
+    shutdown normal      正常方式关闭数据库。
+    ---------------------------------------------------------------------------------------------------
+    shutdown immediate;  立即关闭数据库，这种方式会让数据库干净的关闭，一般采用这种方式。
+    ---------------------------------------------------------------------------------------------------
+    shutdown abort       直接关闭数据库，正在访问的数据库会话会被突然终止。
+    ---------------------------------------------------------------------------------------------------
+    shutdown transactional 计划关闭数据库，它使当前连接到系统且正在活动的事务执行完毕，运行该命令后，
+                           任何新的连接和事务都是不允许的。在所有活动的事务完成后，数据库将采用和shutdown
+			   immediate同样的方式关闭数据库。
+    ---------------------------------------------------------------------------------------------------
+
+    例24.2 立即关闭Oracle数据库
+
+    -->sqlplus / as sysdba
+
+    -->shutdown immediate;
+
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+
+
+24.4 Oracle客户端工具
+
+24.4.1 SQL*Plus
+
+    SQL*Plus主要具有以下功能：
+
+    。数据库维护，比如启动、关闭数据库等。
+
+    。执行SQL语句和PL/SQL
+
+    。执行SQL脚本，生成新的SQL脚本
+
+    。数据的导出，生成报表
+
+    。应用程序开发、测试SQL/和PL/SQL
+
+    。供应用程序开发、测试SQL和PL/SQL
+
+    。供应用程序调用，比如安装程序中进行脚本的安装
+
+    。用户管理和权限维护等。
+
+
+    使用SQL*Plus连接Oracle数据库时，有两种主要的验证身份方法，分别是操作系统验证身份和数据库验证身份。
+
+    1.操作系统验证
+
+    -->sqlplus / as sysdba
+
+SQL*Plus: Release 12.1.0.1.0 Production on Wed Jun 24 20:18:38 2015
+
+Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle Database 12c Enterprise Edition Release 12.1.0.1.0 - 64bit Production
+With the Partitioning, OLAP, Advanced Analytics and Real Application Testing options
+
+SQL> 
+
+
+    2.数据库验证身份
+
+    -->sqlplus sys/fulong@orcl as sysdba
+
+SQL*Plus: Release 12.1.0.1.0 Production on Wed Jun 24 20:20:02 2015
+
+Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle Database 12c Enterprise Edition Release 12.1.0.1.0 - 64bit Production
+With the Partitioning, OLAP, Advanced Analytics and Real Application Testing options
+
+SQL> 
+
+
+24.4.2 ORACLE EM Express
+
+    Oracle EM Express(全称Oracle Enterprise Manager Database Express)是一个简化版本的
+
+Database Control,只提供最基本的数据库管理和性能监控管理。通过使用Oracle EM Express可以
+
+查看数据库基本参数信息、存储信息、添加数据文件盒表空间，以及进行用户管理等。
+
+
+    浏览器访问EM
+
+    https://192.168.0.203:5500/em   #注意是https 
+
+    -->用户名：sys
+
+    -->口令:******
+
+    勾选"以sysdba"身份
+
+    -->登录
+
+
+24.4.3 Oracle SQL Developer 
+
+    Oracle SQL Developer是一款图形化的Oracle数据库管理和开发软件。使用该软件可以浏览数据库对象、
+
+运行SQL语句和SQL脚本、编辑和调试PL/SQL语句、运行所提供的报表，以及创建和保存报表。
+
+    下载地址：http:///www.oracle.com
+
+    Windows系统上，打开"Oracle SQL Develper"-->文件-->新建-->数据库连接
+
+    -->连接名:192.168.0.203
+
+       用户名:sys
+
+       口令：******
+
+
+       连接类型：基本   角色：SSYDBA
+
+       主机名：192.168.0.203
+
+       端口：1521
+
+       SID:orcl
+
+   -->保存-->测试  #测试成功后执行下面操作
+
+   -->连接
+

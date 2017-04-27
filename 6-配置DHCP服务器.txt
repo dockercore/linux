@@ -1,0 +1,1152 @@
+                                       第6章  配置DHCP服务器
+
+
+6.1 DHCP简介
+
+6.1.1 什么是DHCP
+
+   DHCP(Dynamic Host Configuration Protocol,动态主机配置协议)是一种简化计算机IP地址配置管理的标准。
+
+通过采用DHCP标准，可以使用DHCP服务器为网络上的计算机分配、管理动态IP地址以及其他相关配置信息。
+
+   由于DHCP服务器需要固定的IP地址和DHCP客户端计算机进行通信，所以DHCP服务器必须配置为使用静态IP地址。
+
+   在DHCP服务器上的IP地址数据库包含以下一些项目
+
+   。对公司网络内的所有客户机的有效配置参数。
+
+   。在缓冲池总指定给客户机的有效IP地址，以及手工指定的保留地址。
+
+   。在服务器提供租约时间，租约时间即指定IP地址可以使用的时间。
+
+
+6.1.2 使用DHCP服务优缺点
+
+    1.DHCP服务优点
+
+    。管理员可以集中为整个公司完了指定通用和特定子网的TCP/IP参数，并且可以定义使用保留地址的客户机的参数。
+
+    。提供安全可信的配置。
+
+    。使用DHCP服务器能大大减少配置网络上计算机的时间，服务器可以砸i指派地址租约时配置所有的附加配置值。
+
+    。客户机不需要手工配置TCP/IP
+
+    。客户机在子网间移动时，旧的IP地址自动释放以便再次使用。在再次启动客户端计算机时，DHCP服务器会自动为
+
+      客户端计算机重新配置TCP/IP。
+
+    。大部分路由器可以转发DHCP配置请求，因此，互联网的每个子网并不都需要DHCP服务器。
+
+    2.DHCP服务缺点。
+
+    。DHCP不能发现网络上非DHCP客户机已经在使用的IP地址。
+
+    。当网络上存在多个DHCP服务器时，一个DHCP服务器不能查出已被其它服务器租出去的IP地址。
+    
+    。DHCP服务器不能跨路由器与客户机通信，除非路由器允许BOOTP转发
+
+
+6.1.3 DHCP地址租约过程
+
+    在标准情况下DHCP客户端和DHCP服务器之间会进行四次通信。DHCP协议通信使用UDP协议端口67（服务器端），
+
+和UDP协议端口68（客户端）进行通信，并且DHCP协议通信使用广播进行。
+
+    1. IP地址租约申请阶段
+
+    DHCP客户端发起DHCPDISCOVER广播消息，向网络上所有的DHCP服务器获取IP地址租约。此时，由于DHCP客户端没有IP地址，
+
+因此在数据包中，使用0.0.0.0作为源IP地址，然后广播地址255.255.255.255.0作为目的地址。在此请求数据包中会包含客户端
+
+的MAC地址和计算机名，以便DHCP服务器进行区分和识别。
+
+    2. IP地址租约提供阶段
+
+    所有接受到DHCP客户端发送的DHCPDISCOVER广播消息的DHCP服务器会检查自己的配置，如果具有有效的DHCP作用域和富余的IP
+
+地址，则DHCP服务器发起DHCPOFFER广播消息来应答发起DHCPDISCOVER广播的DHCP客户端。
+
+    3. IP地址租约选择阶段
+
+    如果有多台DHCP服务器向DHCP客户机发来的DHCPOFFER提供信息，则DHCP客户机只接受第一个收到的DHCPOFFER提供信息，然后它
+
+就以广播方式回答一个DHCPREQUEST请求信息，该信息中包含向它所选定的DHCP服务器请求IP地址的内容。之所以要以广播方式回答，
+
+是为了通知所有的DHCP服务器，它将选择某台DHCP服务器提供的IP地址。
+
+    在此DHCPREQUEST广播消息中包含了DHCP客户端的MAC地址、接受的租约中的IP地址、提供此租约的DHCP服务器地址等，所有其他
+
+的DHCP服务器将收回它们为此DHCP客户端所保留的IP地址租约，以给其它DHCP客户端使用。
+
+    4. IP地址租约确认阶段
+
+    提供的租约被接受的DHCP服务器在接收到DHCP客户端发起的DHCPREQUEST广播消息后，会发送DHCPPACK广播消息进行最后的确认，
+
+在这个消息中包含了租约期限及其它TCP/IP选项信息。
+
+6.1.4 DHCP相关术语
+
+    1.作用域： 是一个完整连续的可用IP地址范围。
+
+    2.地址池： 包含的可以分配给客户端计算机使用的IP地址范围。
+
+    3.租约： DHCP服务器指定的时间长度，在此时间长度内客户机可以使用分配给它的IP地址，如果租约到期，
+
+     客户机必须更新IP租约。
+
+    4.保留地址
+
+     保留地址提供了一个将动态地址和其MAC地址相关的手段，用于保证此网卡长期使用某个IP地址
+
+    5.选项类型
+
+     这是DHCP为客户端提供的其它参数，比如网关的IP地址、DNS服务器等。
+
+    6.超级作用域。
+
+     可以对多个作用域进行统一管理，包含多个作用域。
+
+
+6.2 DHCP服务器安装和配置
+
+6.2.1 安装DHCP服务器软件包
+
+    -->rpm -qa|grep dhcp
+
+   dhcp-common-4.1.1-38.P1.el6.centos.x86_64
+
+   可以看到只安装了dhcp-common，还需要安装dhcp
+
+   -->yum install dhcp -y
+
+
+6.2.2 /etc/dhcp/dhcpd.conf文件详解
+
+   默认DHCP服务器配置文件/etc/dhcp/dhcpd.conf中没有内容
+
+   -->cat /etc/dhcp/dhcpd.conf 
+#
+# DHCP Server Configuration file.
+#   see /usr/share/doc/dhcp*/dhcpd.conf.sample
+#   see 'man 5 dhcpd.conf'
+#
+
+   。拷贝DHCP模板文件
+
+   -->cp /usr/share/doc/dhcp-4.1.1/dhcpd.conf.sample /etc/dhcp/dhcpd.conf 
+      cp：是否覆盖"/etc/dhcp/dhcpd.conf"？ y
+
+   配置文件分为两部分：
+
+   * 全局配置：用来设置DHCP服务器整体运行环境的选项。
+
+   * 局部配置：用来设置作用域内容
+
+   -->more /etc/dhcp/dhcpd.conf 
+
+//第一部分：设置全局配置内容
+option domain-name "example.org";
+option domain-name-servers ns1.example.org, ns2.example.org;
+default-lease-time 600;
+max-lease-time 7200;
+#ddns-update-style none;
+#authoritative;
+log-facility local7;
+
+
+
+//第二部分：设置局部配置内容
+//在下面的这个子网内没有服务，但宣布它帮助DHCP服务器，了解网络的拓扑结构
+subnet 10.152.187.0 netmask 255.255.255.0 {
+}
+
+
+//下面是一个非常基本的子网声明
+subnet 10.254.239.0 netmask 255.255.255.224 {
+  range 10.254.239.10 10.254.239.20;
+  option routers rtr-239-0-1.example.org, rtr-239-0-2.example.org;
+}
+
+//下面的子网声明允许BOOTP客户端获得动态地址
+subnet 10.254.239.32 netmask 255.255.255.224 {
+  range dynamic-bootp 10.254.239.40 10.254.239.60;
+  option broadcast-address 10.254.239.31;
+  option routers rtr-239-32-1.example.org;
+}
+
+//下面是一个内部子网的子网声明
+subnet 10.5.5.0 netmask 255.255.255.224 {
+  range 10.5.5.26 10.5.5.30;
+  option domain-name-servers ns1.internal.example.org;
+  option domain-name "internal.example.org";
+  option routers 10.5.5.1;
+  option broadcast-address 10.5.5.31;
+  default-lease-time 600;
+  max-lease-time 7200;
+}
+
+//在主机声明中主机需要特殊的配置选项可以列出
+host passacaglia {
+  hardware ethernet 0:0:c0:5d:bd:95;
+  filename "vmunix.passacaglia";
+  server-name "toccata.fugue.com";
+}
+
+
+//设置保留IP地址
+host fantasia {
+  hardware ethernet 08:00:07:26:c0:a5;
+  fixed-address fantasia.fugue.com;
+}
+
+
+//定义类
+class "foo" {
+  match if substring (option vendor-class-identifier, 0, 4) = "SUNW";
+}
+
+
+//声明类的客户端，然后作地址分配
+shared-network 224-29 {
+  subnet 10.17.224.0 netmask 255.255.255.0 {
+    option routers rtr-224.example.org;
+  }
+  subnet 10.0.29.0 netmask 255.255.255.0 {
+    option routers rtr-29.example.org;
+  }
+  pool {
+    allow members of "foo";
+    range 10.17.224.10 10.17.224.250;
+  }
+  pool {
+    deny members of "foo";
+    range 10.0.29.10 10.0.29.230;
+  }
+}
+
+
+    DHCP服务器配置文件通常包括三个部分，分别是：声明、参数和选项部分。
+
+    1.DHCP服务声明部分
+
+    声明部分用来描述网络布局、提供客户端的IP地址等。
+
+    。share-network:用来告知是否一些子网络分享相同网络，也就是超级作用域。
+
+    。subnet:描述一个IP地址是否属于该子网。
+
+    。range:提供动态分配IP地址的范围
+
+    。host:参考特别的主机。
+
+    。group:为一组参数提供声明
+
+    。allow unknown-client：允许动态分配IP地址给未知的客户端。
+
+    。deny unknown-client:拒绝动态分配IP地址给未知的客户端
+
+    。allow bootp:允许响应botp查询
+
+    。deny bootp:拒绝响应bootp查询
+
+    。all booting:允许响应使用者查询
+
+    。deny booting:拒绝响应使用者查询
+
+    。filename:开始启动文件的名称，应用于无盘工作站。
+
+    。next-server: 设置服务器从初始引导文件中加载指定服务器的主机地址，服务器名称应该是IP地址或域名，应用于
+
+      无盘工作站。
+
+
+    2.DHCP服务参数部分
+
+    参数部分是表明如何执行任务，是否要执行任务，或将哪些网络配置选项发送给客户。
+
+    可添加的参数：
+
+    。ddns-update-style none
+
+    设置动态DNS更新模式，none表示不支持动态更新，interim表示DNS动态更新模式，ad-hoc:表示特殊DNS更新模式
+
+    。ignore client-updates
+    
+    忽略客户机更新DNS记录
+
+    。default-lease-time 600
+
+    指定默认客户端租约IP地址的时间长度，单位是秒。
+
+    。max-lease-time 7200
+
+    指定最大客户端租约IP地址的时间长度，单位是秒
+
+    。hardware ethernet 08:00:07:26:c0:a5
+
+    指定网卡接口类型和MAC地址
+
+    。server-name
+
+    通知DHCP客户服务器名称
+
+    。get-lease-hostnames flag
+
+    检查客户端使用的IP地址
+
+    。fixed-address
+
+    为客户端保留一个固定IP地址
+
+    3.DHCP服务选项部分
+
+    选项部分是用来配置DHCP可选参数，全部用option关键字作为开始
+
+    。subnet-mask: 为客户端指定子网掩码
+
+    。domain-name: 为客户端指定DNS域名
+
+    。domain-name-servers:为客户端指定DNS服务器的IP地址
+
+    。host-name:为客户端指定主机名称
+
+    。routers: 为客户端默认网关
+
+    。broadcast-address;为客户端指定广播地址
+
+    。ntp-server：为客户端指定网络时间服务器(NTP服务器)的IP地址
+
+    。time-offset:为客户单指定和格林威治时间的偏移时间，单位是秒
+
+    。nis-domain：设置客户端的NIS域名
+
+    。netbios-name-servers: 设置客户机的WINS服务器的IP地址
+
+    。netbios-node-type:设置客户机的NetBIOS节点类型
+    
+
+    注意：如果客户端计算机使用的是Windows操作系统，不要选择host-name参数，及不要为其指定主机名称。
+
+
+6.2.3 DHCP服务器配置实例
+
+    在公司内部配置一台DHCP服务器，为公司网络内的客户端计算机自动分配IP地址等信息，参数如下：
+
+    。分配IP地址池：192.168.0.97-192.168.0.98  (实际可选择范围更大的地址)
+
+    。子网掩码：255.255.255.0
+
+    。网关地址：192.168.0.1
+
+    。DNS服务器：192.168.0.203
+
+    。DNS域名：fulong.com
+
+    。默认租约有效期：1天(86400秒)
+
+    。最大租约有效期：7天(604800秒)
+
+    。给主机名为windows的客户机(MAC地址为:00:50:56:C0:00:01)保留使用IP地址192.168.0.95
+
+    。支持DNS动态更新模式
+
+    。忽略客户机更新DNS记录
+
+    
+    1.复制DHCP服务配置模板文件
+
+    -->cp /usr/share/doc/dhcp-4.1.1/dhcpd.conf.sample /etc/dhcp/dhcpd.conf 
+       cp：是否覆盖"/etc/dhcp/dhcpd.conf"？ y
+
+
+    2.编辑/etc/dhcp/dhcpd.conf文件
+
+    -->vim /etc/dhcp/dhcpd.conf ，修改后的内容如下：
+
+ddns-update-style interim;
+ignore client-updates;
+subnet 192.168.0.0 netmask 255.255.255.0 {
+  option routers               192.168.0.1;
+       option subnet-mask      255.255.255.0;
+       option domain-name      "fulong.com";
+       option time-offset      -18000;
+       range 192.168.0.97   192.168.0.98;
+       default-lease-time  86400;
+       max-lease-time   604800;
+
+}
+host windows {
+  hardware ethernet 00:50:56:C0:00:01;  #客户端的MAC地址
+  fixed-address 192.168.0.95;           #客户端指定的静态IP
+}
+
+    3.在指定网络接口启动DHCP服务器
+
+    如果在linux系统中安装了多个网卡，只希望让DHCP服务器启动其中一块网卡，那么可以配置DHCP
+
+服务器只在那块网卡上启动。
+
+    -->vim /etc/sysconfig/dhcpd  #设置DHCP只在eth0这块网卡上启动
+
+    DHCPDARGS=eth0
+
+
+6.2.5 控制dhcpd服务
+
+    1.启动dhcpd服务
+
+    -->service dhcpd start
+
+       正在启动 dhcpd：                                           [确定]
+
+    2.查看dhcpd服务运行状态
+
+    -->service dhcpd status
+
+       dhcpd (pid  4279) 正在运行...
+
+    3.停止dhcpd服务器
+
+    -->service dhcpd stop
+
+       关闭 dhcpd：                                               [确定]
+
+
+    4.重新启动dhcpd服务
+
+    -->service dhcpd restart
+
+       正在启动 dhcpd：                                           [确定]
+
+
+    5.重新加载dhcpd服务
+
+    -->service dhcpd force-reload
+
+       关闭 dhcpd：                                               [确定]
+       正在启动 dhcpd：                                           [确定]
+
+    6.开机自动启动dhcpd服务
+
+    -->chkconfig dhcpd on
+
+    -->chkconfig --list dhcpd
+
+       dhcpd          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+6.2.6 DHCP服务器排错
+
+   命令语法：
+
+   dhcpd[选项][if0[..ifN]]
+
+                             dhcpd选项含义
+   -------------------------------------------------------------------------------
+     选项                                           选项含义
+   --------------------------------------------------------------------------------
+     -p<端口>                指定dhcpd监听的端口
+   --------------------------------------------------------------------------------
+     -f                      作为前台进程运行dhcpd
+   --------------------------------------------------------------------------------
+     -d                      启用调试模式
+   --------------------------------------------------------------------------------
+     -q                      在启动时不显示版权信息
+   --------------------------------------------------------------------------------
+     -t                      简单地测试配置i文件爱你的语法是否正确，但不会尝试执行
+                             任何网络操作
+   --------------------------------------------------------------------------------
+     -T                      可以用来测试租约数据库文件
+   --------------------------------------------------------------------------------
+     -4                      运行DHCP服务器
+   --------------------------------------------------------------------------------
+     -6                      运行DHCPv6服务器
+   --------------------------------------------------------------------------------
+     -s <服务器>             指定发送回复的服务器
+   --------------------------------------------------------------------------------
+     -cf<配置文件>           指定配置文件
+   --------------------------------------------------------------------------------
+     -lf<租约文件>           指定租约文件
+   --------------------------------------------------------------------------------
+     -pf<PID文件>            指定PID文件
+   --------------------------------------------------------------------------------
+     -tf<跟踪输出文件>       指定文件记录DHCP服务器的整个启动状态
+   --------------------------------------------------------------------------------
+
+   例6.1 对DHCP服务器进行排错
+
+   -->dhcpd
+
+Internet Systems Consortium DHCP Server 4.1.1-P1
+Copyright 2004-2010 Internet Systems Consortium.
+All rights reserved.
+For info, please visit https://www.isc.org/software/dhcp/
+Not searching LDAP since ldap-server, ldap-port and ldap-base-dn were not specified in the config file
+Wrote 0 deleted host decls to leases file.
+Wrote 0 new dynamic host decls to leases file.
+Wrote 0 leases to leases file.
+Listening on LPF/eth0/00:0c:29:ee:fa:05/192.168.0.0/24
+Sending on   LPF/eth0/00:0c:29:ee:fa:05/192.168.0.0/24
+Sending on   Socket/fallback/fallback-net
+There's already a DHCP server running.
+
+This version of ISC DHCP is based on the release available
+on ftp.isc.org.  Features have been added and other changes
+have been made to the base software release in order to make
+it work better with this distribution.
+
+Please report for this software via the CentOS Bugs Database:
+    http://bugs.centos.org/
+
+exiting.
+--------------------------------------------------------------------------------------------------------------
+互联网系统协会的DHCP服务器4.1.1-p1
+版权2004-2010年互联网系统协会。
+保留所有权利。
+信息，请访问https://www.isc.org/software/dhcp/
+不搜索LDAP从LDAP服务器，LDAP端口和LDAP基本DN不在配置文件中指定的
+写了0删除主机decls租约文件。
+写了0个新的动态主机decls租约文件。
+写了0个租赁租赁文件。
+听力对LPF / eth0 / 00:0c：29：EE：足总杯：05 / 192.168.0.0/24
+将低通滤波器/是/ 00:0c：29：EE：足总杯：05 / 192.168.0.0/24
+将插座/后退/兜底网
+已经有一个DHCP服务器上运行。
+这个版本的ISC DHCP是基于版本可用
+在ftp.isc.org。功能已被添加和其他变化
+已作出的基础软件发布为了使
+它的工作更好地与分布。
+请报告这个软件通过CentOS的bug数据库：
+http://bugs.centos.org/
+退出。
+--------------------------------------------------------------------------------------------------------------
+
+6.3 配置DHCP客户端
+
+    可以支持linux和非linux(Windows)客户端，自动获取IP地址
+
+6.3.1 Linux客户端配置
+
+   （192.168.0.204）
+
+    1.启用网卡联网功能
+
+    -->vim /etc/sysconfig/network
+
+NETWORKING=yes
+HOSTNAME=linux
+GATEWAY=192.168.0.1
+
+
+    2.修改网卡配置文件
+
+    -->vim /etc/sysconfig/network-scripts/ifcfg-eth0
+
+DEVICE="eth0"
+BOOTPROTO=dhcp    ---------------------------#只需将这里改为dhcp其它不用修改。 
+HWADDR="00:0C:29:38:A2:6D"
+NM_CONTROLLED="yes"
+ONBOOT="yes"
+TYPE="Ethernet"
+UUID="35533284-e02d-4c1d-aeae-ecce600e1200"
+IPADDR=192.168.0.204
+NETWORK=255.255.255.0
+GATEWAY=192.168.0.1
+DNS1=114.114.114.114
+DNS2=8.8.8.8
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=yes
+IPV6INIT=no
+USERCTL=no
+ARPCHECK=no
+NAME="System eth0"
+
+
+    3.重新启动network服务并申请IP地址
+
+    -->service network restart
+
+        正在关闭接口 eth0                    确定
+	关闭环回接口：                       确定
+	弹出环回接口：                       确定
+        弹出界面 eth0:          
+	正在决定 eth0的IP嘻嘻...完成         确定
+
+
+
+    4.查看获取的IP地址
+  
+    -->ifconfig eth0
+
+eth0      Link encap:Ethernet  HWaddr 00:0C:29:38:A2:6D  
+          inet addr:192.168.0.97  Bcast:192.168.0.255  Mask:255.255.255.0
+          inet6 addr: fe80::20c:29ff:fe38:a26d/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:137553 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:43256 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+
+
+    可以看到该客户端获取的IP地址为：192.168.0.97.
+
+
+
+6.3.2 Windows客户端配置
+
+   win7为例：
+
+   1.设置自动获得IP地址
+
+   -->网络-->属性-->更改网络适配器-->本地连接属性-->Internet协议版本4（TCP/IPvv6)
+
+   -->属性：自动获得IP地址
+
+            自动获得DNS服务器地址
+
+   -->确定
+
+   。查看获取的IP
+
+   -->C:\Users\Administrator>ipconfig
+
+Windows IP 配置
+
+
+以太网适配器 本地连接:
+
+   连接特定的 DNS 后缀 . . . . . . . : fulong.com
+   本地链接 IPv6 地址. . . . . . . . : fe80::1c10:c699:2514:ce1a%1
+   IPv4 地址 . . . . . . . . . . . . : 192.168.0.98                  -----#发现已经获取到IP地址了
+   子网掩码  . . . . . . . . . . . . : 255.255.255.0
+   默认网关. . . . . . . . . . . . . : 192.168.0.1
+
+
+
+   2.申请IP地址
+
+   如果客户端没有立即向DHCP服务器申请IP地址，也可以使用ipconfig /renew命令申请
+
+   -->C:\>ipconfig /renew
+
+Windows IP 配置
+
+在释放接口 Loopback Pseudo-Interface 1 时出错: 系统找不到指定的文件。
+
+
+以太网适配器 本地连接:
+
+   连接特定的 DNS 后缀 . . . . . . . : fulong.com
+   本地链接 IPv6 地址. . . . . . . . : fe80::1c10:c699:2514:ce1a%12
+   IPv4 地址 . . . . . . . . . . . . : 192.168.0.98
+   子网掩码  . . . . . . . . . . . . : 255.255.255.0
+   默认网关. . . . . . . . . . . . . : 192.168.0.1
+
+隧道适配器 isatap.fulong.com:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+   连接特定的 DNS 后缀 . . . . . . . : fulong.com
+
+隧道适配器 本地连接*:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+   连接特定的 DNS 后缀 . . . . . . . :
+
+
+    3.查看IP地址
+
+    -->C:\>ipconfig /all
+
+Windows IP 配置
+
+   主机名  . . . . . . . . . . . . . : LBJY--20140513D
+   主 DNS 后缀 . . . . . . . . . . . :
+   节点类型  . . . . . . . . . . . . : 混合
+   IP 路由已启用 . . . . . . . . . . : 否
+   WINS 代理已启用 . . . . . . . . . : 否
+   DNS 后缀搜索列表  . . . . . . . . : fulong.com
+
+以太网适配器 本地连接:
+
+   连接特定的 DNS 后缀 . . . . . . . : fulong.com
+   描述. . . . . . . . . . . . . . . : Intel(R) PRO/1000 MT Network Conne
+   物理地址. . . . . . . . . . . . . : 00-0C-29-FC-85-CD
+   DHCP 已启用 . . . . . . . . . . . : 是
+   自动配置已启用. . . . . . . . . . : 是
+   本地链接 IPv6 地址. . . . . . . . : fe80::1c10:c699:2514:ce1a%12(首选)
+   IPv4 地址 . . . . . . . . . . . . : 192.168.0.98(首选)                    -----#获取的IP地址
+   子网掩码  . . . . . . . . . . . . : 255.255.255.0
+   获得租约的时间  . . . . . . . . . : 2015年6月10日 星期三 下午 1:13:55
+   租约过期的时间  . . . . . . . . . : 2015年6月11日 星期四 下午 1:15:00
+   默认网关. . . . . . . . . . . . . : 192.168.0.1
+   DHCP 服务器 . . . . . . . . . . . : 192.168.0.203
+   DHCPv6 IAID . . . . . . . . . . . : 251661353
+   DHCPv6 客户端 DUID  . . . . . . . : 00-01-00-01-1B-03-BC-A3-00-0C-29-F
+
+   DNS 服务器  . . . . . . . . . . . : fec0:0:0:ffff::1%1
+                                       fec0:0:0:ffff::2%1
+                                       fec0:0:0:ffff::3%1
+   TCPIP 上的 NetBIOS  . . . . . . . : 已启用
+
+隧道适配器 isatap.fulong.com:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+   连接特定的 DNS 后缀 . . . . . . . : fulong.com
+   描述. . . . . . . . . . . . . . . : Microsoft ISATAP Adapter
+   物理地址. . . . . . . . . . . . . : 00-00-00-00-00-00-00-E0
+   DHCP 已启用 . . . . . . . . . . . : 否
+   自动配置已启用. . . . . . . . . . : 是
+
+隧道适配器 本地连接*:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+   连接特定的 DNS 后缀 . . . . . . . :
+   描述. . . . . . . . . . . . . . . : Microsoft Teredo Tunneling Adapter
+   物理地址. . . . . . . . . . . . . : 00-00-00-00-00-00-00-E0
+   DHCP 已启用 . . . . . . . . . . . : 否
+   自动配置已启用. . . . . . . . . . : 是
+
+--------------------------------------------------------------------------------------------
+
+   。通过上面查询发现：
+
+   DNS 后缀搜索列表  . . . . . . . . : fulong.com
+   IPv4 地址 . . . . . . . . . . . . : 192.168.0.98(首选)                    -----#获取的IP地址
+   子网掩码  . . . . . . . . . . . . : 255.255.255.0
+   获得租约的时间  . . . . . . . . . : 2015年6月10日 星期三 下午 1:13:55
+   租约过期的时间  . . . . . . . . . : 2015年6月11日 星期四 下午 1:15:00
+   默认网关. . . . . . . . . . . . . : 192.168.0.1
+   DHCP 服务器 . . . . . . . . . . . : 192.168.0.203
+   DHCPv6 IAID . . . . . . . . . . . : 251661353
+   DHCPv6 客户端 DUID  . . . . . . . : 00-01-00-01-1B-03-BC-A3-00-0C-29-F
+
+   DNS 服务器  . . . . . . . . . . . : fec0:0:0:ffff::1%1
+                                       fec0:0:0:ffff::2%1
+                                       fec0:0:0:ffff::3%1
+   TCPIP 上的 NetBIOS  . . . . . . . : 已启用
+
+                         
+			       
+			       ipconfig /all命令输出信息描述
+   ----------------------------------------------------   --------------------------------------------
+      输出信息                                                                  信息描述
+   ---------------------------------------------------------------------------------------------------
+   连接特定的 DNS 后缀 . . . . . . . : fulong.com                                域名
+   描述. . . . . . . . . . . . . . . : Intel(R) PRO/1000 MT Network Conne        网卡型号
+   物理地址. . . . . . . . . . . . . : 00-0C-29-FC-85-CD                         网卡硬件MAC地址
+   DHCP 已启用 . . . . . . . . . . . : 是                                        使用DHCP获取地址
+   自动配置已启用. . . . . . . . . . : 是                                        已经设置自动配置
+   本地链接 IPv6 地址. . . . . . . . : fe80::1c10:c699:2514:ce1a%12(首选)
+   IPv4 地址 . . . . . . . . . . . . : 192.168.0.98(首选)                        从DHCP获取的IP地址                
+   子网掩码  . . . . . . . . . . . . : 255.255.255.0                             子网掩码
+   获得租约的时间  . . . . . . . . . : 2015年6月10日 星期三 下午 1:13:55         IP地址租约开始时间
+   租约过期的时间  . . . . . . . . . : 2015年6月11日 星期四 下午 1:15:00         IP地址租约结束时间
+   默认网关. . . . . . . . . . . . . : 192.168.0.1                               默认网关IP
+   DHCP 服务器 . . . . . . . . . . . : 192.168.0.203                             DHCP服务器IP地址
+   DHCPv6 IAID . . . . . . . . . . . : 251661353
+   DHCPv6 客户端 DUID  . . . . . . . : 00-01-00-01-1B-03-BC-A3-00-0C-29-F
+
+   DNS 服务器  . . . . . . . . . . . : fec0:0:0:ffff::1%1
+                                       fec0:0:0:ffff::2%1
+                                       fec0:0:0:ffff::3%1
+   TCPIP 上的 NetBIOS  . . . . . . . : 已启用                                   已经启用TCP/IP上的NetBIOS
+   ----------------------------------------------------   --------------------------------------------
+
+    4.释放IP
+
+    如果不再需要DHCP服务器处获取的IP地址，可以使用下面命令释放
+
+    -->C:\>ipconfig /release
+
+Windows IP 配置
+
+在释放接口 Loopback Pseudo-Interface 1 时出错: 系统找不到指定的文件。
+
+
+以太网适配器 本地连接:
+
+   连接特定的 DNS 后缀 . . . . . . . :
+   本地链接 IPv6 地址. . . . . . . . : fe80::1c10:c699:2514:ce1a%12
+   默认网关. . . . . . . . . . . . . :
+
+隧道适配器 isatap.fulong.com:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+   连接特定的 DNS 后缀 . . . . . . . :
+
+隧道适配器 本地连接*:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+   连接特定的 DNS 后缀 . . . . . . . :
+
+
+    。再次查看IP
+
+    -->C:\Users\Administrator>ipconfig /all
+
+Windows IP 配置
+
+   主机名  . . . . . . . . . . . . . : LBJY--20140513D
+   主 DNS 后缀 . . . . . . . . . . . :
+   节点类型  . . . . . . . . . . . . : 混合
+   IP 路由已启用 . . . . . . . . . . : 否
+   WINS 代理已启用 . . . . . . . . . : 否
+
+以太网适配器 本地连接:
+
+   连接特定的 DNS 后缀 . . . . . . . :
+   描述. . . . . . . . . . . . . . . : Intel(R) PRO/1000 MT Network Connection
+   物理地址. . . . . . . . . . . . . : 00-0C-29-FC-85-CD
+   DHCP 已启用 . . . . . . . . . . . : 是
+   自动配置已启用. . . . . . . . . . : 是
+   本地链接 IPv6 地址. . . . . . . . : fe80::1c10:c699:2514:ce1a%12(首选)
+   自动配置 IPv4 地址  . . . . . . . : 169.254.206.26(首选)                   ------#可以发现IP已经释放了
+   子网掩码  . . . . . . . . . . . . : 255.255.0.0
+   默认网关. . . . . . . . . . . . . :
+   DHCPv6 IAID . . . . . . . . . . . : 251661353
+   DHCPv6 客户端 DUID  . . . . . . . : 00-01-00-01-1B-03-BC-A3-00-0C-29-FC-85-CD
+
+   DNS 服务器  . . . . . . . . . . . : fec0:0:0:ffff::1%1
+                                       fec0:0:0:ffff::2%1
+                                       fec0:0:0:ffff::3%1
+   TCPIP 上的 NetBIOS  . . . . . . . : 已启用
+
+隧道适配器 isatap.{5EED1D14-86DF-46F2-9593-C5A33D1F9CDC}:
+
+   媒体状态  . . . . . . . . . . . . : 媒体已断开
+
+
+
+6.4 查看DHCP地址租约信息
+
+   在DHCP服务器上，/var/lib/dhcpd/dhcpd.leases文件中存放着DHCP地址租约数据库。
+
+   将/var/lib/dhcpd/dhcpd.leases~  备份文件重命名为/var/lib/dhcpd/dhcpd.leases，然后再启动守护进程。
+
+   。默认/var/lib/dhcpd/dhcpd.leases 是一个空文件。租约数据库不时被重建，首先所有已知的租约会被存储到
+
+   一个临时的租约数据库中，/var/lib/dhcpd/dhcpd.leases被重命名为：/var/lib/dhcpd/dhcpd.leases~ ，然后
+
+   临时租约数据库被写入/var/lib/dhcpd/dhcpd.leases文件
+
+
+   -->cat  /var/lib/dhcpd/dhcpd.leases
+
+# The format of this file is documented in the dhcpd.leases(5) manual page.
+# This lease file was written by isc-dhcp-4.1.1-P1
+
+server-duid "\000\001\000\001\035\012|\211\000\014)\356\372\005";
+
+
+    为了不丢失租约文件，需要备份原有文件
+
+    -->cp /var/lib/dhcpd/dhcpd.leases~ /var/lib/dhcpd/dhcpd.leases
+
+       cp：是否覆盖"/var/lib/dhcpd/dhcpd.leases"？ y
+
+    然后启动守护进程
+
+    -->service dhcpd restart
+
+    。dhcpd.leases文件内容为：
+
+    -->more /var/lib/dhcpd/dhcpd.leases
+
+# The format of this file is documented in the dhcpd.leases(5) manual page.
+# This lease file was written by isc-dhcp-4.1.1-P1
+
+
+server-duid "\000\001\000\001\035\012|\211\000\014)\356\372\005";
+
+lease 192.168.0.97 {                        #DHCP服务器分配给客户端的IP地址，这里分配了192.168.0.97
+  starts 3 2015/06/10 05:03:30;             #开始租约的时间，是格林威治标准时间(GMT),时间格式是：年/月/日 时：分：秒
+  ends 4 2015/06/11 05:03:30;               #结束租约的时间，是格林威治标准时间(GMT)
+  cltt 3 2015/06/10 05:03:30;
+  binding state active;                     #租约的绑定状态
+  next binding state free;
+  hardware ethernet 00:0c:29:38:a2:6d;      #客户端的MAC地址
+}
+lease 192.168.0.97 {
+  starts 3 2015/06/10 05:04:06;
+  ends 4 2015/06/11 05:04:06;
+  cltt 3 2015/06/10 05:04:06;
+  binding state active;
+  next binding state free;
+  hardware ethernet 00:0c:29:38:a2:6d;
+}
+lease 192.168.0.98 {                     #客户端的IP
+  starts 3 2015/06/10 05:15:13;
+  ends 4 2015/06/11 05:15:13;
+  cltt 3 2015/06/10 05:15:13;
+  binding state active;
+  next binding state free;
+  hardware ethernet 00:0c:29:fc:85:cd;   #客户端的MAC地址
+uid "\001\000\014)\374\205\315";
+  client-hostname "LBJY--20140513D";
+}
+lease 192.168.0.98 {
+  starts 3 2015/06/10 05:16:19;
+  ends 4 2015/06/11 05:16:19;
+  cltt 3 2015/06/10 05:16:19;
+  binding state active;
+  next binding state free;
+  hardware ethernet 00:0c:29:fc:85:cd;
+  uid "\001\000\014)\374\205\315";
+  client-hostname "LBJY--20140513D";
+}
+lease 192.168.0.98 {
+  starts 3 2015/06/10 05:16:19;
+  ends 3 2015/06/10 05:24:38;
+  tstp 3 2015/06/10 05:24:38;
+  cltt 3 2015/06/10 05:16:19;
+  binding state free;
+  hardware ethernet 00:0c:29:fc:85:cd;
+  uid "\001\000\014)\374\205\315";
+}
+
+
+6.5 DHCP中继代理
+
+6.5.1 DHCP中继代理
+
+    安装了中继代理的计算机称为DHCP中继代理服务器，它承担了不同子网间的DHCP客户机和服务器的通信任务。
+
+DHCP中继代理是在不同子网上的客户端和服务器之间中转DHCP/BOOTP消息的程序。
+
+    DHCP中继代理将它连接的其中一个网卡上广播的DHCP/BOOTP消息中转到其它网卡连接的子网。
+
+6.5.2 DHCP中继代理配置实例
+
+    公司内部有两个子网，分别是192.168.0.0和192.168.1.0，DHCP服务器位于192.168.0.0子网。通过配置一台
+
+DHCP中继代理服务器，使得192.168.1.0子网的计算机也能从DHCP服务器上申请到IP地址。
+
+                  
+                            外网网卡IP地址                                     内网网卡IP地址
+			    192.168.1.1                                        192.168.0.1
+                                      \                                       /
+                                      eth1                                     eth0
+     角色：DHCP客户机 ------路由器----------角色：网关、DHCP中继代理服务器 -----------路由器-------角色：DHCP服务器
+
+     主机名：client2                        主机名：dhcrelay                                       主机名：rhel                       
+
+     IP地址：动态获取                                                                              IP地址：192.168.0.203
+
+
+
+                                             图：配置DHCP中继代理拓扑
+
+
+    1.配置DHCP服务器(192.168.0.203)
+
+    在DHCP服务器上，通过创建超级作用域的方法分别为两个网段192.168.0.0和192.168.1.0创建作用域
+
+    (1)编辑/etc/dhcp/dhcpd.conf文件(192.168.0.203)
+
+    -->vim  /etc/dhcp/dhcpd.conf 
+
+ddns-update-style interim;
+ignore client-updates;
+shared-network 0-1 {
+subnet 192.168.0.0 netmask 255.255.255.0 {
+       range 192.168.0.97   192.168.0.98;
+       option domain-name-servers 192.168.0.203;
+       option domain-name      "fulong.com";
+       option routers               192.168.0.1;
+       option broadcast-address     192.168.0.255;
+       default-lease-time  86400;
+       max-lease-time   604800;
+}
+subnet 192.168.1.0 netmask 255.255.255.0 {
+       range 192.168.1.60   192.168.1.160;
+       option domain-name-servers 192.168.1.203;
+       option domain-name      "fulong.com";
+       option routers               192.168.1.1;
+       option broadcast-address     192.168.1.255;
+       default-lease-time  86400;
+       max-lease-time   604800;
+}
+
+    (2)重新启动dhcp服务
+
+    -->service dhcpd restart
+
+       正在启动 dhcpd：                                           [确定]
+
+
+    2.配置DHCP中继代理服务器(192.168.0.204)
+
+    需要添加2块网卡，配置为：
+
+    eth0:
+
+    eth1:
+
+    分别在ifcfg-eth0和ifcfg-eth1中配置好IP
+
+    -->cd /etc/sysconfig/network-scripts/
+
+    -->vim ifcfg-eth0   DHCP方式
+
+DEVICE="eth0"
+BOOTPROTO=dhcp   
+HWADDR="00:0C:29:38:A2:6D"
+NM_CONTROLLED="yes"
+ONBOOT="yes"
+TYPE="Ethernet"
+UUID="35533284-e02d-4c1d-aeae-ecce600e1200"
+IPADDR=192.168.0.1
+NETWORK=255.255.255.0
+GATEWAY=192.168.0.1
+DNS1=114.114.114.114
+DNS2=8.8.8.8
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=yes
+IPV6INIT=no
+USERCTL=no
+ARPCHECK=no
+NAME="System eth0"
+
+    -->vim ifcfg-eth1   DHCP方式
+
+DEVICE="eth1"
+BOOTPROTO=dhcp   
+HWADDR="00:0C:29:38:A2:77"
+NM_CONTROLLED="yes"
+ONBOOT="yes"
+TYPE="Ethernet"
+UUID="35533284-e02d-4c1d-aeae-ecce600e1200"
+IPADDR=192.168.1.1
+NETWORK=255.255.255.0
+GATEWAY=192.168.1.1
+DNS1=114.114.114.114
+DNS2=8.8.8.8
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=yes
+IPV6INIT=no
+USERCTL=no
+ARPCHECK=no
+NAME="System eth0"
+
+
+    (1)配置IP地址
+
+    手工配置IP：
+
+     -->ifconfig eth0 192.168.0.1 netmask 255.255.255.0
+
+     -->ifconfig eth1 192.168.1.1 netmask 255.255.255.0
+
+   
+    (2)安装dhcp软件包
+
+     -->yum install dhcp -y
+
+    (3)指定DHCP服务器
+
+     使用dhcrelay命令可以提供中继DHCP和BOOTP请求，从一个没有DHCP服务器的子网直接连接其它
+
+子网内的一个或多个DHCP服务器。它同时支持DHCP v4/BOOTP和DHCP v6协议。
+
+     命令语法：
+
+     dhcrelay [选项][DHCP服务器]
+
+                         dhcrelay命令选项含义
+     ---------------------------------------------------------------------------------------
+        选项                                         选项含义 
+     ---------------------------------------------------------------------------------------
+        -c <跳数>     当转发数据包时，dhcrelay丢弃已经达到一个最大跳数的数据包，默认值是10，
+	              最大值是255
+     -----------------------------------------------------------------------------------------
+        -4            运行dhcrelay命令作为DHCP v4/BOOTP中继代理。这是默认操作模式
+     -----------------------------------------------------------------------------------------
+        -6            运行dhcrelay命令作为DHCP v6中继代理
+     -----------------------------------------------------------------------------------------
+        -q            安静模式
+     -----------------------------------------------------------------------------------------
+        -p<端口>      监听和发送端口。DHCP v4/BOOTP默认端口是67，DHCP V6默认端口是547
+     -----------------------------------------------------------------------------------------
+        -A<长度>      指定发送到DHCP服务器的最大数据包大小
+     -----------------------------------------------------------------------------------------
+        -d            强制dhcrelay命令作为前台进程运行
+     -----------------------------------------------------------------------------------------
+
+     DHCP中继代理服务器默认不会为DHCP客户端转发申请IP地址的请求，使用dhcrelay命令指定DHCP服务器
+
+     的位置。
+
+     -->dhcrelay 192.168.0.203  #指定DHCP地址（在中继代理服务器上操作192.168.0.204）
+
+Internet System Consortium DHCP Relay Agent 4.1.1-P1
+Copyright 2004-2010 Internet Systems Consortium.
+All rights reserved.
+For info, please visit https://www.isc.org/software/dhcp/
+Listening on LPF/eth1/00:0c:29:38:a2:77
+Sending on LPF/eth1/00:0c:29:38:a2:77
+Listening on LPF/eth0/00:0c:29:38:a2:6d
+Sneding on LPF/eth0/00:0c:29:38:a2:6d
+Sending on Socket/fallback
+
+
+    3.客户端获取IP地址
+
+    在Windows客户端上，为改计算机设置自动货期IP，该客户端即开始申请IP地址。
+
+    如果没有立即申请则：
+
+    -->cmd
+
+    -->ipconfig /renew  #申请，
+
+    -->ipconfig /all  #查看IP详细信息
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
